@@ -177,14 +177,14 @@
             <p class="subtitle">券商研究報告 × 外電快報 × Call Memo × 投資策略</p>
         </div>
         <div class="db-switcher">
-            <button class="db-tab active" data-db="news" onclick="switchDB('news')">⚡外電 <span class="count" id="newsCount">0</span></button>
-            <button class="db-tab" data-db="memo" onclick="switchDB('memo')">📋Memo <span class="count" id="memoCount">0</span></button>
-            <button class="db-tab" data-db="reports" onclick="switchDB('reports')">📑產業 <span class="count" id="reportsCount">0</span></button>
-            <button class="db-tab" data-db="strategy" onclick="switchDB('strategy')">🎯策略 <span class="count" id="strategyCount">0</span></button>
-            <button class="db-tab" data-db="trends" onclick="switchDB('trends')">📈趨勢 <span class="count" id="trendsCount">0</span></button>
-            <button class="db-tab" data-db="industry" onclick="switchDB('industry')">🏭產業總覽 <span class="count" id="industryCount">0</span></button>
-            <button class="db-tab" data-db="timeline" onclick="switchDB('timeline')">📅時程 <span class="count" id="timelineCount">0</span></button>
-            <button class="db-tab" data-db="stocks" onclick="switchDB('stocks')">🏢個股 <span class="count" id="stocksCount">0</span></button>
+            <button class="db-tab active" data-db="news" onclick="switchDB('news')">⚡ 外電報導 <span class="count" id="newsCount">0</span></button>
+            <button class="db-tab" data-db="memo" onclick="switchDB('memo')">📋 報告Memo <span class="count" id="memoCount">0</span></button>
+            <button class="db-tab" data-db="reports" onclick="switchDB('reports')">📑 產業報告 <span class="count" id="reportsCount">0</span></button>
+            <button class="db-tab" data-db="strategy" onclick="switchDB('strategy')">🎯 投資展望 <span class="count" id="strategyCount">0</span></button>
+            <button class="db-tab" data-db="trends" onclick="switchDB('trends')">📈 產業趨勢 <span class="count" id="trendsCount">0</span></button>
+            <button class="db-tab" data-db="industry" onclick="switchDB('industry')">🏭 產業動態 <span class="count" id="industryCount">0</span></button>
+            
+            <button class="db-tab" data-db="stocks" onclick="switchDB('stocks')">🏢 個股查詢 <span class="count" id="stocksCount">0</span></button>
         </div>
         <div class="search-section">
             <div class="main-search">
@@ -409,17 +409,7 @@
             const s2 = wb.Sheets['完整內容收錄'];
             if (s2) {
                 XLSX.utils.sheet_to_json(s2).forEach(r => {
-                    if (r['編號']) {
-                        const id = safeStr(r['編號']);
-                        newsContent[id] = {
-                            content: safeStr(r['完整報導內容']),
-                            date: safeStr(r['日期']),
-                            company: safeStr(r['公司']),
-                            stockCode: safeStr(r['股號']),
-                            broker: safeStr(r['券商來源']),
-                            tags: safeStr(r['標籤'])
-                        };
-                    }
+                    if (r['編號']) newsContent[safeStr(r['編號'])] = safeStr(r['完整報導內容']);
                 });
             }
             
@@ -835,7 +825,7 @@
         document.getElementById('strategyCount').textContent = strategyReports.length;
         document.getElementById('trendsCount').textContent = trendsData.length;
         document.getElementById('industryCount').textContent = memoIndustryTrends.length;
-        document.getElementById('timelineCount').textContent = memoTimeline.length;
+        // timelineCount removed
         document.getElementById('stocksCount').textContent = new Set(Object.values(masterStocks).map(s => s.code)).size;
     }
 
@@ -883,7 +873,7 @@
         currentDB = db;
         document.querySelectorAll('.db-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.db === db));
         document.getElementById('categoryFilterWrap').style.display = (db === 'news') ? 'block' : 'none';
-        document.getElementById('importanceFilterWrap').style.display = ['news', 'memo', 'timeline'].includes(db) ? 'block' : 'none';
+        document.getElementById('importanceFilterWrap').style.display = ['news', 'memo'].includes(db) ? 'block' : 'none';
         document.getElementById('industryFilterWrap').style.display = ['reports', 'memo', 'industry', 'stocks'].includes(db) ? 'block' : 'none';
         document.getElementById('marketFilterWrap').style.display = (db === 'stocks') ? 'block' : 'none';
         renderCurrentDB();
@@ -933,7 +923,7 @@
     }
 
     function renderCurrentDB() {
-        const renderers = { news: renderNews, memo: renderMemo, reports: renderReports, strategy: renderStrategy, trends: renderTrends, industry: renderIndustry, timeline: renderTimeline, stocks: renderStocks };
+        const renderers = { news: renderNews, memo: renderMemo, reports: renderReports, strategy: renderStrategy, trends: renderTrends, industry: renderIndustry, stocks: renderStocks };
         if (renderers[currentDB]) renderers[currentDB]();
     }
 
@@ -1160,13 +1150,15 @@
             return;
         }
         
-        list.innerHTML = filtered.map((item, idx) => `<div class="card-base" onclick="openTimelineModal(${idx})">
+        list.innerHTML = filtered.map((item) => {
+            const originalIdx = memoTimeline.indexOf(item);
+            return `<div class="card-base" onclick="openTimelineModal(${originalIdx})">
             <div class="card-header"><div class="card-left"><span class="company-name company-link" onclick="event.stopPropagation();openStockModal('${item.stockCode}')">${item.company}</span><span class="stock-code" onclick="event.stopPropagation();openStockModal('${item.stockCode}')">${item.stockCode}</span></div><span class="importance">${item.importance}</span></div>
             <div class="card-meta"><span class="meta-tag date">📅 ${item.time}</span><span class="meta-tag category">${item.type}</span><span class="meta-tag trend">${item.status}</span></div>
             <div class="company-name" style="margin:8px 0;font-size:14px;">${item.event}</div>
             <div class="card-content">${item.impact}</div>
             ${item.note ? `<div style="margin-top:8px;font-size:11px;color:#8b8b8b;">📝 ${item.note}</div>` : ''}
-        </div>`).join('');
+        </div>`;}).join('');
     }
 
     function renderStocks() {
