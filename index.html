@@ -267,15 +267,60 @@
 
     function safeStr(v) { return (v === null || v === undefined) ? '' : String(v).trim(); }
 
-    function formatContent(text) {
+    function formatContent(text, forceSimple = false) {
         if (!text) return '';
-        // 按分號分段，每個分段作為一個段落
-        let result = text
-            .replace(/;/g, '\n\n')  // 分號變成段落分隔
-            .replace(/•/g, '\n• ')   // 項目符號換行
-            .replace(/\n{3,}/g, '\n\n')  // 多餘換行合併
-            .trim();
-        return result;
+        
+        // 如果強制簡單模式，只做基本處理
+        if (forceSimple) {
+            return text.replace(/;/g, '；').replace(/•/g, '<br>• ');
+        }
+        
+        // 按分號分段
+        const segments = text.split(';').filter(s => s.trim());
+        
+        if (segments.length <= 1) {
+            // 單段落，直接返回純文字
+            return text.replace(/•/g, '<br>• ');
+        }
+        
+        // 多段落，檢查是否有標題格式 (xxx:內容 或 xxx：內容)
+        let html = '';
+        segments.forEach(seg => {
+            seg = seg.trim();
+            if (!seg) return;
+            
+            // 檢查是否有標題 (冒號前的文字作為標題，2-20字)
+            const colonMatch = seg.match(/^([^:：]{2,20})[:：](.+)$/);
+            if (colonMatch) {
+                const title = colonMatch[1].trim();
+                const body = colonMatch[2].trim();
+                // 根據關鍵字選擇圖示和顏色
+                let icon = '📌', color = '#c96442';
+                if (title.includes('展望') || title.includes('預期')) { icon = '🔮'; color = '#9b59b6'; }
+                else if (title.includes('風險') || title.includes('挑戰')) { icon = '⚠️'; color = '#e74c3c'; }
+                else if (title.includes('成長') || title.includes('營收') || title.includes('獲利')) { icon = '📈'; color = '#27ae60'; }
+                else if (title.includes('產品') || title.includes('組合')) { icon = '📦'; color = '#3498db'; }
+                else if (title.includes('AI') || title.includes('伺服器')) { icon = '🤖'; color = '#8e44ad'; }
+                else if (title.includes('EV') || title.includes('電動車')) { icon = '🚗'; color = '#16a085'; }
+                else if (title.includes('半導體') || title.includes('晶片') || title.includes('SiC')) { icon = '💎'; color = '#2980b9'; }
+                else if (title.includes('布局') || title.includes('產能')) { icon = '🏭'; color = '#7f8c8d'; }
+                else if (title.includes('業務') || title.includes('事業')) { icon = '💼'; color = '#34495e'; }
+                else if (title.includes('消費') || title.includes('智能')) { icon = '📱'; color = '#e67e22'; }
+                else if (title.includes('雲端') || title.includes('網路')) { icon = '☁️'; color = '#3498db'; }
+                else if (title.includes('電腦') || title.includes('終端')) { icon = '💻'; color = '#95a5a6'; }
+                else if (title.includes('元件')) { icon = '🔧'; color = '#7f8c8d'; }
+                
+                html += '<div style="margin-bottom:12px;padding:12px 14px;background:linear-gradient(135deg,#fff,#fafaf8);border-radius:10px;border-left:4px solid ' + color + ';box-shadow:0 1px 3px rgba(0,0,0,0.05);">';
+                html += '<div style="font-weight:600;color:' + color + ';margin-bottom:8px;font-size:14px;">' + icon + ' ' + title + '</div>';
+                html += '<div style="font-size:13px;line-height:1.8;color:#444;">' + body + '</div>';
+                html += '</div>';
+            } else {
+                // 沒有標題格式，作為普通段落
+                html += '<div style="margin-bottom:10px;padding:10px 12px;background:#fafaf8;border-radius:8px;font-size:13px;line-height:1.8;color:#444;">' + seg + '</div>';
+            }
+        });
+        
+        return html;
     }
 
     function parseTags(tagStr) {
@@ -1215,10 +1260,10 @@
         </div>`;
         
         // 營運重點
-        html += `<div class="tab-content" id="tab-operation">${detail.operation ? `<div class="content-block">${formatContent(detail.operation)}</div>` : '<p style="color:#8b8b8b;">暫無營運重點資料</p>'}</div>`;
+        html += `<div class="tab-content" id="tab-operation">${detail.operation ? formatContent(detail.operation) : '<p style="color:#8b8b8b;">暫無營運重點資料</p>'}</div>`;
         
         // 策略方向
-        html += `<div class="tab-content" id="tab-strategy">${detail.strategy ? `<div class="content-block">${formatContent(detail.strategy)}</div>` : '<p style="color:#8b8b8b;">暫無策略方向資料</p>'}</div>`;
+        html += `<div class="tab-content" id="tab-strategy">${detail.strategy ? formatContent(detail.strategy) : '<p style="color:#8b8b8b;">暫無策略方向資料</p>'}</div>`;
         
         // 財務數據
         html += `<div class="tab-content" id="tab-finance">${Object.keys(finance).length > 0 ? `
@@ -1239,7 +1284,7 @@
         ` : '<p style="color:#8b8b8b;">暫無產品結構資料</p>'}</div>`;
         
         // QA摘要
-        html += `<div class="tab-content" id="tab-qa">${detail.qa ? `<div class="content-block">${formatContent(detail.qa)}</div>` : '<p style="color:#8b8b8b;">暫無QA摘要</p>'}</div>`;
+        html += `<div class="tab-content" id="tab-qa">${detail.qa ? formatContent(detail.qa) : '<p style="color:#8b8b8b;">暫無QA摘要</p>'}</div>`;
         
         document.getElementById('modalBody').innerHTML = html;
         openModal();
