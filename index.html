@@ -226,7 +226,16 @@
             <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
-};
+<script>
+    const NEWS_FILE = '01_news.xlsx';
+    const MEMO_FILE = '02_memo.xlsx';
+    const REPORTS_FILE = '03_reports.xlsx';
+    const MASTER_FILE = '04_master.xlsx';
+    const STRATEGY_FILE = '05_Strategy.xlsx';
+
+    let newsData=[],newsContent={},trendsData=[];
+    let memoReports=[],memoTracking={},memoFinance={},memoProducts={},memoTimeline=[],memoIndustryTrends=[],memoAnalysts={},memoDetails={};
+    let reportsData=[],reportDetails={},reportConclusions={},reportStocksData={};
     let masterStocks={},conceptStocks=[];
     let strategyReports=[],strategyMacro={},strategyFundamental={},strategyThemes={},strategyChips={},strategyTechnical={},strategyQuarters={},strategyPicks={};
     let currentDB='news',currentSort='date';
@@ -335,7 +344,7 @@
             const s5=wb.Sheets['籌碼分析'];
             if(s5)XLSX.utils.sheet_to_json(s5).forEach(r=>{if(!r['報告編號'])return;const id=safeStr(r['報告編號']);if(!strategyChips[id])strategyChips[id]=[];strategyChips[id].push({topic:safeStr(r['籌碼主題']),content:safeStr(r['分析內容']),indicator:safeStr(r['指標名稱']),value:safeStr(r['數據值']),unit:safeStr(r['單位']),time:safeStr(r['時間點']),source:safeStr(r['資料來源'])});});
             const s6=wb.Sheets['技術分析'];
-            if(s6)XLSX.utils.sheet_to_json(s6).forEach(r=>{if(!r['報告編號'])return;const id=safeStr(r['報告編號']);strategyTechnical[id]={index:safeStr(r['指數名稱']),period:safeStr(r['分析週期']),trend:safeStr(r['趨勢判斷']),support1:safeStr(r['支撐位1']),support2:safeStr(r['支撐位2']),resistance1:safeStr(r['壓力位1']),resistance2:safeStr(r['壓力位2']),view:safeStr(r['技術觀點']),source:safeStr(r['資料來源'])};});
+            if(s6)XLSX.utils.sheet_to_json(s6).forEach(r=>{if(!r['報告編號'])return;const id=safeStr(r['報告編號']);strategyTechnical[id]={index:safeStr(r['指數名稱']),period:safeStr(r['分析週期']),trend:safeStr(r['趨勢判斷']),support1:safeStr(r['支撐位1']),support2:safeStr(r['支撐位2']),resistance1:safeStr(r['壓力位1']),resistance2:safeStr(r['壓力位2']),view:safeStr(r['技術觀點']),source:safeStr(r['資料來源'])});});
             const s7=wb.Sheets['季度行情規劃'];
             if(s7)XLSX.utils.sheet_to_json(s7).forEach(r=>{if(!r['報告編號'])return;const id=safeStr(r['報告編號']);if(!strategyQuarters[id])strategyQuarters[id]=[];strategyQuarters[id].push({quarter:safeStr(r['季度']),indexLow:r['指數預測_低'],indexHigh:r['指數預測_高'],positives:[safeStr(r['利多因素1']),safeStr(r['利多因素2']),safeStr(r['利多因素3'])].filter(p=>p),negatives:[safeStr(r['利空因素1']),safeStr(r['利空因素2']),safeStr(r['利空因素3'])].filter(n=>n)});});
             const s8=wb.Sheets['選股策略'];
@@ -459,12 +468,6 @@
     function openIndustryModal(idx){const item=memoIndustryTrends[idx];if(!item)return;document.getElementById('modalHeaderInfo').innerHTML='<div class="modal-meta"><span class="meta-tag trend">'+item.trend+'</span><span class="meta-tag" style="background:#9b59b6;color:#fff;">'+item.position+'</span></div><h2 class="modal-title">'+item.industry+'</h2>';document.getElementById('modalBody').innerHTML='<div class="modal-section"><h3 class="section-title">🏢 代表公司</h3><div class="tags-block">'+item.companies.split('、').map(c=>'<span class="modal-tag">🏢 '+c+'</span>').join('')+'</div></div><div class="modal-section"><h3 class="section-title">🔥 關鍵驅動因素</h3><div class="content-block">'+formatContent(item.driver)+'</div></div><div class="modal-section"><h3 class="section-title">⚠️ 風險因素</h3><div class="content-block">'+formatContent(item.risk)+'</div></div><div class="modal-section"><h3 class="section-title">🔮 2026展望</h3><div class="content-block">'+formatContent(item.outlook)+'</div></div>'+(item.suggestion?'<div class="modal-section"><h3 class="section-title">💡 投資建議</h3><div style="padding:12px;background:linear-gradient(135deg,#f8f4ff,#efe8ff);border-radius:10px;font-size:14px;color:#9b59b6;font-weight:600;">'+item.suggestion+'</div></div>':'');openModal();}
 
     function openTimelineModal(idx){const item=memoTimeline[idx];if(!item)return;document.getElementById('modalHeaderInfo').innerHTML='<div class="modal-meta"><span class="meta-tag date">📅 '+item.time+'</span><span class="meta-tag category">'+item.type+'</span><span class="meta-tag trend">'+item.status+'</span></div><h2 class="modal-title"><span class="company-link" onclick="openStockModal(\''+item.stockCode+'\')">'+item.company+'</span> ('+item.stockCode+')</h2>';document.getElementById('modalBody').innerHTML='<div class="modal-section"><h3 class="section-title">📌 事件內容</h3><div class="content-block" style="font-size:15px;">'+item.event+'</div></div><div class="modal-section"><h3 class="section-title">💡 預期影響</h3><div class="content-block">'+formatContent(item.impact)+'</div></div>'+(item.note?'<div class="modal-section"><h3 class="section-title">📝 備註</h3><div class="content-block">'+item.note+'</div></div>':'');openModal();}
-.length>0?'<div class="modal-section"><h3 class="section-title">📋 Call Memo ('+relatedMemo.length+'筆)</h3>'+relatedMemo.map(m=>'<div class="related-item" onclick="closeModal();setTimeout(function(){openMemoModal(\''+m.id+'\');},100);"><div class="related-title">'+m.type+'</div><div class="related-meta">'+m.date+' | '+m.broker+' | '+m.analyst+'</div></div>').join('')+'</div>':'')+(relatedNews.length===0&&relatedMemo.length===0?'<p style="color:#8b8b8b;padding:20px;">暫無相關報導</p>':'')+'</div>';
-        html+='<div class="tab-content" id="stock-timeline">'+(relatedTimeline.length>0?relatedTimeline.map(t=>'<div class="timeline-item"><div class="timeline-date">📅 '+t.time+'</div><div class="timeline-event">'+t.event+'</div><div class="timeline-note">'+t.impact+'</div><span class="timeline-status">'+t.status+'</span></div>').join(''):'<p style="color:#8b8b8b;padding:20px;">暫無重要時程</p>')+'</div>';
-        html+='<div style="text-align:center;margin-top:20px;padding-top:15px;border-top:1px solid #eceae3;font-size:11px;color:#8b8b8b;">資料更新：'+stock.updateDate+'</div>';
-        document.getElementById('modalBody').innerHTML=html;openModal();
-    }
-    
 
     function openStockModal(codeOrName){
         const stock=masterStocks[codeOrName]||masterStocks[String(codeOrName)];
@@ -496,6 +499,6 @@
         document.getElementById('modalBody').innerHTML=html;openModal();
     }
     function switchStockTab(tabId){document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active'));event.target.classList.add('active');document.querySelectorAll('.tab-content').forEach(content=>content.classList.remove('active'));document.getElementById('stock-'+tabId).classList.add('active');}
-    </script>
+</script>
 </body>
 </html>
