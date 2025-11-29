@@ -409,7 +409,17 @@
             const s2 = wb.Sheets['完整內容收錄'];
             if (s2) {
                 XLSX.utils.sheet_to_json(s2).forEach(r => {
-                    if (r['編號']) newsContent[safeStr(r['編號'])] = safeStr(r['完整報導內容']);
+                    if (r['編號']) {
+                        const id = safeStr(r['編號']);
+                        newsContent[id] = {
+                            content: safeStr(r['完整報導內容']),
+                            date: safeStr(r['日期']),
+                            company: safeStr(r['公司']),
+                            stockCode: safeStr(r['股號']),
+                            broker: safeStr(r['券商來源']),
+                            tags: safeStr(r['標籤'])
+                        };
+                    }
                 });
             }
             
@@ -593,10 +603,13 @@
                     const id = safeStr(r['報告編號']);
                     if (!reportDetails[id]) reportDetails[id] = [];
                     reportDetails[id].push({
+                        sectionNo: safeStr(r['段落編號']),
                         sectionTitle: safeStr(r['段落標題']),
                         content: safeStr(r['段落內容']),
                         marketSize: safeStr(r['市場規模數據']),
-                        growthRate: safeStr(r['成長率數據'])
+                        growthRate: safeStr(r['成長率數據']),
+                        source: safeStr(r['資料來源']),
+                        note: safeStr(r['備註'])
                     });
                 });
             }
@@ -1312,7 +1325,7 @@
         
         let html = '';
         if (report.highlights.length > 0) html += `<div class="modal-section"><h3 class="section-title">📌 核心重點</h3><div class="content-block">${report.highlights.map(h => '• ' + h).join('\n')}</div></div>`;
-        if (details.length > 0) html += `<div class="modal-section"><h3 class="section-title">📊 焦點分析</h3>${details.map(d => `<div style="margin-bottom:12px;"><div style="font-weight:600;color:#c96442;margin-bottom:4px;">${d.sectionTitle}</div><div class="content-block">${formatContent(d.content)}</div>${d.marketSize || d.growthRate ? `<div style="margin-top:8px;font-size:11px;color:#6b8cce;">${d.marketSize ? '📊 市場規模: ' + d.marketSize : ''}${d.growthRate ? ' | 成長率: ' + d.growthRate : ''}</div>` : ''}</div>`).join('')}</div>`;
+        if (details.length > 0) html += `<div class="modal-section"><h3 class="section-title">📊 焦點分析</h3>${details.map(d => `<div style="margin-bottom:16px;padding:12px;background:#fafaf8;border-radius:10px;border-left:3px solid #c96442;"><div style="font-weight:600;color:#c96442;margin-bottom:8px;font-size:14px;">${d.sectionNo ? d.sectionNo + '. ' : ''}${d.sectionTitle}</div><div style="font-size:13px;line-height:1.8;color:#444;margin-bottom:8px;">${formatContent(d.content)}</div>${d.marketSize || d.growthRate ? `<div style="font-size:12px;color:#6b8cce;margin-bottom:6px;">${d.marketSize ? '📊 市場規模: ' + d.marketSize : ''}${d.growthRate ? ' | 📈 成長率: ' + d.growthRate : ''}</div>` : ''}${d.source ? `<div style="font-size:11px;color:#888;">📎 資料來源: ${d.source}</div>` : ''}${d.note ? `<div style="font-size:11px;color:#e67e22;margin-top:4px;">💡 備註: ${d.note}</div>` : ''}</div>`).join('')}</div>`;
         if (stocks.length > 0) html += `<div class="modal-section"><h3 class="section-title">📈 首選個股評價</h3><div style="overflow-x:auto;"><table class="stock-pick-table"><thead><tr><th>公司</th><th>代號</th><th>評等</th><th>目標價</th><th>EPS 25F</th><th>亮點</th></tr></thead><tbody>${stocks.map(s => `<tr onclick="openStockModal('${s.code}')" style="cursor:pointer;"><td><strong>${s.name}</strong></td><td>${s.code}</td><td><span class="meta-tag rating">${s.rating}</span></td><td style="color:#2e7d46;font-weight:600;">${s.target || '-'}</td><td>${s.eps25 || '-'}</td><td>${s.highlight || '-'}</td></tr>`).join('')}</tbody></table></div></div>`;
         
         document.getElementById('modalBody').innerHTML = html;
