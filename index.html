@@ -239,6 +239,7 @@
     let cbData = {}; // 股票代號 -> [CB資訊陣列]
     let cbIndustry = {}; // 股票代號 -> 產業分類
     let cbList = []; // 所有CB列表
+    let cbPriceRange = {}; // CB代號 -> {high, low}
     let memoReports = [], memoTracking = {}, memoFinance = {}, memoProducts = {}, memoTimeline = [], memoIndustryTrends = [], memoDetails = {}, memoAnalysts = [];
     let reportsData = [], reportDetails = {}, reportStocksData = {}, reportConclusions = {};
     let masterStocks = {}, conceptStocks = [];
@@ -334,11 +335,51 @@
     }
 
 
+
+    // Excel 日期轉換為日期字串（支援數字和字串格式）
+    function excelDateToStr(val) {
+        if (!val) return '';
+        // 如果是數字（Excel serial date）
+        if (!isNaN(val) && typeof val === 'number') {
+            const utc_days = Math.floor(val - 25569);
+            const date = new Date(utc_days * 86400 * 1000);
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}/${m}/${d}`;
+        }
+        // 如果是字串，嘗試解析
+        const str = String(val);
+        // 格式: 2026-01-29 00:00:00 或 2026-01-29
+        const match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+            return `${match[1]}/${match[2]}/${match[3]}`;
+        }
+        // 其他格式直接返回
+        return str;
+    }
+
     // 載入 CB 可轉債資料
     async function loadCBData() {
         try {
             const data = await fetchFile(CB_FILE);
             const wb = XLSX.read(data, { type: 'array' });
+            
+            // 載入掛牌高低資料
+            const ws00 = wb.Sheets['00_CB代號名稱過濾及掛牌高低_20251031'];
+            if (ws00) {
+                XLSX.utils.sheet_to_json(ws00).forEach(r => {
+                    if (!r['代號']) return;
+                    const cbCode = String(r['代號']).trim();
+                    const high = parseFloat(r['掛牌最高']) || 0;
+                    const low = parseFloat(r['掛牌最低']) || 0;
+                    cbPriceRange[cbCode] = {
+                        high: high,
+                        low: low,
+                        range: high > 0 && low > 0 ? ((high - low) / low * 100).toFixed(1) : '0'
+                    };
+                });
+            }
             
             // 載入產業分類
             const ws16 = wb.Sheets['16_產業分類'];
@@ -365,16 +406,22 @@
                     const stockName = String(r['轉換標的名稱'] || '');
                     const ind = cbIndustry[stockCode] || {};
                     
+                    const issueAmt = parseFloat(r['實際發行總額(百萬)']) || 0;
+                    const remainAmt = parseFloat(r['最新餘額(百萬)']) || 0;
+                    const remainPct = issueAmt > 0 ? ((remainAmt / issueAmt) * 100).toFixed(1) : '0';
+                    const convPrice = parseFloat(r['轉換價格(元)']) || 0;
+                    
                     const cbInfo = {
                         cbCode: String(r['代號']),
                         cbName: String(r['名稱'] || ''),
                         stockCode: stockCode,
                         stockName: stockName,
-                        conversionPrice: r['轉換價格(元)'] || '',
-                        maturityDate: r['到期日'] || '',
-                        issueDate: r['發行日期'] || '',
-                        issueAmount: r['實際發行總額(百萬)'] || '',
-                        remainAmount: r['最新餘額(百萬)'] || '',
+                        conversionPrice: convPrice,
+                        maturityDate: excelDateToStr(r['到期日']),
+                        issueDate: excelDateToStr(r['發行日期']),
+                        issueAmount: issueAmt,
+                        remainAmount: remainAmt,
+                        remainPct: remainPct,
                         industry: ind.industry || '其他',
                         market: ind.market || ''
                     };
@@ -1336,27 +1383,43 @@
                 <table style="width:100%;border-collapse:collapse;font-size:14px;">
                     <thead>
                         <tr style="background:#f8f8f8;">
-                            <th style="padding:12px;text-align:left;border-bottom:2px solid #e8e8e8;">CB代號</th>
-                            <th style="padding:12px;text-align:left;border-bottom:2px solid #e8e8e8;">CB簡稱</th>
-                            <th style="padding:12px;text-align:left;border-bottom:2px solid #e8e8e8;">標的股票</th>
-                            <th style="padding:12px;text-align:left;border-bottom:2px solid #e8e8e8;">產業</th>
-                            <th style="padding:12px;text-align:right;border-bottom:2px solid #e8e8e8;">轉換價</th>
-                            <th style="padding:12px;text-align:right;border-bottom:2px solid #e8e8e8;">餘額(百萬)</th>
-                            <th style="padding:12px;text-align:center;border-bottom:2px solid #e8e8e8;">到期日</th>
+                            <th style="padding:10px;text-align:left;border-bottom:2px solid #e8e8e8;font-size:13px;">CB代號</th>
+                            <th style="padding:10px;text-align:left;border-bottom:2px solid #e8e8e8;font-size:13px;">CB簡稱</th>
+                            <th style="padding:10px;text-align:left;border-bottom:2px solid #e8e8e8;font-size:13px;">標的股票</th>
+                            <th style="padding:10px;text-align:left;border-bottom:2px solid #e8e8e8;font-size:13px;">產業</th>
+                            <th style="padding:10px;text-align:right;border-bottom:2px solid #e8e8e8;font-size:13px;">轉換價</th>
+                            <th style="padding:10px;text-align:right;border-bottom:2px solid #e8e8e8;font-size:13px;">市價</th>
+                            <th style="padding:10px;text-align:right;border-bottom:2px solid #e8e8e8;font-size:13px;">轉換價值</th>
+                            <th style="padding:10px;text-align:right;border-bottom:2px solid #e8e8e8;font-size:13px;">餘額%</th>
+                            <th style="padding:10px;text-align:right;border-bottom:2px solid #e8e8e8;font-size:13px;">掛牌高</th>
+                            <th style="padding:10px;text-align:right;border-bottom:2px solid #e8e8e8;font-size:13px;">掛牌低</th>
+                            <th style="padding:10px;text-align:right;border-bottom:2px solid #e8e8e8;font-size:13px;">振幅%</th>
+                            <th style="padding:10px;text-align:center;border-bottom:2px solid #e8e8e8;font-size:13px;">到期日</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${filteredCBs.slice(0, 100).map(cb => `
+                        ${filteredCBs.slice(0, 100).map(cb => {
+                            const stock = masterStocks[cb.stockCode] || {};
+                            const marketPrice = parseFloat(stock.price) || 0;
+                            const convValue = cb.conversionPrice > 0 ? ((marketPrice / cb.conversionPrice) * 100).toFixed(2) : '-';
+                            const convValueColor = parseFloat(convValue) >= 100 ? '#27ae60' : (parseFloat(convValue) >= 80 ? '#f39c12' : '#e74c3c');
+                            const priceRange = cbPriceRange[cb.cbCode] || {high: 0, low: 0, range: '0'};
+                            return `
                             <tr style="border-bottom:1px solid #f0f0f0;cursor:pointer;" onclick="openStockModal('${cb.stockCode}')" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='#fff'">
-                                <td style="padding:12px;font-weight:600;color:#e74c3c;">${cb.cbCode}</td>
-                                <td style="padding:12px;">${cb.cbName}</td>
-                                <td style="padding:12px;"><span style="color:#c96442;font-weight:600;">${cb.stockName}</span> <span style="color:#888;">${cb.stockCode}</span></td>
-                                <td style="padding:12px;"><span style="background:#f0f0f0;padding:3px 8px;border-radius:5px;font-size:13px;">${cb.industry}</span></td>
-                                <td style="padding:12px;text-align:right;font-weight:600;">${cb.conversionPrice}</td>
-                                <td style="padding:12px;text-align:right;">${cb.remainAmount}</td>
-                                <td style="padding:12px;text-align:center;color:#666;">${cb.maturityDate}</td>
-                            </tr>
-                        `).join('')}
+                                <td style="padding:10px;font-weight:600;color:#e74c3c;font-size:13px;">${cb.cbCode}</td>
+                                <td style="padding:10px;font-size:13px;">${cb.cbName}</td>
+                                <td style="padding:10px;font-size:13px;"><span style="color:#c96442;font-weight:600;">${cb.stockName}</span> <span style="color:#888;">${cb.stockCode}</span></td>
+                                <td style="padding:10px;"><span style="background:#f0f0f0;padding:2px 6px;border-radius:5px;font-size:12px;">${cb.industry}</span></td>
+                                <td style="padding:10px;text-align:right;font-weight:600;font-size:13px;">${cb.conversionPrice}</td>
+                                <td style="padding:10px;text-align:right;font-size:13px;">${marketPrice || '-'}</td>
+                                <td style="padding:10px;text-align:right;font-weight:600;color:${convValueColor};font-size:13px;">${convValue}</td>
+                                <td style="padding:10px;text-align:right;font-size:13px;">${cb.remainPct}%</td>
+                                <td style="padding:10px;text-align:right;font-size:13px;color:#27ae60;">${priceRange.high || '-'}</td>
+                                <td style="padding:10px;text-align:right;font-size:13px;color:#e74c3c;">${priceRange.low || '-'}</td>
+                                <td style="padding:10px;text-align:right;font-size:13px;color:#3498db;">${priceRange.range}%</td>
+                                <td style="padding:10px;text-align:center;color:#666;font-size:13px;">${cb.maturityDate}</td>
+                            </tr>`;
+                        }).join('')}
                     </tbody>
                 </table>
                 ${filteredCBs.length > 100 ? `<div style="text-align:center;padding:15px;color:#888;">顯示前 100 筆，共 ${filteredCBs.length} 筆</div>` : ''}
@@ -1657,7 +1720,13 @@
                 const cbs = cbData[stockCode] || [];
                 console.log('查詢CB:', stockCode, '找到:', cbs.length, '檔');
                 if (cbs.length === 0) return '';
-                return `<div class="modal-section"><h3 class="section-title">🎫 可轉換公司債 (${cbs.length}檔)</h3>${cbs.map(cb => `<div class="product-item" style="border-left:3px solid #e74c3c;"><div class="product-name" style="color:#e74c3c;">${cb.cbName} (${cb.cbCode})</div><div class="product-ratio">轉換價 ${cb.conversionPrice}元 | 到期日 ${cb.maturityDate} | 餘額 ${cb.remainAmount}百萬</div></div>`).join('')}</div>`;
+                const stockPrice = parseFloat(stock.price) || 0;
+                return `<div class="modal-section"><h3 class="section-title">🎫 可轉換公司債 (${cbs.length}檔)</h3>${cbs.map(cb => {
+                    const convValue = cb.conversionPrice > 0 ? ((stockPrice / cb.conversionPrice) * 100).toFixed(2) : '-';
+                    const convColor = parseFloat(convValue) >= 100 ? '#27ae60' : (parseFloat(convValue) >= 80 ? '#f39c12' : '#e74c3c');
+                    const remainAmt = cb.remainAmount >= 1000 ? (cb.remainAmount / 1000).toFixed(1) + '億' : cb.remainAmount + '百萬';
+                    return `<div class="product-item" style="border-left:3px solid #e74c3c;"><div class="product-name" style="color:#e74c3c;">${cb.cbName} (${cb.cbCode})</div><div class="product-ratio">轉換價 ${cb.conversionPrice}元 | 轉換價值 <span style="color:${convColor};font-weight:600;">${convValue}</span> | 餘額 ${remainAmt} (${cb.remainPct}%) | 到期日 ${cb.maturityDate}</div></div>`;
+                }).join('')}</div>`;
             })()}
         </div>`;
         
