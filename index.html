@@ -231,9 +231,11 @@
     const REPORTS_FILE = '03_reports.xlsx';
     const MASTER_FILE = '04_master.xlsx';
     const STRATEGY_FILE = '05_Strategy.xlsx';
+    const CB_FILE = '00_CB.xlsx';
 
     // ===== 全域資料變數 =====
     let newsData = [], newsContent = {}, trendsData = [];
+    let cbData = {}; // 股票代號 -> [CB資訊陣列]
     let memoReports = [], memoTracking = {}, memoFinance = {}, memoProducts = {}, memoTimeline = [], memoIndustryTrends = [], memoDetails = {}, memoAnalysts = [];
     let reportsData = [], reportDetails = {}, reportStocksData = {}, reportConclusions = {};
     let masterStocks = {}, conceptStocks = [];
@@ -326,6 +328,31 @@
     function parseTags(tagStr) {
         if (!tagStr) return [];
         return tagStr.split('#').filter(t => t.trim()).map(t => t.trim());
+    }
+
+
+    // 載入 CB 可轉債資料
+    async function loadCBData() {
+        try {
+            const data = await fetchFile(CB_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
+            const ws = wb.Sheets['08_最新動態每週基本資料'];
+            if (ws) {
+                XLSX.utils.sheet_to_json(ws).forEach(r => {
+                    if (!r['轉換標的代碼']) return;
+                    const stockCode = String(r['轉換標的代碼']);
+                    if (!cbData[stockCode]) cbData[stockCode] = [];
+                    cbData[stockCode].push({
+                        cbCode: String(r['代號']),
+                        cbName: String(r['名稱'] || ''),
+                        conversionPrice: r['轉換價格(元)'] || '',
+                        maturityDate: r['到期日'] || '',
+                        issueAmount: r['實際發行總額(百萬)'] || '',
+                        remainAmount: r['最新餘額(百萬)'] || ''
+                    });
+                });
+            }
+        } catch (e) { console.warn('CB資料載入失敗:', e); }
     }
 
     // ===== 主程式入口 =====
@@ -1186,10 +1213,12 @@
         
         list.innerHTML = filtered.slice(0, 50).map(s => {
             const concepts = conceptStocks.filter(c => c.code === s.code).slice(0, 3);
+            const cbs = cbData[s.code] || [];
+            const cbTag = cbs.length > 0 ? `<span class="meta-tag" style="background:#e74c3c;color:#fff;font-weight:600;">🎫 有CB(${cbs.length}檔)</span>` : '';
             return `<div class="card-base stock-card" onclick="openStockModal('${s.code}')">
                 <span class="stock-badge">${s.market}</span>
                 <div class="card-header"><div class="card-left"><span class="company-name">${s.name}</span><span class="stock-code">${s.code}</span></div><div style="text-align:right;"><div style="font-size:16px;font-weight:700;">${s.price}</div><div style="font-size:13px;color:${String(s.changePercent).includes('-') ? '#d64545' : '#2e7d46'};">${s.change} (${s.changePercent})</div></div></div>
-                <div class="card-meta"><span class="meta-tag industry">${s.industry}</span><span class="meta-tag date">市值 ${s.marketCap}億</span></div>
+                <div class="card-meta"><span class="meta-tag industry">${s.industry}</span><span class="meta-tag date">市值 ${s.marketCap}億</span>${cbTag}</div>
                 <div class="card-content">${(s.business || '').substring(0, 80)}...</div>
                 ${concepts.length > 0 ? `<div class="card-tags" style="margin-top:8px;">${concepts.map(c => `<span class="mini-tag">${c.concept}</span>`).join('')}</div>` : ''}
             </div>`;
@@ -1482,6 +1511,11 @@
             ${stock.position ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🏆 產業地位</h3><div class="content-block">${stock.position}</div></div>` : ''}
             ${stock.business ? `<div class="modal-section"><h3 class="section-title">💼 業務摘要</h3><div class="content-block">${stock.business}</div></div>` : ''}
             ${concepts.length > 0 ? `<div class="modal-section"><h3 class="section-title">💡 概念股族群</h3>${concepts.map(c => `<div class="product-item"><div class="product-name">${c.concept}</div><div class="product-ratio">${c.subRole} - ${c.description}</div></div>`).join('')}</div>` : ''}
+            ${(() => {
+                const cbs = cbData[stock.code] || [];
+                if (cbs.length === 0) return '';
+                return `<div class="modal-section"><h3 class="section-title">🎫 可轉換公司債 (${cbs.length}檔)</h3>${cbs.map(cb => `<div class="product-item" style="border-left:3px solid #e74c3c;"><div class="product-name" style="color:#e74c3c;">${cb.cbName} (${cb.cbCode})</div><div class="product-ratio">轉換價 ${cb.conversionPrice}元 | 到期日 ${cb.maturityDate} | 餘額 ${cb.remainAmount}百萬</div></div>`).join('')}</div>`;
+            })()}
         </div>`;
         
         // 財務數據
