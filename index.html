@@ -185,6 +185,7 @@
             <button class="db-tab" data-db="industry" onclick="switchDB('industry')">🏭 產業動態 <span class="count" id="industryCount">0</span></button>
             
             <button class="db-tab" data-db="stocks" onclick="switchDB('stocks')">🏢 個股查詢 <span class="count" id="stocksCount">0</span></button>
+            <button class="db-tab" data-db="cb" onclick="switchDB('cb')">🎫 CB統計 <span class="count" id="cbCount">0</span></button>
         </div>
         <div class="search-section">
             <div class="main-search">
@@ -236,6 +237,8 @@
     // ===== 全域資料變數 =====
     let newsData = [], newsContent = {}, trendsData = [];
     let cbData = {}; // 股票代號 -> [CB資訊陣列]
+    let cbIndustry = {}; // 股票代號 -> 產業分類
+    let cbList = []; // 所有CB列表
     let memoReports = [], memoTracking = {}, memoFinance = {}, memoProducts = {}, memoTimeline = [], memoIndustryTrends = [], memoDetails = {}, memoAnalysts = [];
     let reportsData = [], reportDetails = {}, reportStocksData = {}, reportConclusions = {};
     let masterStocks = {}, conceptStocks = [];
@@ -336,20 +339,49 @@
         try {
             const data = await fetchFile(CB_FILE);
             const wb = XLSX.read(data, { type: 'array' });
+            
+            // 載入產業分類
+            const ws16 = wb.Sheets['16_產業分類'];
+            if (ws16) {
+                XLSX.utils.sheet_to_json(ws16).forEach(r => {
+                    if (!r['股票代號']) return;
+                    const code = String(r['股票代號']);
+                    cbIndustry[code] = {
+                        industry: r['產業分類'] || '其他',
+                        subIndustry: r['細分產業'] || '',
+                        position: r['產業地位說明'] || '',
+                        market: r['市場分類'] || '',
+                        name: r['公司名稱'] || ''
+                    };
+                });
+            }
+            
+            // 載入 CB 基本資料
             const ws = wb.Sheets['08_最新動態每週基本資料'];
             if (ws) {
                 XLSX.utils.sheet_to_json(ws).forEach(r => {
                     if (!r['轉換標的代碼']) return;
                     const stockCode = String(r['轉換標的代碼']);
-                    if (!cbData[stockCode]) cbData[stockCode] = [];
-                    cbData[stockCode].push({
+                    const stockName = String(r['轉換標的名稱'] || '');
+                    const ind = cbIndustry[stockCode] || {};
+                    
+                    const cbInfo = {
                         cbCode: String(r['代號']),
                         cbName: String(r['名稱'] || ''),
+                        stockCode: stockCode,
+                        stockName: stockName,
                         conversionPrice: r['轉換價格(元)'] || '',
                         maturityDate: r['到期日'] || '',
+                        issueDate: r['發行日期'] || '',
                         issueAmount: r['實際發行總額(百萬)'] || '',
-                        remainAmount: r['最新餘額(百萬)'] || ''
-                    });
+                        remainAmount: r['最新餘額(百萬)'] || '',
+                        industry: ind.industry || '其他',
+                        market: ind.market || ''
+                    };
+                    
+                    if (!cbData[stockCode]) cbData[stockCode] = [];
+                    cbData[stockCode].push(cbInfo);
+                    cbList.push(cbInfo);
                 });
             }
         } catch (e) { console.warn('CB資料載入失敗:', e); }
@@ -853,6 +885,7 @@
         document.getElementById('trendsCount').textContent = trendsData.length;
         document.getElementById('industryCount').textContent = memoIndustryTrends.length;
         // timelineCount removed
+            document.getElementById('cbCount').textContent = cbList.length;
         document.getElementById('stocksCount').textContent = new Set(Object.values(masterStocks).map(s => s.code)).size;
     }
 
@@ -950,7 +983,7 @@
     }
 
     function renderCurrentDB() {
-        const renderers = { news: renderNews, memo: renderMemo, reports: renderReports, strategy: renderStrategy, trends: renderTrends, industry: renderIndustry, stocks: renderStocks };
+        const renderers = { news: renderNews, memo: renderMemo, reports: renderReports, strategy: renderStrategy, trends: renderTrends, industry: renderIndustry, stocks: renderStocks, cb: renderCB };
         if (renderers[currentDB]) renderers[currentDB]();
     }
 
@@ -1223,6 +1256,110 @@
                 ${concepts.length > 0 ? `<div class="card-tags" style="margin-top:8px;">${concepts.map(c => `<span class="mini-tag">${c.concept}</span>`).join('')}</div>` : ''}
             </div>`;
         }).join('') + (filtered.length > 50 ? `<div style="text-align:center;padding:20px;color:#8b8b8b;">顯示前 50 筆，共 ${filtered.length} 筆</div>` : '');
+    }
+
+
+    function renderCB() {
+        // 統計各產業 CB 數量
+        const industryStats = {};
+        cbList.forEach(cb => {
+            const ind = cb.industry || '其他';
+            if (!industryStats[ind]) industryStats[ind] = { count: 0, cbs: [], totalAmount: 0 };
+            industryStats[ind].count++;
+            industryStats[ind].cbs.push(cb);
+            industryStats[ind].totalAmount += parseFloat(cb.remainAmount) || 0;
+        });
+        
+        // 排序：按 CB 數量降序
+        const sortedIndustries = Object.entries(industryStats).sort((a, b) => b[1].count - a[1].count);
+        
+        // 篩選
+        let filteredCBs = cbList;
+        if (activeFilters.search) {
+            const q = activeFilters.search.toLowerCase();
+            filteredCBs = cbList.filter(cb => 
+                [cb.cbCode, cb.cbName, cb.stockCode, cb.stockName, cb.industry].join(' ').toLowerCase().includes(q)
+            );
+        }
+        if (activeFilters.industry) {
+            filteredCBs = filteredCBs.filter(cb => cb.industry === activeFilters.industry);
+        }
+        
+        document.getElementById('filteredCount').textContent = filteredCBs.length;
+        const list = document.getElementById('reportsList');
+        
+        // 統計摘要
+        let html = `<div style="background:linear-gradient(135deg,#fff5f5,#fff0f0);border-radius:15px;padding:20px;margin-bottom:20px;border:1px solid #f5d5d5;">
+            <h3 style="margin:0 0 15px 0;color:#c96442;font-size:18px;">🎫 可轉債市場統計</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;">
+                <div style="text-align:center;padding:15px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="font-size:28px;font-weight:700;color:#e74c3c;">${cbList.length}</div>
+                    <div style="font-size:14px;color:#666;">掛牌中CB總數</div>
+                </div>
+                <div style="text-align:center;padding:15px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="font-size:28px;font-weight:700;color:#3498db;">${Object.keys(cbData).length}</div>
+                    <div style="font-size:14px;color:#666;">發行CB公司數</div>
+                </div>
+                <div style="text-align:center;padding:15px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="font-size:28px;font-weight:700;color:#9b59b6;">${sortedIndustries.length}</div>
+                    <div style="font-size:14px;color:#666;">涵蓋產業數</div>
+                </div>
+                <div style="text-align:center;padding:15px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="font-size:28px;font-weight:700;color:#27ae60;">${(cbList.reduce((sum, cb) => sum + (parseFloat(cb.remainAmount) || 0), 0) / 1000).toFixed(1)}</div>
+                    <div style="font-size:14px;color:#666;">總餘額(十億)</div>
+                </div>
+            </div>
+        </div>`;
+        
+        // 產業分佈
+        html += `<div style="background:#fff;border-radius:15px;padding:20px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+            <h3 style="margin:0 0 15px 0;color:#333;font-size:16px;">📊 各產業CB分佈</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                ${sortedIndustries.map(([ind, data]) => `
+                    <div onclick="activeFilters.industry='${ind}';renderCB();" style="cursor:pointer;padding:10px 15px;background:${activeFilters.industry === ind ? '#e74c3c' : '#f8f8f8'};color:${activeFilters.industry === ind ? '#fff' : '#333'};border-radius:10px;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
+                        <span style="font-weight:600;">${ind}</span>
+                        <span style="background:${activeFilters.industry === ind ? 'rgba(255,255,255,0.3)' : '#e74c3c'};color:${activeFilters.industry === ind ? '#fff' : '#fff'};padding:2px 8px;border-radius:10px;font-size:13px;">${data.count}</span>
+                    </div>
+                `).join('')}
+                ${activeFilters.industry ? `<div onclick="activeFilters.industry='';renderCB();" style="cursor:pointer;padding:10px 15px;background:#fff;border:1px solid #e74c3c;color:#e74c3c;border-radius:10px;">✕ 清除篩選</div>` : ''}
+            </div>
+        </div>`;
+        
+        // CB 列表
+        html += `<div style="background:#fff;border-radius:15px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+            <h3 style="margin:0 0 15px 0;color:#333;font-size:16px;">📋 CB列表 ${activeFilters.industry ? `(${activeFilters.industry})` : ''}</h3>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <thead>
+                        <tr style="background:#f8f8f8;">
+                            <th style="padding:12px;text-align:left;border-bottom:2px solid #e8e8e8;">CB代號</th>
+                            <th style="padding:12px;text-align:left;border-bottom:2px solid #e8e8e8;">CB簡稱</th>
+                            <th style="padding:12px;text-align:left;border-bottom:2px solid #e8e8e8;">標的股票</th>
+                            <th style="padding:12px;text-align:left;border-bottom:2px solid #e8e8e8;">產業</th>
+                            <th style="padding:12px;text-align:right;border-bottom:2px solid #e8e8e8;">轉換價</th>
+                            <th style="padding:12px;text-align:right;border-bottom:2px solid #e8e8e8;">餘額(百萬)</th>
+                            <th style="padding:12px;text-align:center;border-bottom:2px solid #e8e8e8;">到期日</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredCBs.slice(0, 100).map(cb => `
+                            <tr style="border-bottom:1px solid #f0f0f0;cursor:pointer;" onclick="openStockModal('${cb.stockCode}')" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='#fff'">
+                                <td style="padding:12px;font-weight:600;color:#e74c3c;">${cb.cbCode}</td>
+                                <td style="padding:12px;">${cb.cbName}</td>
+                                <td style="padding:12px;"><span style="color:#c96442;font-weight:600;">${cb.stockName}</span> <span style="color:#888;">${cb.stockCode}</span></td>
+                                <td style="padding:12px;"><span style="background:#f0f0f0;padding:3px 8px;border-radius:5px;font-size:13px;">${cb.industry}</span></td>
+                                <td style="padding:12px;text-align:right;font-weight:600;">${cb.conversionPrice}</td>
+                                <td style="padding:12px;text-align:right;">${cb.remainAmount}</td>
+                                <td style="padding:12px;text-align:center;color:#666;">${cb.maturityDate}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ${filteredCBs.length > 100 ? `<div style="text-align:center;padding:15px;color:#888;">顯示前 100 筆，共 ${filteredCBs.length} 筆</div>` : ''}
+            </div>
+        </div>`;
+        
+        list.innerHTML = html;
     }
 
     // ===== Modal 彈窗功能 =====
