@@ -407,6 +407,9 @@
             updateLoadingStatus('正在載入投資策略...', STRATEGY_FILE, 85);
             await loadStrategyData();
             
+            updateLoadingStatus('正在載入可轉債資料...', CB_FILE, 90);
+            await loadCBData();
+            
             updateLoadingStatus('正在建立索引...', '', 95);
             buildSearchIndex();
             buildFilters();
