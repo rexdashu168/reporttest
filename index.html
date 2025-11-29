@@ -361,7 +361,7 @@
             if (ws) {
                 XLSX.utils.sheet_to_json(ws).forEach(r => {
                     if (!r['轉換標的代碼']) return;
-                    const stockCode = String(r['轉換標的代碼']);
+                    const stockCode = String(r['轉換標的代碼']).trim();
                     const stockName = String(r['轉換標的名稱'] || '');
                     const ind = cbIndustry[stockCode] || {};
                     
@@ -379,8 +379,9 @@
                         market: ind.market || ''
                     };
                     
-                    if (!cbData[stockCode]) cbData[stockCode] = [];
-                    cbData[stockCode].push(cbInfo);
+                    const codeKey = stockCode.replace(/\s/g, '');
+                    if (!cbData[codeKey]) cbData[codeKey] = [];
+                    cbData[codeKey].push(cbInfo);
                     cbList.push(cbInfo);
                 });
             }
@@ -1637,8 +1638,8 @@
         html += `<div class="tab-content active" id="stock-basic">
             <div class="info-grid">
                 <div class="info-item"><div class="info-label">股價</div><div class="info-value large">${stock.price}</div></div>
-                <div class="info-item"><div class="info-label">市值</div><div class="info-value">${stock.marketCap}億</div></div>
-                <div class="info-item"><div class="info-label">股本</div><div class="info-value">${stock.capital}億</div></div>
+                <div class="info-item"><div class="info-label">市值</div><div class="info-value">${parseFloat(stock.marketCap).toFixed(2)}億</div></div>
+                <div class="info-item"><div class="info-label">股本</div><div class="info-value">${parseFloat(stock.capital).toFixed(2)}億</div></div>
                 <div class="info-item"><div class="info-label">掛牌年數</div><div class="info-value">${stock.listedYears}年</div></div>
                 ${stock.chairman ? `<div class="info-item"><div class="info-label">董事長</div><div class="info-value">${stock.chairman}</div></div>` : ''}
                 ${stock.ceo ? `<div class="info-item"><div class="info-label">總經理</div><div class="info-value">${stock.ceo}</div></div>` : ''}
@@ -1649,7 +1650,9 @@
             ${stock.business ? `<div class="modal-section"><h3 class="section-title">💼 業務摘要</h3><div class="content-block">${stock.business}</div></div>` : ''}
             ${concepts.length > 0 ? `<div class="modal-section"><h3 class="section-title">💡 概念股族群</h3>${concepts.map(c => `<div class="product-item"><div class="product-name">${c.concept}</div><div class="product-ratio">${c.subRole} - ${c.description}</div></div>`).join('')}</div>` : ''}
             ${(() => {
-                const cbs = cbData[stock.code] || [];
+                const stockCode = String(stock.code).trim().replace(/\s/g, '');
+                const cbs = cbData[stockCode] || [];
+                console.log('查詢CB:', stockCode, '找到:', cbs.length, '檔');
                 if (cbs.length === 0) return '';
                 return `<div class="modal-section"><h3 class="section-title">🎫 可轉換公司債 (${cbs.length}檔)</h3>${cbs.map(cb => `<div class="product-item" style="border-left:3px solid #e74c3c;"><div class="product-name" style="color:#e74c3c;">${cb.cbName} (${cb.cbCode})</div><div class="product-ratio">轉換價 ${cb.conversionPrice}元 | 到期日 ${cb.maturityDate} | 餘額 ${cb.remainAmount}百萬</div></div>`).join('')}</div>`;
             })()}
