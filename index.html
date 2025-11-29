@@ -532,6 +532,7 @@
                         trend: safeStr(r['趨勢判斷']),
                         position: safeStr(r['景氣位置']),
                         companies: safeStr(r['代表公司']),
+                        stockCodes: safeStr(r['股號']),
                         driver: safeStr(r['關鍵驅動因素']),
                         risk: safeStr(r['風險因素']),
                         outlook: safeStr(r['2026展望']),
@@ -1398,7 +1399,18 @@
         `;
         
         document.getElementById('modalBody').innerHTML = `
-            <div class="modal-section"><h3 class="section-title">🏢 代表公司</h3><div class="tags-block">${item.companies.split('、').map(c => `<span class="modal-tag">🏢 ${c}</span>`).join('')}</div></div>
+            <div class="modal-section"><h3 class="section-title">🏢 代表公司</h3><div class="tags-block">${(() => {
+                const companies = item.companies.split('、');
+                const codes = item.stockCodes ? item.stockCodes.split('、') : [];
+                return companies.map((c, i) => {
+                    const code = codes[i] || '';
+                    if (code) {
+                        return `<span class="modal-tag" onclick="openStockModal('${code}')" style="cursor:pointer;">🏢 ${c} (${code})</span>`;
+                    } else {
+                        return `<span class="modal-tag">🏢 ${c}</span>`;
+                    }
+                }).join('');
+            })()}</div></div>
             <div class="modal-section"><h3 class="section-title">🔥 關鍵驅動因素</h3><div class="content-block">${formatContent(item.driver)}</div></div>
             <div class="modal-section"><h3 class="section-title">⚠️ 風險因素</h3><div class="content-block">${formatContent(item.risk)}</div></div>
             <div class="modal-section"><h3 class="section-title">🔮 2026展望</h3><div class="content-block">${formatContent(item.outlook)}</div></div>
