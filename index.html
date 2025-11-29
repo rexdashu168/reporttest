@@ -269,7 +269,13 @@
 
     function formatContent(text) {
         if (!text) return '';
-        return text.replace(/(\d+\.)/g, '\n$1').replace(/•/g, '\n•').replace(/\n{3,}/g, '\n\n').trim();
+        // 按分號分段，每個分段作為一個段落
+        let result = text
+            .replace(/;/g, '\n\n')  // 分號變成段落分隔
+            .replace(/•/g, '\n• ')   // 項目符號換行
+            .replace(/\n{3,}/g, '\n\n')  // 多餘換行合併
+            .trim();
+        return result;
     }
 
     function parseTags(tagStr) {
@@ -592,6 +598,9 @@
                         capital: safeStr(r['股本(億)']),
                         marketCap: safeStr(r['市值(億)']),
                         listedYears: safeStr(r['掛牌年數']),
+                        chairman: safeStr(r['董事長']),
+                        ceo: safeStr(r['總經理']),
+                        position: safeStr(r['產業地位']),
                         business: safeStr(r['業務摘要']),
                         updateDate: safeStr(r['資料更新日期'])
                     };
@@ -1400,15 +1409,16 @@
         html += `<div class="tab-content active" id="stock-basic">
             <div class="info-grid">
                 <div class="info-item"><div class="info-label">股價</div><div class="info-value large">${stock.price}</div></div>
-                <div class="info-item"><div class="info-label">漲跌</div><div class="info-value large" style="color:${String(stock.changePercent).includes('-') ? '#d64545' : '#2e7d46'};">${stock.change} (${stock.changePercent})</div></div>
-                <div class="info-item"><div class="info-label">成交量</div><div class="info-value">${stock.volume}張</div></div>
                 <div class="info-item"><div class="info-label">市值</div><div class="info-value">${stock.marketCap}億</div></div>
                 <div class="info-item"><div class="info-label">股本</div><div class="info-value">${stock.capital}億</div></div>
                 <div class="info-item"><div class="info-label">掛牌年數</div><div class="info-value">${stock.listedYears}年</div></div>
+                ${stock.chairman ? `<div class="info-item"><div class="info-label">董事長</div><div class="info-value">${stock.chairman}</div></div>` : ''}
+                ${stock.ceo ? `<div class="info-item"><div class="info-label">總經理</div><div class="info-value">${stock.ceo}</div></div>` : ''}
                 ${tracking.targetPrice ? `<div class="info-item"><div class="info-label">目標價</div><div class="info-value large" style="color:#2e7d46;">${tracking.targetPrice}</div></div>` : ''}
                 ${tracking.trackStatus ? `<div class="info-item"><div class="info-label">追蹤狀態</div><div class="info-value">${tracking.trackStatus}</div></div>` : ''}
             </div>
-            ${stock.business ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">💼 業務摘要</h3><div class="content-block">${stock.business}</div></div>` : ''}
+            ${stock.position ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🏆 產業地位</h3><div class="content-block">${stock.position}</div></div>` : ''}
+            ${stock.business ? `<div class="modal-section"><h3 class="section-title">💼 業務摘要</h3><div class="content-block">${stock.business}</div></div>` : ''}
             ${concepts.length > 0 ? `<div class="modal-section"><h3 class="section-title">💡 概念股族群</h3>${concepts.map(c => `<div class="product-item"><div class="product-name">${c.concept}</div><div class="product-ratio">${c.subRole} - ${c.description}</div></div>`).join('')}</div>` : ''}
         </div>`;
         
