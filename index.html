@@ -993,7 +993,7 @@
             const tags = parseTags(detail.tags).slice(0, 4);
             return `<div class="card-base" onclick="openMemoModal('${item.id}')">
                 <div class="card-header"><div class="card-left"><span class="company-name company-link" onclick="event.stopPropagation();openStockModal('${item.stockCode}')">${item.company}</span><span class="stock-code" onclick="event.stopPropagation();openStockModal('${item.stockCode}')">${item.stockCode}</span></div><span class="importance">${item.importance}</span></div>
-                <div class="card-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag industry">${item.industry}</span><span class="meta-tag analyst">${item.analyst}</span><span class="meta-tag date">${item.date}</span>${tracking.trackStatus ? `<span class="meta-tag trend">${tracking.trackStatus}</span>` : ''}</div>
+                <div class="card-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag industry">${item.industry}</span><span class="meta-tag date">${item.date}</span>${tracking.trackStatus ? `<span class="meta-tag trend">${tracking.trackStatus}</span>` : ''}</div>
                 <div class="card-content">${preview}...</div>
                 <div class="card-data"><div class="data-item"><span class="data-label">營收YoY </span><span class="data-value ${item.revenueYoY.includes('+') ? 'positive' : ''}">${item.revenueYoY}</span></div><div class="data-item"><span class="data-label">毛利率 </span><span class="data-value">${item.grossMargin}</span></div><div class="data-item"><span class="data-label">EPS </span><span class="data-value">${item.eps}</span></div>${tracking.targetPrice ? `<div class="data-item"><span class="data-label">目標價 </span><span class="data-value positive">${tracking.targetPrice}</span></div>` : ''}</div>
                 <div class="card-tags" style="margin-top:8px;">${tags.map(t => `<span class="mini-tag" onclick="event.stopPropagation();searchByTag('${t}')">#${t}</span>`).join('')}</div>
@@ -1230,7 +1230,7 @@
         const tags = parseTags(detail.tags);
         
         document.getElementById('modalHeaderInfo').innerHTML = `
-            <div class="modal-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag industry">${item.industry}</span><span class="meta-tag analyst">${item.analyst}</span><span class="meta-tag date">${item.date}</span>${tracking.rating ? `<span class="meta-tag rating">${tracking.rating}</span>` : ''}</div>
+            <div class="modal-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag industry">${item.industry}</span><span class="meta-tag date">${item.date}</span>${tracking.rating ? `<span class="meta-tag rating">${tracking.rating}</span>` : ''}</div>
             <h2 class="modal-title"><span class="company-link" onclick="openStockModal('${item.stockCode}')">${item.company}</span> (${item.stockCode})</h2>
             <p class="modal-subtitle">${item.type}</p>
         `;
