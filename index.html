@@ -725,7 +725,7 @@ async function loadMemoData() {
         const ab = await fetchFile(MEMO_FILE);
         const wb = XLSX.read(ab, { type: 'array' });
         
-        // 從內容中提取日期和券商的函數
+        // 從內容中提取日期和券商
         const extractDateBroker = (text) => {
             if (!text) return { date: '', broker: '' };
             const dateMatch = text.match(/(\d{4}\/\d{2}\/\d{2})/);
@@ -736,10 +736,11 @@ async function loadMemoData() {
             };
         };
         
-        // 用於整合的 Map
-        const detailByKey = {}; // key: 公司_日期_券商 或 公司_股號
+        // 建立多重索引
+        const detailByDateBroker = {}; // key: 公司_日期_券商
+        const detailByCompanyList = {}; // key: 公司_股號, value: 陣列（保留所有版本）
         
-        // 1. 讀取詳細內容庫，嘗試提取日期券商建立多重索引
+        // 1. 讀取詳細內容庫
         const s8 = wb.Sheets['詳細內容庫'];
         if (s8) {
             XLSX.utils.sheet_to_json(s8).forEach(r => {
@@ -755,19 +756,23 @@ async function loadMemoData() {
                     qa: safeStr(r['重要QA摘要']),
                     rexView: safeStr(r['Rex觀察']),
                     followUp: safeStr(r['後續追蹤']),
-                    tags: safeStr(r['標籤'])
+                    tags: safeStr(r['標籤']),
+                    extractedDate: extracted.date,
+                    extractedBroker: extracted.broker
                 };
                 
-                // 優先用 公司+日期+券商 作為 key
+                // 用 日期+券商 建立精確索引
                 if (extracted.date && extracted.broker) {
                     const key = `${company}_${extracted.date}_${extracted.broker}`;
-                    detailByKey[key] = detail;
+                    detailByDateBroker[key] = detail;
                 }
-                // 同時用 公司+股號 作為備用 key（如果沒有更精確的 key 時使用）
-                const fallbackKey = `${company}_${stockCode}_fallback`;
-                if (!detailByKey[fallbackKey]) {
-                    detailByKey[fallbackKey] = detail;
+                
+                // 同時保存到公司列表（用於 fallback）
+                const listKey = `${company}_${stockCode}`;
+                if (!detailByCompanyList[listKey]) {
+                    detailByCompanyList[listKey] = [];
                 }
+                detailByCompanyList[listKey].push(detail);
             });
         }
         
@@ -783,11 +788,7 @@ async function loadMemoData() {
                 const broker = safeStr(r['券商']);
                 
                 memoReports.push({
-                    id: id,
-                    date: date,
-                    company: company,
-                    stockCode: stockCode,
-                    broker: broker,
+                    id, date, company, stockCode, broker,
                     analyst: safeStr(r['分析師']),
                     type: safeStr(r['報告類型']),
                     importance: safeStr(r['重要性']),
@@ -799,14 +800,22 @@ async function loadMemoData() {
                     targetPrice: safeStr(r['目標價'])
                 });
                 
-                // 嘗試用 公司+日期+券商 關聯詳細內容
+                // 關聯詳細內容
                 const primaryKey = `${company}_${date}_${broker}`;
-                const fallbackKey = `${company}_${stockCode}_fallback`;
-                
-                if (detailByKey[primaryKey]) {
-                    memoDetails[id] = detailByKey[primaryKey];
-                } else if (detailByKey[fallbackKey]) {
-                    memoDetails[id] = detailByKey[fallbackKey];
+                if (detailByDateBroker[primaryKey]) {
+                    memoDetails[id] = detailByDateBroker[primaryKey];
+                } else {
+                    // Fallback: 找同公司的詳細內容，優先找沒有日期的（通常是最新的）
+                    const listKey = `${company}_${stockCode}`;
+                    const companyDetails = detailByCompanyList[listKey] || [];
+                    // 找沒有提取到日期的（表示是較新格式的報告）
+                    const noDateDetail = companyDetails.find(d => !d.extractedDate);
+                    if (noDateDetail) {
+                        memoDetails[id] = noDateDetail;
+                    } else if (companyDetails.length > 0) {
+                        // 如果都有日期，就用最後一個
+                        memoDetails[id] = companyDetails[companyDetails.length - 1];
+                    }
                 }
             });
         }
@@ -1917,7 +1926,7 @@ function openStockModal(codeOrName) {
     const finance = memoFinance[stock.name] || {};
     const products = memoProducts[stock.name] || {};
     const relatedNews = newsData.filter(n => n.stockCode === stock.code || n.company === stock.name).slice(0, 5);
-    const relatedMemo = memoReports.filter(m => m.stockCode === stock.code || m.company === stock.name).slice(0, 5);
+    const relatedMemo = memoReports.filter(m => m.stockCode === stock.code || m.company === stock.name);
     const relatedTimeline = memoTimeline.filter(t => t.stockCode === stock.code || t.company === stock.name).slice(0, 5);
     
     document.getElementById('modalHeaderInfo').innerHTML = `
@@ -1930,7 +1939,7 @@ function openStockModal(codeOrName) {
         <button class="tab-btn active" onclick="switchStockTab('basic')">📊 基本資料</button>
         <button class="tab-btn" onclick="switchStockTab('finance')">💰 財務數據</button>
         <button class="tab-btn" onclick="switchStockTab('products')">📦 產品結構</button>
-        <button class="tab-btn" onclick="switchStockTab('news')">📰 相關報導</button>
+        <button class="tab-btn" onclick="switchStockTab('news')">📋 相關報告</button>
         <button class="tab-btn" onclick="switchStockTab('timeline')">📅 重要時程</button>
         <button class="tab-btn" onclick="switchStockTab('ratings')">⭐ 券商評等</button>
     </div>`;
@@ -2085,17 +2094,38 @@ function openStockModal(codeOrName) {
     
     // 相關報導
     html += `<div class="tab-content" id="stock-news">
-        ${relatedNews.length > 0 ? `<div class="modal-section"><h3 class="section-title">📰 外電報導 (${relatedNews.length}筆)</h3>${relatedNews.map(n => `<div class="related-item" onclick="closeModal();setTimeout(function(){openNewsModal('${n.id}');},100);"><div class="related-title">${n.category}</div><div class="related-meta">${n.date} | ${n.broker}</div></div>`).join('')}</div>` : ''}
-        ${relatedMemo.length > 0 ? `<div class="modal-section"><h3 class="section-title">📋 Call Memo (${relatedMemo.length}筆)</h3>${relatedMemo.map(m => `<div class="related-item" onclick="closeModal();setTimeout(function(){openMemoModal('${m.id}');},100);"><div class="related-title">${m.type}</div><div class="related-meta">${m.date} | ${m.broker}</div></div>`).join('')}</div>` : ''}
-        ${relatedNews.length === 0 && relatedMemo.length === 0 ? '<p style="color:#8b8b8b;padding:20px;">暫無相關報導</p>' : ''}
+        ${relatedNews.length > 0 ? `<div class="modal-section"><h3 class="section-title">📰 外電報導 (${relatedNews.length}筆)</h3>${relatedNews.slice(0,10).map(n => `<div class="related-item" onclick="closeModal();setTimeout(function(){openNewsModal('${n.id}');},100);"><div class="related-title">${n.category}</div><div class="related-meta">${n.date} | ${n.broker}</div></div>`).join('')}</div>` : ''}
+        ${relatedMemo.length > 0 ? `<div class="modal-section"><h3 class="section-title">📋 研究報告 (${relatedMemo.length}筆)</h3>${relatedMemo.map(m => `<div class="related-item" style="padding:12px;margin-bottom:8px;background:#fafaf8;border-radius:8px;border-left:3px solid #d4a574;cursor:pointer;" onclick="closeModal();setTimeout(function(){openMemoModal('${m.id}');},100);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-weight:600;color:#333;">${m.type}</span>
+                <span style="font-size:12px;color:#888;">${m.date}</span>
+            </div>
+            <div style="font-size:13px;color:#666;">${m.broker}${m.analyst ? ' | ' + m.analyst : ''}</div>
+            ${m.rating || m.targetPrice ? `<div style="margin-top:6px;font-size:12px;">${m.rating ? '<span style="background:#27ae60;color:#fff;padding:1px 6px;border-radius:8px;margin-right:8px;">' + m.rating + '</span>' : ''}${m.targetPrice ? '<span style="color:#2e7d46;font-weight:500;">目標價 ' + m.targetPrice + '</span>' : ''}</div>` : ''}
+        </div>`).join('')}</div>` : ''}
+        ${relatedNews.length === 0 && relatedMemo.length === 0 ? '<p style="color:#8b8b8b;padding:20px;">暫無相關報告</p>' : ''}
     </div>`;
     
     // 重要時程
     html += `<div class="tab-content" id="stock-timeline">${relatedTimeline.length > 0 ? relatedTimeline.map(t => `<div class="timeline-item"><div class="timeline-date">📅 ${t.time}</div><div class="timeline-event">${t.event}</div><div class="timeline-note">${t.impact}</div><span class="timeline-status">${t.status}</span></div>`).join('') : '<p style="color:#8b8b8b;padding:20px;">暫無重要時程</p>'}</div>`;
     
-    // 券商評等 Tab
-    const stockRatings = memoReports.filter(m => (m.stockCode === stock.code || m.company === stock.name) && (m.rating || m.targetPrice));
-    html += `<div class="tab-content" id="stock-ratings">${stockRatings.length > 0 ? `
+    // 券商評等 Tab - 整合所有券商評等資訊
+    const allStockReports = memoReports.filter(m => m.stockCode === stock.code || m.company === stock.name);
+    const trackingInfo = memoTracking[stock.name] || {};
+    const stockRatings = allStockReports.filter(m => m.rating || m.targetPrice);
+    // 如果報告總表沒有評等，但公司追蹤表有，也要顯示
+    const hasTrackingRating = trackingInfo.rating || trackingInfo.targetPrice;
+    html += `<div class="tab-content" id="stock-ratings">${(stockRatings.length > 0 || hasTrackingRating) ? `
+        ${hasTrackingRating ? `<div style="margin-bottom:15px;padding:15px;background:#fff8e1;border-radius:8px;border-left:3px solid #ffc107;">
+            <div style="font-weight:600;margin-bottom:8px;">📌 最新追蹤評等</div>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                ${trackingInfo.rating ? `<div><span style="color:#666;">投資評等：</span><span style="background:${trackingInfo.rating.includes('買') ? '#27ae60' : (trackingInfo.rating.includes('賣') ? '#e74c3c' : '#f39c12')};color:#fff;padding:2px 10px;border-radius:10px;font-weight:500;">${trackingInfo.rating}</span></div>` : ''}
+                ${trackingInfo.targetPrice ? `<div><span style="color:#666;">目標價：</span><span style="color:#2e7d46;font-weight:600;font-size:18px;">${trackingInfo.targetPrice}</span></div>` : ''}
+                ${trackingInfo.trackStatus ? `<div><span style="color:#666;">追蹤狀態：</span><span>${trackingInfo.trackStatus}</span></div>` : ''}
+            </div>
+        </div>` : ''}
+        ${stockRatings.length > 0 ? `
+        <div style="font-weight:600;margin-bottom:10px;">📊 各券商評等記錄 (${stockRatings.length}筆)</div>
         <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;font-size:13px;">
                 <thead>
@@ -2109,19 +2139,16 @@ function openStockModal(codeOrName) {
                 </thead>
                 <tbody>
                     ${stockRatings.map(r => `
-                        <tr style="cursor:pointer;" onclick="closeModal();setTimeout(function(){openMemoModal('${r.id}');},100);">
+                        <tr style="cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''" onclick="closeModal();setTimeout(function(){openMemoModal('${r.id}');},100);">
                             <td style="padding:8px;border:1px solid #e0dcd3;">${r.date || '-'}</td>
                             <td style="padding:8px;border:1px solid #e0dcd3;">${r.broker || '-'}</td>
-                            <td style="padding:8px;border:1px solid #e0dcd3;text-align:center;"><span style="background:${r.rating && r.rating.includes('買') ? '#27ae60' : (r.rating && r.rating.includes('賣') ? '#e74c3c' : '#f39c12')};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;">${r.rating || '-'}</span></td>
+                            <td style="padding:8px;border:1px solid #e0dcd3;text-align:center;">${r.rating ? `<span style="background:${r.rating.includes('買') ? '#27ae60' : (r.rating.includes('賣') ? '#e74c3c' : '#f39c12')};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;">${r.rating}</span>` : '-'}</td>
                             <td style="padding:8px;border:1px solid #e0dcd3;text-align:right;font-weight:600;color:#2e7d46;">${r.targetPrice || '-'}</td>
                             <td style="padding:8px;border:1px solid #e0dcd3;">${r.type || '-'}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
-        </div>
-        ${tracking.rating ? `<div style="margin-top:15px;padding:12px;background:#f0f8f0;border-radius:8px;border-left:3px solid #27ae60;">
-            <strong>最新評等：</strong>${tracking.rating}${tracking.targetPrice ? ` | <strong>目標價：</strong>${tracking.targetPrice}` : ''}
         </div>` : ''}
     ` : '<p style="color:#8b8b8b;padding:20px;">暫無券商評等資料</p>'}</div>`;
     
