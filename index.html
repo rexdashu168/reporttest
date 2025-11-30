@@ -456,20 +456,76 @@ async function loadRevenueData() {
                     capital: r['股本(億)'] || '',
                     marketCap: r['市值(億)'] || '',
                     industry: r['產業別'] || '',
-                    chairman: r['董事長'] || '',
-                    ceo: r['總經理'] || '',
                     business: r['主要業務'] || '',
-                    concepts: r['相關概念'] || ''
+                    monthly: [],
+                    quarterly: [],
+                    yearly: []
                 };
             });
         }
         
-        // 讀取月累營收年增
-        const wsRev = wb.Sheets['000_月累營收年增'];
-        if (wsRev) {
-            const rows = XLSX.utils.sheet_to_json(wsRev);
+        // 讀取月營收（最近12個月）
+        const wsMonth = wb.Sheets['000_月營收'];
+        if (wsMonth) {
+            const rows = XLSX.utils.sheet_to_json(wsMonth);
             const headers = Object.keys(rows[0] || {});
-            // 找最新的營收年增欄位
+            const monthCols = headers.filter(h => h.includes('單月營收'));
+            const last12Months = monthCols.slice(-12);
+            rows.forEach(r => {
+                if (!r['代號']) return;
+                const code = String(r['代號']).trim();
+                if (revenueData[code]) {
+                    revenueData[code].monthly = last12Months.map(col => ({
+                        period: col.replace('單月營收(億)', ''),
+                        value: r[col] || ''
+                    }));
+                }
+            });
+        }
+        
+        // 讀取季營收（最近12季）
+        const wsQuarter = wb.Sheets['000_季營收'];
+        if (wsQuarter) {
+            const rows = XLSX.utils.sheet_to_json(wsQuarter);
+            const headers = Object.keys(rows[0] || {});
+            const quarterCols = headers.filter(h => h.includes('單季營收'));
+            const last12Quarters = quarterCols.slice(-12);
+            rows.forEach(r => {
+                if (!r['代號']) return;
+                const code = String(r['代號']).trim();
+                if (revenueData[code]) {
+                    revenueData[code].quarterly = last12Quarters.map(col => ({
+                        period: col.replace('單季營收(億)', ''),
+                        value: r[col] || ''
+                    }));
+                }
+            });
+        }
+        
+        // 讀取年營收（最近12年）
+        const wsYear = wb.Sheets['000_年營收'];
+        if (wsYear) {
+            const rows = XLSX.utils.sheet_to_json(wsYear);
+            const headers = Object.keys(rows[0] || {});
+            const yearCols = headers.filter(h => h.includes('年度營收'));
+            const last12Years = yearCols.slice(-12);
+            rows.forEach(r => {
+                if (!r['代號']) return;
+                const code = String(r['代號']).trim();
+                if (revenueData[code]) {
+                    revenueData[code].yearly = last12Years.map(col => ({
+                        period: col.replace('年度營收(億)', ''),
+                        value: r[col] || ''
+                    }));
+                }
+            });
+        }
+        
+        // 讀取月累營收年增
+        const wsRevYoY = wb.Sheets['000_月累營收年增'];
+        if (wsRevYoY) {
+            const rows = XLSX.utils.sheet_to_json(wsRevYoY);
+            const headers = Object.keys(rows[0] || {});
             const revCol = headers.filter(h => h.includes('累月營收年增')).pop();
             rows.forEach(r => {
                 if (!r['代號']) return;
@@ -501,7 +557,6 @@ async function loadRevenueData() {
                 const code = String(r['代碼']).trim();
                 if (revenueData[code]) {
                     revenueData[code].position = r['產業地位'] || '';
-                    revenueData[code].subIndustry = r['細產業'] || '';
                 }
             });
         }
@@ -1750,6 +1805,7 @@ function openStockModal(codeOrName) {
     const stock = masterStocks[codeOrName] || masterStocks[String(codeOrName)];
     if (!stock) { alert('找不到 ' + codeOrName + ' 的資料'); return; }
     
+    const revenue = revenueData[stock.code] || {};
     const concepts = conceptStocks.filter(c => c.code === stock.code);
     const tracking = memoTracking[stock.name] || {};
     const finance = memoFinance[stock.name] || {};
@@ -1803,14 +1859,46 @@ function openStockModal(codeOrName) {
     </div>`;
     
     // 財務數據
-    html += `<div class="tab-content" id="stock-finance">${Object.keys(finance).length > 0 ? `
+    const hasRevenue = revenue.capital || revenue.revenueYoY || revenue.yearHigh;
+    const hasFinance = Object.keys(finance).length > 0;
+    const hasRevenueData = revenue.monthly && revenue.monthly.length > 0;
+    
+    // 生成營收表格函數
+    const genRevenueTable = (data, type) => {
+        if (!data || data.length === 0) return '<p style="color:#8b8b8b;text-align:center;">無資料</p>';
+        const validData = data.filter(d => d.value !== '' && d.value !== null);
+        if (validData.length === 0) return '<p style="color:#8b8b8b;text-align:center;">無資料</p>';
+        return `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
+            <tr style="background:#f5f5f5;">${validData.map(d => `<th style="padding:8px 4px;border:1px solid #ddd;white-space:nowrap;">${d.period}</th>`).join('')}</tr>
+            <tr>${validData.map(d => `<td style="padding:8px 4px;border:1px solid #ddd;text-align:right;font-weight:500;">${d.value ? parseFloat(d.value).toLocaleString() : '-'}</td>`).join('')}</tr>
+        </table></div>`;
+    };
+    
+    html += `<div class="tab-content" id="stock-finance">${(hasRevenue || hasFinance || hasRevenueData) ? `
         <div class="info-grid">
-            ${finance.revenue3Q ? `<div class="info-item"><div class="info-label">3Q25營收</div><div class="info-value">${finance.revenue3Q}</div></div>` : ''}
-            ${finance.revenueYoY ? `<div class="info-item"><div class="info-label">營收YoY</div><div class="info-value">${finance.revenueYoY}</div></div>` : ''}
+            ${revenue.capital ? `<div class="info-item"><div class="info-label">股本</div><div class="info-value">${revenue.capital}億</div></div>` : ''}
+            ${revenue.marketCap ? `<div class="info-item"><div class="info-label">市值</div><div class="info-value">${parseFloat(revenue.marketCap).toLocaleString()}億</div></div>` : ''}
+            ${revenue.revenueYoY ? `<div class="info-item"><div class="info-label">累計營收YoY</div><div class="info-value" style="color:${parseFloat(revenue.revenueYoY)>=0?'#27ae60':'#e74c3c'};">${revenue.revenueYoY}%</div></div>` : ''}
+            ${revenue.yearHigh ? `<div class="info-item"><div class="info-label">1年最高</div><div class="info-value" style="color:#27ae60;">${revenue.yearHigh}</div></div>` : ''}
+            ${revenue.yearLow ? `<div class="info-item"><div class="info-label">1年最低</div><div class="info-value" style="color:#e74c3c;">${revenue.yearLow}</div></div>` : ''}
             ${finance.grossMargin ? `<div class="info-item"><div class="info-label">毛利率</div><div class="info-value">${finance.grossMargin}</div></div>` : ''}
             ${finance.eps ? `<div class="info-item"><div class="info-label">EPS</div><div class="info-value large">${finance.eps}</div></div>` : ''}
         </div>
-        ${finance.guidance4Q ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">📈 4Q25展望指引</h3><div class="content-block">${finance.guidance4Q}</div></div>` : ''}
+        ${revenue.position ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🏆 產業地位</h3><div class="content-block" style="background:#fff3e0;border-left:3px solid #ff9800;padding:12px;">${revenue.position}</div></div>` : ''}
+        ${hasRevenueData ? `
+        <div class="modal-section" style="margin-top:15px;">
+            <h3 class="section-title">📈 營收資料 (億元)</h3>
+            <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;">
+                <button class="rev-tab-btn active" onclick="switchRevTab('monthly')" style="padding:6px 12px;border:1px solid #d4a574;background:#d4a574;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">近12月</button>
+                <button class="rev-tab-btn" onclick="switchRevTab('quarterly')" style="padding:6px 12px;border:1px solid #d4a574;background:#fff;color:#d4a574;border-radius:4px;cursor:pointer;font-size:12px;">近12季</button>
+                <button class="rev-tab-btn" onclick="switchRevTab('yearly')" style="padding:6px 12px;border:1px solid #d4a574;background:#fff;color:#d4a574;border-radius:4px;cursor:pointer;font-size:12px;">近12年</button>
+            </div>
+            <div id="rev-monthly" class="rev-content">${genRevenueTable(revenue.monthly, 'monthly')}</div>
+            <div id="rev-quarterly" class="rev-content" style="display:none;">${genRevenueTable(revenue.quarterly, 'quarterly')}</div>
+            <div id="rev-yearly" class="rev-content" style="display:none;">${genRevenueTable(revenue.yearly, 'yearly')}</div>
+        </div>
+        ` : ''}
+        ${finance.guidance4Q ? `<div class="modal-section"><h3 class="section-title">📈 4Q25展望指引</h3><div class="content-block">${finance.guidance4Q}</div></div>` : ''}
     ` : '<p style="color:#8b8b8b;padding:20px;">暫無詳細財務數據</p>'}</div>`;
     
     // 產品結構
@@ -1841,6 +1929,19 @@ function switchStockTab(tabId) {
     event.target.classList.add('active');
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     document.getElementById('stock-' + tabId).classList.add('active');
+}
+
+function switchRevTab(tabId) {
+    document.querySelectorAll('.rev-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = '#fff';
+        btn.style.color = '#d4a574';
+    });
+    event.target.classList.add('active');
+    event.target.style.background = '#d4a574';
+    event.target.style.color = '#fff';
+    document.querySelectorAll('.rev-content').forEach(c => c.style.display = 'none');
+    document.getElementById('rev-' + tabId).style.display = 'block';
 }
 </script>
 ```
