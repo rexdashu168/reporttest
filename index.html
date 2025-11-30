@@ -325,15 +325,16 @@ async function init() {
                     mCols.forEach(col => {
                         const m = col.match(/(\d+)M(\d+)/);
                         if(m && r[col] !== null && r[col] !== undefined) {
-                            const year = parseInt(m[1]) + 1911; // 民國轉西元
-                            const month = m[2].padStart(2, '0');
-                            const period = `${year}/${month}`;
+                            // 25M08 = 2025年8月 (前兩位就是西元年後兩位)
+                            const year = 2000 + parseInt(m[1]);
+                            const month = parseInt(m[2]);
+                            const period = `${year}/${month.toString().padStart(2, '0')}`;
                             const accCol = accCols.find(c => c.includes(m[0]));
                             data.push({ 
                                 d: period,
                                 period: m[0],
                                 year: year,
-                                month: parseInt(m[2]),
+                                month: month,
                                 rev: r[col],
                                 acc: accCol ? r[accCol] : null
                             });
@@ -366,7 +367,7 @@ async function init() {
                     qCols.forEach(col => {
                         const m = col.match(/(\d+)Q(\d)/);
                         if(m && r[col] !== null && r[col] !== undefined) {
-                            const year = parseInt(m[1]) + 1911;
+                            const year = 2000 + parseInt(m[1]);
                             data.push({ 
                                 d: `${year}Q${m[2]}`, 
                                 year: year,
@@ -847,10 +848,18 @@ window.openStock = code => {
     }
     
     if(revM.length > 0 || revQ.length > 0 || revY.length > 0) {
+        // 只取近12期
+        const recent12M = revM.slice(0, 12);
+        const recent12Q = revQ.slice(0, 12);
+        const recent12Y = revY.slice(0, 12);
+        
         // 計算月增率和年增率
-        const revWithGrowth = revM.map((r, idx) => {
+        const revWithGrowth = recent12M.map((r, idx) => {
             const prevMonth = revM.find(p => p.month === r.month && p.year === r.year - 1);
-            const lastMonth = revM[idx + 1];
+            const lastMonth = revM.find(p => {
+                if(r.month === 1) return p.year === r.year - 1 && p.month === 12;
+                return p.year === r.year && p.month === r.month - 1;
+            });
             return {
                 ...r,
                 yoy: prevMonth ? ((r.rev - prevMonth.rev) / prevMonth.rev * 100) : null,
@@ -859,19 +868,7 @@ window.openStock = code => {
             };
         });
         
-        // 計算累計營收年增率
-        const revWithAccGrowth = revWithGrowth.map(r => {
-            const prevYearAcc = revM.find(p => p.month === r.month && p.year === r.year - 1);
-            return {
-                ...r,
-                accYoy: (r.acc && prevYearAcc?.acc) ? ((r.acc - prevYearAcc.acc) / prevYearAcc.acc * 100) : null
-            };
-        });
-        
-        // 取最近24個月
-        const recent24 = revWithAccGrowth.slice(0, 24);
-        
-        // 年度比較表 - 建立資料結構
+        // 年度比較表 - 建立資料結構（只取近4年）
         const years = [...new Set(revM.map(r => r.year))].sort((a,b) => b-a).slice(0, 4);
         const monthlyByYear = {};
         years.forEach(y => { monthlyByYear[y] = {}; });
@@ -896,7 +893,7 @@ window.openStock = code => {
             </div>
             
             <div id="ft-0" class="fin-sub-pane active">
-                ${recent24.length > 0 ? `
+                ${revWithGrowth.length > 0 ? `
                 <div class="rev-unit">💰 單位：億元</div>
                 <div class="table-wrap"><table class="fin-table">
                     <thead><tr>
@@ -906,7 +903,7 @@ window.openStock = code => {
                         <th>去年同期</th>
                         <th>年增率</th>
                     </tr></thead>
-                    <tbody>${recent24.map(r => {
+                    <tbody>${revWithGrowth.map(r => {
                         const momClass = r.mom > 0 ? '' : (r.mom < 0 ? 't-down' : '');
                         const yoyClass = r.yoy > 0 ? '' : (r.yoy < 0 ? 't-down' : '');
                         return `<tr>
@@ -915,24 +912,6 @@ window.openStock = code => {
                             <td class="${momClass}">${r.mom !== null ? (r.mom >= 0 ? '+' : '') + fmtNum(r.mom, 2) + '%' : '-'}</td>
                             <td>${r.prevYearRev ? fmtNum(r.prevYearRev, 1) : '-'}</td>
                             <td class="${yoyClass}">${r.yoy !== null ? (r.yoy >= 0 ? '+' : '') + fmtNum(r.yoy, 2) + '%' : '-'}</td>
-                        </tr>`;
-                    }).join('')}</tbody>
-                </table></div>
-                
-                <div class="section-head" style="margin-top:20px">📊 累計營收</div>
-                <div class="rev-unit">💰 單位：億元</div>
-                <div class="table-wrap"><table class="fin-table">
-                    <thead><tr>
-                        <th>期別</th>
-                        <th>累計營收</th>
-                        <th>年增率</th>
-                    </tr></thead>
-                    <tbody>${recent24.filter(r => r.acc).map(r => {
-                        const accClass = r.accYoy > 0 ? '' : (r.accYoy < 0 ? 't-down' : '');
-                        return `<tr>
-                            <td>${r.d}</td>
-                            <td>${fmtNum(r.acc, 1)}</td>
-                            <td class="${accClass}">${r.accYoy !== null ? (r.accYoy >= 0 ? '+' : '') + fmtNum(r.accYoy, 2) + '%' : '-'}</td>
                         </tr>`;
                     }).join('')}</tbody>
                 </table></div>
