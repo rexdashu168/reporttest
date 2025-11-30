@@ -725,53 +725,53 @@ async function loadMemoData() {
         const ab = await fetchFile(MEMO_FILE);
         const wb = XLSX.read(ab, { type: 'array' });
         
-        // 用於整合的 Map
-        const integratedMap = new Map();
-        const detailByKey = {}; // 改用 公司+股號 作為 key
+        // 從內容中提取日期和券商的函數
+        const extractDateBroker = (text) => {
+            if (!text) return { date: '', broker: '' };
+            const dateMatch = text.match(/(\d{4}\/\d{2}\/\d{2})/);
+            const brokerMatch = text.match(/(國泰證期|元大投顧|凱基投顧|永豐投顧|宏遠投顧|中信投顧|台新投顧|富邦投顧|統一投顧)/);
+            return {
+                date: dateMatch ? dateMatch[1] : '',
+                broker: brokerMatch ? brokerMatch[1] : ''
+            };
+        };
         
-        // 1. 先讀取詳細內容庫（用 公司+股號 關聯）
+        // 用於整合的 Map
+        const detailByKey = {}; // key: 公司_日期_券商 或 公司_股號
+        
+        // 1. 讀取詳細內容庫，嘗試提取日期券商建立多重索引
         const s8 = wb.Sheets['詳細內容庫'];
         if (s8) {
             XLSX.utils.sheet_to_json(s8).forEach(r => {
                 if (!r['公司']) return;
                 const company = safeStr(r['公司']);
                 const stockCode = safeStr(r['股號']);
-                const key = `${company}_${stockCode}`;
+                const operation = safeStr(r['營運重點']);
+                const extracted = extractDateBroker(operation);
                 
-                // 如果同一公司有多筆，合併內容
-                if (!detailByKey[key]) {
-                    detailByKey[key] = {
-                        operation: safeStr(r['營運重點']),
-                        strategy: safeStr(r['策略方向']),
-                        qa: safeStr(r['重要QA摘要']),
-                        rexView: safeStr(r['Rex觀察']),
-                        followUp: safeStr(r['後續追蹤']),
-                        tags: safeStr(r['標籤'])
-                    };
-                } else {
-                    // 合併內容
-                    const exist = detailByKey[key];
-                    if (r['營運重點'] && !exist.operation.includes(safeStr(r['營運重點']))) {
-                        exist.operation += (exist.operation ? '; ' : '') + safeStr(r['營運重點']);
-                    }
-                    if (r['策略方向'] && !exist.strategy.includes(safeStr(r['策略方向']))) {
-                        exist.strategy += (exist.strategy ? '; ' : '') + safeStr(r['策略方向']);
-                    }
-                    if (r['重要QA摘要'] && !exist.qa.includes(safeStr(r['重要QA摘要']))) {
-                        exist.qa += (exist.qa ? '; ' : '') + safeStr(r['重要QA摘要']);
-                    }
-                    if (r['Rex觀察'] && !exist.rexView.includes(safeStr(r['Rex觀察']))) {
-                        exist.rexView += (exist.rexView ? '; ' : '') + safeStr(r['Rex觀察']);
-                    }
-                    if (r['後續追蹤'] && !exist.followUp.includes(safeStr(r['後續追蹤']))) {
-                        exist.followUp += (exist.followUp ? '; ' : '') + safeStr(r['後續追蹤']);
-                    }
-                    if (r['標籤']) exist.tags += (exist.tags ? ',' : '') + safeStr(r['標籤']);
+                const detail = {
+                    operation: operation,
+                    strategy: safeStr(r['策略方向']),
+                    qa: safeStr(r['重要QA摘要']),
+                    rexView: safeStr(r['Rex觀察']),
+                    followUp: safeStr(r['後續追蹤']),
+                    tags: safeStr(r['標籤'])
+                };
+                
+                // 優先用 公司+日期+券商 作為 key
+                if (extracted.date && extracted.broker) {
+                    const key = `${company}_${extracted.date}_${extracted.broker}`;
+                    detailByKey[key] = detail;
+                }
+                // 同時用 公司+股號 作為備用 key（如果沒有更精確的 key 時使用）
+                const fallbackKey = `${company}_${stockCode}_fallback`;
+                if (!detailByKey[fallbackKey]) {
+                    detailByKey[fallbackKey] = detail;
                 }
             });
         }
         
-        // 2. 讀取報告總表，用 股號+日期+券商 整合
+        // 2. 讀取報告總表
         const s1 = wb.Sheets['報告總表'];
         if (s1) {
             XLSX.utils.sheet_to_json(s1).forEach(r => {
@@ -781,67 +781,37 @@ async function loadMemoData() {
                 const stockCode = safeStr(r['股號']);
                 const date = safeStr(r['日期']);
                 const broker = safeStr(r['券商']);
-                const intKey = `${stockCode || company}_${date}_${broker}`;
-                const detailKey = `${company}_${stockCode}`;
                 
-                if (!integratedMap.has(intKey)) {
-                    integratedMap.set(intKey, {
-                        ids: [id],
-                        date, company, stockCode, broker,
-                        analyst: safeStr(r['分析師']),
-                        types: [safeStr(r['報告類型'])].filter(t => t),
-                        importance: safeStr(r['重要性']),
-                        industry: safeStr(r['產業']),
-                        revenueYoY: safeStr(r['營收YoY']),
-                        grossMargin: safeStr(r['毛利率']),
-                        eps: safeStr(r['EPS']),
-                        rating: safeStr(r['投資評等']),
-                        targetPrice: safeStr(r['目標價']),
-                        detailKey: detailKey
-                    });
-                } else {
-                    const exist = integratedMap.get(intKey);
-                    exist.ids.push(id);
-                    const newType = safeStr(r['報告類型']);
-                    if (newType && !exist.types.includes(newType)) exist.types.push(newType);
-                    if (!exist.revenueYoY && r['營收YoY']) exist.revenueYoY = safeStr(r['營收YoY']);
-                    if (!exist.grossMargin && r['毛利率']) exist.grossMargin = safeStr(r['毛利率']);
-                    if (!exist.eps && r['EPS']) exist.eps = safeStr(r['EPS']);
-                    if (!exist.rating && r['投資評等']) exist.rating = safeStr(r['投資評等']);
-                    if (!exist.targetPrice && r['目標價']) exist.targetPrice = safeStr(r['目標價']);
+                memoReports.push({
+                    id: id,
+                    date: date,
+                    company: company,
+                    stockCode: stockCode,
+                    broker: broker,
+                    analyst: safeStr(r['分析師']),
+                    type: safeStr(r['報告類型']),
+                    importance: safeStr(r['重要性']),
+                    industry: safeStr(r['產業']),
+                    revenueYoY: safeStr(r['營收YoY']),
+                    grossMargin: safeStr(r['毛利率']),
+                    eps: safeStr(r['EPS']),
+                    rating: safeStr(r['投資評等']),
+                    targetPrice: safeStr(r['目標價'])
+                });
+                
+                // 嘗試用 公司+日期+券商 關聯詳細內容
+                const primaryKey = `${company}_${date}_${broker}`;
+                const fallbackKey = `${company}_${stockCode}_fallback`;
+                
+                if (detailByKey[primaryKey]) {
+                    memoDetails[id] = detailByKey[primaryKey];
+                } else if (detailByKey[fallbackKey]) {
+                    memoDetails[id] = detailByKey[fallbackKey];
                 }
             });
         }
         
-        // 3. 轉換為 memoReports 並整合 memoDetails
-        integratedMap.forEach((data, key) => {
-            const mainId = data.ids[0];
-            memoReports.push({
-                id: mainId,
-                ids: data.ids,
-                date: data.date,
-                company: data.company,
-                stockCode: data.stockCode,
-                broker: data.broker,
-                analyst: data.analyst,
-                type: data.types.join(' + '),
-                types: data.types,
-                importance: data.importance,
-                industry: data.industry,
-                revenueYoY: data.revenueYoY,
-                grossMargin: data.grossMargin,
-                eps: data.eps,
-                rating: data.rating,
-                targetPrice: data.targetPrice
-            });
-            
-            // 用 detailKey 關聯詳細內容
-            if (detailByKey[data.detailKey]) {
-                memoDetails[mainId] = detailByKey[data.detailKey];
-            }
-        });
-        
-        // 4. 讀取公司追蹤表
+        // 3. 讀取公司追蹤表
         const s2 = wb.Sheets['公司追蹤表'];
         if (s2) {
             XLSX.utils.sheet_to_json(s2).forEach(r => {
@@ -856,7 +826,7 @@ async function loadMemoData() {
             });
         }
         
-        // 5. 讀取財務數據彙總
+        // 4. 讀取財務數據彙總
         const s3 = wb.Sheets['財務數據彙總'];
         if (s3) {
             XLSX.utils.sheet_to_json(s3).forEach(r => {
@@ -875,7 +845,7 @@ async function loadMemoData() {
             });
         }
         
-        // 6. 讀取產品結構分析
+        // 5. 讀取產品結構分析
         const s4 = wb.Sheets['產品結構分析'];
         if (s4) {
             XLSX.utils.sheet_to_json(s4).forEach(r => {
@@ -892,7 +862,7 @@ async function loadMemoData() {
             });
         }
         
-        // 7. 讀取關鍵時程追蹤
+        // 6. 讀取關鍵時程追蹤
         const s5 = wb.Sheets['關鍵時程追蹤'];
         if (s5) {
             XLSX.utils.sheet_to_json(s5).forEach(r => {
@@ -910,7 +880,7 @@ async function loadMemoData() {
             });
         }
         
-        // 8. 讀取產業趨勢總覽
+        // 7. 讀取產業趨勢總覽
         const s6 = wb.Sheets['產業趨勢總覽'];
         if (s6) {
             XLSX.utils.sheet_to_json(s6).forEach(r => {
