@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rex大叔投資研究室 v11.1</title>
+    <title>Rex大叔投資研究室 v11.4</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; --up: #e74c3c; --down: #27ae60; }
@@ -108,6 +108,8 @@
         .fin-btn.active { background: var(--primary); color: #fff; }
         .fin-sub-pane { display: none; }
         .fin-sub-pane.active { display: block; }
+        
+        .rev-unit { text-align: right; font-size: 11px; color: #888; margin-bottom: 8px; }
 
         .table-wrap { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; }
         .fin-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
@@ -116,6 +118,8 @@
         .fin-table th:first-child, .fin-table td:first-child { position: sticky; left: 0; background: #fff; border-right: 1px solid #eee; text-align: left; z-index: 2; font-weight: 700; }
         .fin-table tr:nth-child(even) td { background: #fcfcfc; }
         .fin-table tr:nth-child(even) td:first-child { background: #fcfcfc; }
+        .fin-table .highlight-row td { background: #fff3e0; font-weight: 700; }
+        .fin-table .highlight-row td:first-child { background: #fff3e0; color: var(--primary); }
         
         .t-up { color: var(--up); font-weight: 700; }
         .t-down { color: var(--down); font-weight: 700; }
@@ -155,7 +159,7 @@
 <div class="container">
     <div class="header">
         <h1>📊 Rex大叔投資研究室</h1>
-        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.1</p>
+        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.4</p>
     </div>
 
     <div class="db-switcher">
@@ -198,7 +202,7 @@ const FILES = {
     MASTER: '04_master.xlsx', STRAT: '05_Strategy.xlsx', CB: '00_CB.xlsx', REV: '06_revenue.xlsx'
 };
 
-const DB = { news:[], memo:[], reports:[], strategy:[], stocks:{}, cb:[], cbDaily:[], trends:[] };
+const DB = { news:[], memo:[], reports:[], strategy:[], stocks:{}, cb:[], trends:[] };
 const META = { 
     memoDetail:{}, tracking:{}, finance:{}, products:{}, 
     concepts:{}, cbMap:{}, relatedNews:{}, relatedMemo:{},
@@ -302,7 +306,7 @@ async function init() {
     // 2. Revenue - 完整讀取
     wb = await fetchXlsx(FILES.REV);
     if(wb) {
-        // 月營收
+        // 月營收 - 收集完整資料
         const sheetM = wb.Sheets['000_月營收'];
         if(sheetM) {
             const rows = XLSX.utils.sheet_to_json(sheetM, {defval: null});
@@ -315,16 +319,21 @@ async function init() {
                 
                 rows.forEach(r => {
                     const code = normalizeCode(r['代號']);
-                    if(!code || code.length > 5 || code.startsWith('0')) return; // 過濾 ETF
+                    if(!code || code.length > 5 || code.startsWith('0')) return;
                     
                     const data = [];
-                    mCols.slice(-12).forEach(col => {
-                        const m = col.match(/(\d+M\d+)/);
+                    mCols.forEach(col => {
+                        const m = col.match(/(\d+)M(\d+)/);
                         if(m && r[col] !== null && r[col] !== undefined) {
-                            const period = m[0];
-                            const accCol = accCols.find(c => c.includes(period));
+                            const year = parseInt(m[1]) + 1911; // 民國轉西元
+                            const month = m[2].padStart(2, '0');
+                            const period = `${year}/${month}`;
+                            const accCol = accCols.find(c => c.includes(m[0]));
                             data.push({ 
-                                d: period, 
+                                d: period,
+                                period: m[0],
+                                year: year,
+                                month: parseInt(m[2]),
                                 rev: r[col],
                                 acc: accCol ? r[accCol] : null
                             });
@@ -332,7 +341,9 @@ async function init() {
                     });
                     
                     if(data.length > 0) {
-                        META.revData.month[code] = data.reverse();
+                        // 按日期排序（新的在前）
+                        data.sort((a, b) => b.d.localeCompare(a.d));
+                        META.revData.month[code] = data;
                     }
                 });
                 console.log('月營收載入公司數:', Object.keys(META.revData.month).length);
@@ -352,15 +363,22 @@ async function init() {
                     if(!code || code.length > 5 || code.startsWith('0')) return;
                     
                     const data = [];
-                    qCols.slice(-12).forEach(col => {
-                        const m = col.match(/(\d+Q\d)/);
+                    qCols.forEach(col => {
+                        const m = col.match(/(\d+)Q(\d)/);
                         if(m && r[col] !== null && r[col] !== undefined) {
-                            data.push({ d: m[0], rev: r[col] });
+                            const year = parseInt(m[1]) + 1911;
+                            data.push({ 
+                                d: `${year}Q${m[2]}`, 
+                                year: year,
+                                q: parseInt(m[2]),
+                                rev: r[col] 
+                            });
                         }
                     });
                     
                     if(data.length > 0) {
-                        META.revData.quarter[code] = data.reverse();
+                        data.sort((a, b) => b.d.localeCompare(a.d));
+                        META.revData.quarter[code] = data;
                     }
                 });
                 console.log('季營收載入公司數:', Object.keys(META.revData.quarter).length);
@@ -383,12 +401,17 @@ async function init() {
                     yCols.forEach(col => {
                         const m = col.match(/(\d{4})/);
                         if(m && r[col] !== null && r[col] !== undefined) {
-                            data.push({ d: m[0], rev: r[col] });
+                            data.push({ 
+                                d: m[0], 
+                                year: parseInt(m[0]),
+                                rev: r[col] 
+                            });
                         }
                     });
                     
                     if(data.length > 0) {
-                        META.revData.year[code] = data.reverse();
+                        data.sort((a, b) => b.year - a.year);
+                        META.revData.year[code] = data;
                     }
                 });
                 console.log('年營收載入公司數:', Object.keys(META.revData.year).length);
@@ -486,23 +509,55 @@ async function init() {
     // 7. CB - 完整讀取
     wb = await fetchXlsx(FILES.CB);
     if(wb) {
-        // 基本資料
+        // 日行情 (有產業資訊) - 先讀取建立產業對照
+        const dailyMap = {};
+        XLSX.utils.sheet_to_json(wb.Sheets['09_最新動態每週日行情']||[]).forEach(r => {
+            // 處理欄位名稱有空格的問題
+            const code = safe(r['代碼']);
+            const name = safe(Object.values(r)[1]); // 名稱欄位有空格，用索引取
+            const ind = safe(r['產業']);
+            
+            if(code) {
+                dailyMap[code] = {
+                    name: name,
+                    industry: ind,
+                    cbPrice: r['CB收盤價'],
+                    stockPrice: r['股價'],
+                    convPrice: r['轉換價格'],
+                    convValue: r['轉換價值'],
+                    premium: r['溢(折)價%'],
+                    expDate: r['到期日']
+                };
+                
+                if(ind) {
+                    META.cbStats.industries[ind] = (META.cbStats.industries[ind] || 0) + 1;
+                }
+            }
+        });
+        
+        // 基本資料 - 合併日行情資料
         XLSX.utils.sheet_to_json(wb.Sheets['08_最新動態每週基本資料']||[]).forEach(r => {
+            const cbCode = safe(r['代號']);
             const stockCode = normalizeCode(r['轉換標的代碼']);
-            const cbData = {...r, '_stockCode': stockCode};
+            const daily = dailyMap[cbCode] || {};
+            
+            const cbData = {
+                ...r,
+                '_stockCode': stockCode,
+                '_cbCode': cbCode,
+                '_name': safe(r['名稱']),
+                '_stockName': safe(r['轉換標的名稱']),
+                '_industry': daily.industry || '',
+                '_cbPrice': daily.cbPrice,
+                '_stockPrice': daily.stockPrice,
+                '_convValue': daily.convValue,
+                '_premium': daily.premium
+            };
+            
             DB.cb.push(cbData);
             if(stockCode) { 
                 if(!META.cbMap[stockCode]) META.cbMap[stockCode]=[]; 
                 META.cbMap[stockCode].push(cbData); 
-            }
-        });
-        
-        // 日行情 (有產業資訊)
-        XLSX.utils.sheet_to_json(wb.Sheets['09_最新動態每週日行情']||[]).forEach(r => {
-            DB.cbDaily.push(r);
-            const ind = safe(r['產業']);
-            if(ind) {
-                META.cbStats.industries[ind] = (META.cbStats.industries[ind] || 0) + 1;
             }
         });
         
@@ -517,6 +572,8 @@ async function init() {
         });
         META.cbStats.companies = companies.size;
         META.cbStats.totalBalance = totalBal;
+        
+        console.log('CB載入:', DB.cb.length, '產業數:', Object.keys(META.cbStats.industries).length);
     }
 
     // 更新計數
@@ -596,7 +653,7 @@ function renderList() {
     else if(CURR_DB==='strategy') list = DB.strategy;
     else if(CURR_DB==='stocks') list = Object.values(DB.stocks);
     else if(CURR_DB==='trends') list = DB.trends;
-    else if(CURR_DB==='cb') list = DB.cbDaily.length ? DB.cbDaily : DB.cb;
+    else if(CURR_DB==='cb') list = DB.cb;
 
     const filtered = list.filter(i => {
         const str = JSON.stringify(i).toLowerCase();
@@ -613,28 +670,25 @@ function renderList() {
     let html = '';
     
     // CB 用表格形式
-    if(CURR_DB === 'cb' && DB.cbDaily.length) {
+    if(CURR_DB === 'cb') {
         html = `<div class="cb-table-wrap"><table class="cb-table">
             <thead><tr>
                 <th>CB代號</th><th>CB簡稱</th><th>標的股票</th><th>產業</th>
-                <th>轉換價</th><th>市價</th><th>轉換價值</th><th>溢折價%</th><th>到期日</th>
+                <th>轉換價</th><th>股價</th><th>轉換價值</th><th>溢折價%</th><th>到期日</th>
             </tr></thead><tbody>`;
         
         filtered.slice(0, 100).forEach(r => {
-            const cbCode = safe(r['代碼']);
-            const cbName = safe(r['名稱']).trim();
-            const ind = safe(r['產業']);
-            const convPrice = r['轉換價格'];
-            const stockPrice = r['股價'];
-            const convValue = r['轉換價值'];
-            const premium = r['溢(折)價%'];
+            const cbCode = r['_cbCode'] || safe(r['代號']);
+            const cbName = r['_name'] || safe(r['名稱']);
+            const stockCode = r['_stockCode'] || '';
+            const stockName = r['_stockName'] || safe(r['轉換標的名稱']);
+            const ind = r['_industry'] || '';
+            const convPrice = r['轉換價格(元)'];
+            const stockPrice = r['_stockPrice'];
+            const convValue = r['_convValue'];
+            const premium = r['_premium'];
+            const expDate = fmtDate(r['到期日']);
             const premClass = colorClass(premium);
-            
-            // 從基本資料找標的代碼
-            const cbBasic = DB.cb.find(c => safe(c['代號']) === cbCode);
-            const stockCode = cbBasic ? cbBasic['_stockCode'] : '';
-            const stockName = cbBasic ? safe(cbBasic['轉換標的名稱']) : '';
-            const expDate = cbBasic ? fmtDate(cbBasic['到期日']) : '';
             
             html += `<tr>
                 <td class="code">${cbCode}</td>
@@ -644,7 +698,7 @@ function renderList() {
                 <td>${fmtNum(convPrice, 1)}</td>
                 <td>${fmtNum(stockPrice, 2)}</td>
                 <td class="${colorClass(convValue)}">${fmtNum(convValue, 2)}</td>
-                <td class="${premClass}">${fmtNum(premium, 1)}%</td>
+                <td class="${premClass}">${premium ? fmtNum(premium, 1)+'%' : '-'}</td>
                 <td>${expDate}</td>
             </tr>`;
         });
@@ -793,32 +847,127 @@ window.openStock = code => {
     }
     
     if(revM.length > 0 || revQ.length > 0 || revY.length > 0) {
+        // 計算月增率和年增率
+        const revWithGrowth = revM.map((r, idx) => {
+            const prevMonth = revM.find(p => p.month === r.month && p.year === r.year - 1);
+            const lastMonth = revM[idx + 1];
+            return {
+                ...r,
+                yoy: prevMonth ? ((r.rev - prevMonth.rev) / prevMonth.rev * 100) : null,
+                mom: lastMonth ? ((r.rev - lastMonth.rev) / lastMonth.rev * 100) : null,
+                prevYearRev: prevMonth ? prevMonth.rev : null
+            };
+        });
+        
+        // 計算累計營收年增率
+        const revWithAccGrowth = revWithGrowth.map(r => {
+            const prevYearAcc = revM.find(p => p.month === r.month && p.year === r.year - 1);
+            return {
+                ...r,
+                accYoy: (r.acc && prevYearAcc?.acc) ? ((r.acc - prevYearAcc.acc) / prevYearAcc.acc * 100) : null
+            };
+        });
+        
+        // 取最近24個月
+        const recent24 = revWithAccGrowth.slice(0, 24);
+        
+        // 年度比較表 - 建立資料結構
+        const years = [...new Set(revM.map(r => r.year))].sort((a,b) => b-a).slice(0, 4);
+        const monthlyByYear = {};
+        years.forEach(y => { monthlyByYear[y] = {}; });
+        revM.forEach(r => {
+            if(monthlyByYear[r.year]) monthlyByYear[r.year][r.month] = r.rev;
+        });
+        
+        // 計算年度加總和年增率
+        const yearTotals = years.map(y => {
+            const total = Object.values(monthlyByYear[y] || {}).reduce((a,b) => a+b, 0);
+            return { year: y, total };
+        });
+        const yearGrowth = yearTotals.map((yt, idx) => {
+            const prev = yearTotals[idx + 1];
+            return { ...yt, yoy: prev ? ((yt.total - prev.total) / prev.total * 100) : null };
+        });
+        
         tFin += `
             <div class="fin-switcher">
                 <div class="fin-btn active" onclick="swFin(0)">月營收</div>
-                <div class="fin-btn" onclick="swFin(1)">季營收</div>
-                <div class="fin-btn" onclick="swFin(2)">年營收</div>
+                <div class="fin-btn" onclick="swFin(1)">年營收</div>
             </div>
             
             <div id="ft-0" class="fin-sub-pane active">
-                ${revM.length > 0 ? `<div class="table-wrap"><table class="fin-table">
-                    <thead><tr><th>月份</th><th>營收(億)</th><th>累計(億)</th></tr></thead>
-                    <tbody>${revM.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev, 1)}</td><td>${r.acc ? fmtNum(r.acc, 1) : '-'}</td></tr>`).join('')}</tbody>
-                </table></div>` : '<div style="text-align:center;padding:20px;color:#999">無月營收資料</div>'}
+                ${recent24.length > 0 ? `
+                <div class="rev-unit">💰 單位：億元</div>
+                <div class="table-wrap"><table class="fin-table">
+                    <thead><tr>
+                        <th>期別</th>
+                        <th>營業收入</th>
+                        <th>月增率</th>
+                        <th>去年同期</th>
+                        <th>年增率</th>
+                    </tr></thead>
+                    <tbody>${recent24.map(r => {
+                        const momClass = r.mom > 0 ? '' : (r.mom < 0 ? 't-down' : '');
+                        const yoyClass = r.yoy > 0 ? '' : (r.yoy < 0 ? 't-down' : '');
+                        return `<tr>
+                            <td>${r.d}</td>
+                            <td>${fmtNum(r.rev, 1)}</td>
+                            <td class="${momClass}">${r.mom !== null ? (r.mom >= 0 ? '+' : '') + fmtNum(r.mom, 2) + '%' : '-'}</td>
+                            <td>${r.prevYearRev ? fmtNum(r.prevYearRev, 1) : '-'}</td>
+                            <td class="${yoyClass}">${r.yoy !== null ? (r.yoy >= 0 ? '+' : '') + fmtNum(r.yoy, 2) + '%' : '-'}</td>
+                        </tr>`;
+                    }).join('')}</tbody>
+                </table></div>
+                
+                <div class="section-head" style="margin-top:20px">📊 累計營收</div>
+                <div class="rev-unit">💰 單位：億元</div>
+                <div class="table-wrap"><table class="fin-table">
+                    <thead><tr>
+                        <th>期別</th>
+                        <th>累計營收</th>
+                        <th>年增率</th>
+                    </tr></thead>
+                    <tbody>${recent24.filter(r => r.acc).map(r => {
+                        const accClass = r.accYoy > 0 ? '' : (r.accYoy < 0 ? 't-down' : '');
+                        return `<tr>
+                            <td>${r.d}</td>
+                            <td>${fmtNum(r.acc, 1)}</td>
+                            <td class="${accClass}">${r.accYoy !== null ? (r.accYoy >= 0 ? '+' : '') + fmtNum(r.accYoy, 2) + '%' : '-'}</td>
+                        </tr>`;
+                    }).join('')}</tbody>
+                </table></div>
+                ` : '<div style="text-align:center;padding:20px;color:#999">無月營收資料</div>'}
             </div>
             
             <div id="ft-1" class="fin-sub-pane">
-                ${revQ.length > 0 ? `<div class="table-wrap"><table class="fin-table">
-                    <thead><tr><th>季度</th><th>營收(億)</th></tr></thead>
-                    <tbody>${revQ.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev, 1)}</td></tr>`).join('')}</tbody>
-                </table></div>` : '<div style="text-align:center;padding:20px;color:#999">無季營收資料</div>'}
-            </div>
-            
-            <div id="ft-2" class="fin-sub-pane">
-                ${revY.length > 0 ? `<div class="table-wrap"><table class="fin-table">
-                    <thead><tr><th>年度</th><th>營收(億)</th></tr></thead>
-                    <tbody>${revY.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev, 1)}</td></tr>`).join('')}</tbody>
-                </table></div>` : '<div style="text-align:center;padding:20px;color:#999">無年營收資料</div>'}
+                ${years.length > 0 ? `
+                <div class="rev-unit">💰 單位：億元</div>
+                <div class="table-wrap"><table class="fin-table">
+                    <thead><tr>
+                        <th>期別</th>
+                        ${years.map(y => `<th>${y}</th>`).join('')}
+                    </tr></thead>
+                    <tbody>
+                        <tr class="highlight-row">
+                            <td>年度加總</td>
+                            ${yearGrowth.map(yg => `<td>${fmtNum(yg.total, 1)}</td>`).join('')}
+                        </tr>
+                        <tr class="highlight-row">
+                            <td>年增率</td>
+                            ${yearGrowth.map(yg => {
+                                const cls = yg.yoy > 0 ? '' : (yg.yoy < 0 ? 't-down' : '');
+                                return `<td class="${cls}">${yg.yoy !== null ? (yg.yoy >= 0 ? '+' : '') + fmtNum(yg.yoy, 2) + '%' : '-'}</td>`;
+                            }).join('')}
+                        </tr>
+                        ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m => `
+                            <tr>
+                                <td>${m}月</td>
+                                ${years.map(y => `<td>${monthlyByYear[y]?.[m] ? fmtNum(monthlyByYear[y][m], 1) : ''}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table></div>
+                ` : '<div style="text-align:center;padding:20px;color:#999">無年營收資料</div>'}
             </div>
         `;
     } else {
