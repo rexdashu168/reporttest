@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rex大叔投資研究室 (Final Data Filled)</title>
+    <title>Rex大叔投資研究室 (v13.0 Final)</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>if(typeof XLSX==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');}</script>
     <style>
-        /* ===== v3.0 經典樣式 (保持不變) ===== */
+        /* ===== v3.0 經典彈窗風格 ===== */
         :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; --up: #e74c3c; --down: #27ae60; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
@@ -25,7 +25,7 @@
         .db-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
         .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
 
-        /* Search Box */
+        /* Search Box (含 X 鍵) */
         .search-box { position: relative; margin-bottom: 15px; }
         .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; }
         .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
@@ -43,7 +43,7 @@
         .tag.dt { background: #e0e0e0; color: #666; }
         .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* Modal */
+        /* ===== Modal (v3.0 核心 - 彈出視窗) ===== */
         .modal { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: flex-end; }
         .modal.show { display: flex; }
         .modal-inner { background: #fff; width: 100%; max-width: 600px; height: 90vh; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s; }
@@ -63,7 +63,7 @@
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
 
-        /* Finance Table Styles */
+        /* 財務表格專用 (營收一頁通) */
         .fin-switcher { display: flex; margin-bottom: 10px; border: 1px solid var(--primary); border-radius: 6px; overflow: hidden; }
         .fin-btn { flex: 1; padding: 8px; text-align: center; font-size: 13px; color: var(--primary); background: #fff; cursor: pointer; font-weight: 600; border-right: 1px solid var(--primary); }
         .fin-btn:last-child { border-right: none; }
@@ -82,7 +82,7 @@
         .t-up { color: var(--up); font-weight: 700; }
         .t-down { color: var(--down); font-weight: 700; }
         
-        /* Other Components */
+        /* General Styles */
         .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
         .section-head { font-size: 14px; font-weight: 700; color: #555; margin: 20px 0 10px; padding-left: 8px; border-left: 4px solid #ccc; }
         .hl-block { background: #fafaf8; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; line-height: 1.6; }
@@ -105,7 +105,7 @@
 <div class="container">
     <div class="header">
         <h1>📊 Rex大叔投資研究室</h1>
-        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v12.0</p>
+        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v13.0</p>
     </div>
 
     <div class="db-switcher">
@@ -204,7 +204,7 @@ async function fetchXlsx(url) {
 
 async function init() {
     let wb;
-    // 1. Master
+    // 1. Master & Concepts
     wb = await fetchXlsx(FILES.MASTER);
     if(wb) {
         XLSX.utils.sheet_to_json(wb.Sheets['主資料庫']||[]).forEach(r=>{ if(r['代號']) DB.stocks[safe(r['代號'])]=r; });
@@ -213,14 +213,15 @@ async function init() {
             if(c&&t) { if(!META.concepts[c]) META.concepts[c]=[]; if(!META.concepts[c].includes(t)) META.concepts[c].push(t); }
         });
     }
-    // 2. Revenue (Detailed Injection)
+    
+    // 2. Revenue Data (The Core Logic for "One-Page Overview")
     wb = await fetchXlsx(FILES.REV);
     if(wb) {
         // Month Data
         const sheetM = wb.Sheets['000_月營收']||wb.Sheets[wb.SheetNames[0]];
         const rowsM = XLSX.utils.sheet_to_json(sheetM);
         const headsM = Object.keys(rowsM[0]||{});
-        // Smart Column Detection
+        // Find columns dynamically (e.g. 23M09單月營收)
         const mCols = headsM.filter(h => h.includes('單月營收(億)')).sort();
         
         // Month Accum Data
@@ -229,24 +230,16 @@ async function init() {
         const accMap = {};
         rowsAcc.forEach(r => {
             const c = safe(r['代號']); accMap[c] = {};
-            Object.keys(r).forEach(k => { if(k.includes('累月營收年增')) accMap[c][k.match(/(\d+M\d+)/)[0]] = r[k]; });
+            Object.keys(r).forEach(k => { 
+                if(k.includes('累月營收年增')) {
+                    // Extract Date like 24M09
+                    const m = k.match(/(\d+M\d+)/);
+                    if(m) accMap[c][m[0]] = r[k]; 
+                }
+            });
         });
 
-        // Year Revenue
-        const sheetY = wb.Sheets['000_年營收'];
-        const rowsY = sheetY ? XLSX.utils.sheet_to_json(sheetY) : [];
-        const headsY = Object.keys(rowsY[0]||{});
-        const yCols = headsY.filter(h => h.includes('年度營收')).sort();
-        const yMap = {};
-        rowsY.forEach(r => {
-            const c = safe(r['代號']); if(!c) return;
-            const d = yCols.map(col=>({d:col.match(/(\d{4})/)[0], rev:r[col]})).filter(i=>i.rev);
-            for(let i=1; i<d.length; i++) d[i].yoy = ((d[i].rev-d[i-1].rev)/d[i-1].rev*100).toFixed(2);
-            yMap[c] = d.reverse();
-        });
-        META.revData.year = yMap;
-
-        // Process Month Data
+        // Merge & Calculate
         rowsM.forEach(r => {
             const c = safe(r['代號']); if(!c) return;
             const data = mCols.map(col => {
@@ -255,19 +248,29 @@ async function init() {
             }).filter(i=>i.rev);
             
             let accRev = 0;
+            // Need data sorted ascending for calc
             for(let i=0; i<data.length; i++) {
-                if(i>0) data[i].mom = ((data[i].rev-data[i-1].rev)/data[i-1].rev*100).toFixed(2);
-                if(i>=12) data[i].yoy = ((data[i].rev-data[i-12].rev)/data[i-12].rev*100).toFixed(2);
-                const year = data[i].d.substr(0,2);
-                const prevYear = i>0 ? data[i-1].d.substr(0,2) : '';
-                if(year !== prevYear) accRev = 0;
+                // MoM
+                if(i>0) {
+                    const prev = parseFloat(data[i-1].rev);
+                    const curr = parseFloat(data[i].rev);
+                    if(prev) data[i].mom = ((curr-prev)/prev*100).toFixed(2);
+                }
+                // YoY (Approx 12 index back)
+                if(i>=12) {
+                    const prevY = parseFloat(data[i-12].rev);
+                    const curr = parseFloat(data[i].rev);
+                    if(prevY) data[i].yoy = ((curr-prevY)/prevY*100).toFixed(2);
+                }
+                // Accum Rev (Calculation: Reset on M01)
+                if(data[i].d.endsWith('M01')) accRev = 0;
                 accRev += parseFloat(data[i].rev);
                 data[i].accRev = accRev.toFixed(1);
             }
-            META.revData.month[c] = data.slice(-13).reverse();
+            META.revData.month[c] = data.slice(-13).reverse(); // Store latest
         });
 
-        // Quarter Data
+        // Quarter
         const sheetQ = wb.Sheets['000_季營收'];
         if(sheetQ) {
             const rowsQ = XLSX.utils.sheet_to_json(sheetQ);
@@ -280,6 +283,19 @@ async function init() {
                     if(i>=4) data[i].yoy = ((data[i].rev-data[i-4].rev)/data[i-4].rev*100).toFixed(2);
                 }
                 META.revData.quarter[c] = data.slice(-8).reverse();
+            });
+        }
+        
+        // Year
+        const sheetY = wb.Sheets['000_年營收'];
+        if(sheetY) {
+            const rowsY = XLSX.utils.sheet_to_json(sheetY);
+            const yCols = Object.keys(rowsY[0]||{}).filter(h=>h.includes('年度營收')).sort();
+            rowsY.forEach(r=>{
+                const c = safe(r['代號']); if(!c) return;
+                const data = yCols.map(col=>({d:col.match(/(\d{4})/)[0], rev:r[col]})).filter(i=>i.rev);
+                for(let i=1; i<data.length; i++) data[i].yoy = ((data[i].rev-data[i-1].rev)/data[i-1].rev*100).toFixed(2);
+                META.revData.year[c] = data.slice(-5).reverse();
             });
         }
         
@@ -373,16 +389,18 @@ function renderList() {
     $('list').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無相符資料</div>';
 }
 
-// ===== POP-UP MODAL LOGIC =====
+// ===== POP-UP MODAL (v3.0 Logic) =====
 window.openStock = (code) => {
     if(!code || code==='-') return;
     const s = DB.stocks[code] || { '公司名稱': code, '代號': code, '產業分類':'未知', '業務摘要':'' };
     const name = s['公司名稱'];
     
+    // Aggregate Data
     const cbs = META.cbMap[code], revM = META.revData.month[code]||[], revQ = META.revData.quarter[code]||[], revY = META.revData.year[code]||[];
     const memos = META.relatedMemo[code]||[], news = META.relatedNews[code]||[], fin = META.finance[name]||{}, prod = META.products[name]||{}, track = META.tracking[name]||{}, rate = META.ratings[code]||{}, concepts = META.concepts[code]||[];
     const revH = META.revData.highlights[code]||{};
 
+    // Header
     $('m-info').innerHTML = `
         <div style="font-size:22px;font-weight:700;margin-bottom:5px">${name} (${code})</div>
         <div class="card-meta"><span class="tag ind">${s['產業分類']}</span>${concepts.map(c=>`<span class="tag concept">#${c}</span>`).join('')}</div>
@@ -399,7 +417,7 @@ window.openStock = (code) => {
     }).join('');
     if(cbs) tBasic += `<div class="section-head">🎫 可轉債 (CB)</div>` + cbs.map(c=>`<div class="hl-block"><b>${c['名稱']}</b><br>轉價:${c['轉換價格(元)']} | 餘額:${c['最新餘額(百萬)']}M</div>`).join('');
 
-    // 2. Finance (Interactive Table)
+    // 2. Finance (Full Revenue Table)
     let tFin = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px">
         <div style="background:#f8f9fa;padding:10px;text-align:center;border-radius:8px"><div style="font-size:11px;color:#888">3Q25營收</div><div style="font-weight:700">${fin['3Q25營收']||'-'}</div></div>
         <div style="background:#f8f9fa;padding:10px;text-align:center;border-radius:8px"><div style="font-size:11px;color:#888">毛利率</div><div style="font-weight:700">${fin['毛利率']||'-'}</div></div>
@@ -462,10 +480,9 @@ window.openStock = (code) => {
         <div id="tab-rate" class="tab-pane">${tRate||'<div style="text-align:center;padding:20px;color:#999">無評等</div>'}</div>
     `;
     
-    // Reset Modal Tab to Basic
+    // Reset Modal Tabs
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
     document.querySelector('.b-basic').classList.add('active');
-    // Default to finance if triggered from there (optional, keeping basic for consistency)
     $('modal').classList.add('show');
 };
 
@@ -496,7 +513,6 @@ window.openReport = (rid, type) => {
     // Hide nav grid for reports
     document.querySelector('.nav-grid').style.display = 'none';
     $('modal').classList.add('show');
-    // Restore nav grid when closing (handled by closeModal)
 };
 
 window.swTab = (id, el) => {
