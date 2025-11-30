@@ -3,98 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rex大叔投資研究室 (Final Flat v3.0)</title>
+    <title>Rex大叔投資研究室 (Final Data Filled)</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>if(typeof XLSX==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');}</script>
     <style>
-        /* ===== 1. 視覺風格：完全鎖定 v3.0 (暖色系、圓角、陰影) ===== */
+        /* ===== v3.0 經典樣式 (保持不變) ===== */
         :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; --up: #e74c3c; --down: #27ae60; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; 
-            background: var(--bg); color: var(--text); padding-bottom: 60px;
-            overflow-x: hidden; 
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
+        .container { max-width: 800px; margin: 0 auto; padding: 12px; }
 
-        .container { 
-            width: 100%; max-width: 600px; margin: 0 auto; padding: 12px; position: relative;
-        }
+        /* Loading */
+        .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
+        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
 
-        /* 關鍵修正：這是「換頁」邏輯，不是彈窗 */
-        .view-section { display: none; width: 100%; animation: fadeIn 0.2s ease-out; }
-        .view-section.active { display: block; }
-        @keyframes fadeIn { from{opacity:0; transform:translateY(5px);} to{opacity:1; transform:translateY(0);} }
-
-        /* Header */
-        .header { text-align: center; padding: 15px 0; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
+        /* Header & Tabs */
+        .header { text-align: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
         .header h1 { color: var(--primary); font-size: 22px; margin-bottom: 5px; font-weight: 800; }
-        
-        /* Tabs (維持 v3.0 樣式) */
         .db-switcher { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 15px 0; }
         .db-tab { padding: 6px 14px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--gray); cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .db-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
         .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
-        
+
         /* Search Box */
         .search-box { position: relative; margin-bottom: 15px; }
         .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; }
-        .search-input:focus { border-color: var(--primary); }
         .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
-        .clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; font-size: 14px; line-height: 20px; text-align: center; cursor: pointer; display: none; }
+        .clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; }
 
-        /* Card List (維持 v3.0 樣式) */
+        /* Card List */
         .card-list { display: flex; flex-direction: column; gap: 12px; }
         .card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; }
-        .card:active { transform: scale(0.98); background: #fafafa; }
-        .card-head { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: flex-start; }
+        .card-head { display: flex; justify-content: space-between; margin-bottom: 8px; }
         .card-title { font-weight: 700; font-size: 16px; color: #2c3e50; }
         .card-meta { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
         .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 500; }
         .tag.brk { background: var(--primary); }
         .tag.ind { background: #2980b9; }
         .tag.dt { background: #e0e0e0; color: #666; }
-        .tag.st { background: #27ae60; }
-        .tag.concept { background: #8e44ad; }
-        .card-body { font-size: 13px; color: #555; line-height: 1.6; word-break: break-word; }
+        .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* Detail View Navbar (單純的返回鍵) */
-        .detail-navbar { 
-            position: sticky; top: 0; background: var(--bg); z-index: 100; 
-            padding: 10px 0; margin-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05);
-            margin-left: -12px; margin-right: -12px; padding-left: 12px; /* 滿版修正 */
-        }
-        .back-btn { 
-            background: #fff; border: 1px solid var(--border); padding: 8px 20px; border-radius: 20px; 
-            color: var(--primary); font-weight: 700; font-size: 14px; cursor: pointer; 
-            display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        /* Detail Content (v3.0 樣式) */
-        .info-card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border: 1px solid var(--border); }
-        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
-        .info-label { color: #888; }
-        .info-val { font-weight: 600; color: #333; text-align: right; max-width: 70%; }
+        /* Modal */
+        .modal { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: flex-end; }
+        .modal.show { display: flex; }
+        .modal-inner { background: #fff; width: 100%; max-width: 600px; height: 90vh; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s; }
+        .m-head { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-start; }
+        .m-close { width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; font-size: 20px; color: #666; cursor: pointer; display: flex; justify-content: center; align-items: center; }
         
-        .section-head { font-size: 14px; font-weight: 700; color: #555; margin: 20px 0 10px; padding-left: 8px; border-left: 4px solid var(--primary); }
-        .hl-block { background: #fafaf8; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; line-height: 1.6; }
-        .list-item { padding: 12px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 8px; background: #fff; }
-        .memo-content { font-size: 13px; color: #444; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0e0e0; line-height: 1.6; }
-
-        /* Nav Grid (v3.0 的 6 格按鈕) */
-        .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 12px; border: 1px solid var(--border); }
-        .nav-btn { padding: 10px 5px; border-radius: 8px; border: none; background: #f5f5f5; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
+        .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px 15px; background: #fff; border-bottom: 1px solid #eee; }
+        .nav-btn { padding: 8px 5px; border-radius: 8px; border: none; background: #f5f5f5; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
         .nav-btn.active.b-basic { background: #e3f2fd; color: #1565c0; } 
         .nav-btn.active.b-fin { background: #fff8e1; color: #f57f17; } 
         .nav-btn.active.b-prod { background: #efebe9; color: #5d4037; } 
         .nav-btn.active.b-rep { background: #f3e5f5; color: #7b1fa2; } 
         .nav-btn.active.b-time { background: #ffebee; color: #c62828; } 
         .nav-btn.active.b-rate { background: #e0f2f1; color: #00695c; } 
-        
-        .tab-pane { display: none; }
-        .tab-pane.active { display: block; animation: fadeIn 0.3s; }
 
-        /* 財務表格 (營收一頁通樣式) */
+        .m-body { flex: 1; overflow-y: auto; padding: 15px; background: #fff; -webkit-overflow-scrolling: touch; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* Finance Table Styles */
         .fin-switcher { display: flex; margin-bottom: 10px; border: 1px solid var(--primary); border-radius: 6px; overflow: hidden; }
         .fin-btn { flex: 1; padding: 8px; text-align: center; font-size: 13px; color: var(--primary); background: #fff; cursor: pointer; font-weight: 600; border-right: 1px solid var(--primary); }
         .fin-btn:last-child { border-right: none; }
@@ -106,52 +75,66 @@
         .fin-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
         .fin-table th { background: #f8f9fa; padding: 8px; border-bottom: 2px solid #ddd; text-align: right; color: #555; position: sticky; top: 0; }
         .fin-table td { padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: #333; }
-        .fin-table th:first-child, .fin-table td:first-child { position: sticky; left: 0; background: #fff; border-right: 1px solid #eee; text-align: left; z-index: 2; }
+        .fin-table th:first-child, .fin-table td:first-child { position: sticky; left: 0; background: #fff; border-right: 1px solid #eee; text-align: left; z-index: 2; font-weight: 700; }
         .fin-table tr:nth-child(even) td { background: #fcfcfc; }
         .fin-table tr:nth-child(even) td:first-child { background: #fcfcfc; }
         
         .t-up { color: var(--up); font-weight: 700; }
         .t-down { color: var(--down); font-weight: 700; }
+        
+        /* Other Components */
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .section-head { font-size: 14px; font-weight: 700; color: #555; margin: 20px 0 10px; padding-left: 8px; border-left: 4px solid #ccc; }
+        .hl-block { background: #fafaf8; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; line-height: 1.6; }
+        .list-item { padding: 12px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 8px; background: #fff; }
         .highlight { background-color: #fff3cd; color: #856404; font-weight: bold; padding: 0 2px; }
         .tag-link { color: var(--link); cursor: pointer; font-weight: 600; }
+
+        @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     </style>
 </head>
 <body>
 
+<div class="loading-overlay" id="loader">
+    <div style="font-size:30px;margin-bottom:10px">📊</div>
+    <div style="font-weight:700">Rex大叔投資研究室</div>
+    <div style="font-size:12px;color:#888;margin-top:5px">資料庫載入中...</div>
+</div>
+
 <div class="container">
-    <div id="view-home" class="view-section active">
-        <div class="header">
-            <h1>📊 Rex大叔投資研究室</h1>
-            <p style="font-size:12px;color:#666">全方位台股投資決策系統</p>
-        </div>
-
-        <div class="db-switcher">
-            <div class="db-tab active" onclick="setDB('news')">⚡ 外電 <span class="count" id="c-news">0</span></div>
-            <div class="db-tab" onclick="setDB('memo')">📋 Memo <span class="count" id="c-memo">0</span></div>
-            <div class="db-tab" onclick="setDB('reports')">📑 報告 <span class="count" id="c-reports">0</span></div>
-            <div class="db-tab" onclick="setDB('strategy')">🎯 策略 <span class="count" id="c-strategy">0</span></div>
-            <div class="db-tab" onclick="setDB('stocks')">🏢 個股 <span class="count" id="c-stocks">0</span></div>
-            <div class="db-tab" onclick="setDB('cb')">🎫 CB <span class="count" id="c-cb">0</span></div>
-        </div>
-
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" class="search-input" id="search" placeholder="搜尋公司、代號、#Tag..." oninput="handleInput(this)">
-            <div class="clear-btn" id="clearBtn" onclick="clearSearch()">✕</div>
-        </div>
-
-        <div style="font-size:12px;color:#666;margin-bottom:10px;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
-        <div class="card-list" id="list"></div>
+    <div class="header">
+        <h1>📊 Rex大叔投資研究室</h1>
+        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v12.0</p>
     </div>
 
-    <div id="view-detail" class="view-section">
-        <div class="detail-navbar">
-            <button class="back-btn" onclick="goBack()">❮ 返回列表</button>
+    <div class="db-switcher">
+        <div class="db-tab active" onclick="setDB('news')">⚡ 外電 <span class="count" id="c-news">0</span></div>
+        <div class="db-tab" onclick="setDB('memo')">📋 Memo <span class="count" id="c-memo">0</span></div>
+        <div class="db-tab" onclick="setDB('reports')">📑 報告 <span class="count" id="c-reports">0</span></div>
+        <div class="db-tab" onclick="setDB('strategy')">🎯 策略 <span class="count" id="c-strategy">0</span></div>
+        <div class="db-tab" onclick="setDB('stocks')">🏢 個股 <span class="count" id="c-stocks">0</span></div>
+        <div class="db-tab" onclick="setDB('cb')">🎫 CB <span class="count" id="c-cb">0</span></div>
+    </div>
+
+    <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="search" placeholder="搜尋公司、代號、#Tag..." oninput="handleInput(this)">
+        <div class="clear-btn" id="clearBtn" onclick="clearSearch()">✕</div>
+    </div>
+
+    <div style="font-size:12px;color:#666;margin-bottom:10px;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
+    <div class="card-list" id="list"></div>
+</div>
+
+<div class="modal" id="modal" onclick="closeModal(event)">
+    <div class="modal-inner" onclick="event.stopPropagation()">
+        <div class="m-head">
+            <div id="m-info" style="flex:1"></div>
+            <button class="m-close" onclick="closeModal()">×</button>
         </div>
         
-        <div id="m-info"></div>
-        
-        <div id="stock-nav" class="nav-grid" style="display:none">
+        <div class="nav-grid">
             <button class="nav-btn active b-basic" onclick="swTab('basic', this)">📊 基本資料</button>
             <button class="nav-btn b-fin" onclick="swTab('fin', this)">💰 財務數據</button>
             <button class="nav-btn b-prod" onclick="swTab('prod', this)">📦 產品結構</button>
@@ -160,7 +143,7 @@
             <button class="nav-btn b-rate" onclick="swTab('rate', this)">⭐ 評價評等</button>
         </div>
 
-        <div id="m-body"></div>
+        <div class="m-body" id="m-body"></div>
     </div>
 </div>
 
@@ -188,7 +171,7 @@ const fmtDate = v => {
 const fmtTxt = (t) => {
     if(!t) return '';
     let html = safe(t).replace(/\n/g, '<br>').replace(/•/g, '<br>• ');
-    html = html.replace(/#(\S+)/g, '<span class="tag-link" onclick="setSearch(\'#$1\');">#$1</span>');
+    html = html.replace(/#(\S+)/g, '<span class="tag-link" onclick="setSearch(\'#$1\');closeModal()">#$1</span>');
     html = html.replace(/(\d{4})/g, (match) => DB.stocks[match] ? `<span class="tag-link" onclick="openStock('${match}');">${match}</span>` : match);
     return html;
 };
@@ -205,18 +188,10 @@ const colorClass = (v) => {
     if(n>0) return 't-up'; if(n<0) return 't-down'; return '';
 };
 
-// View Management (Key for Flat View)
-function switchPage(pageId) {
-    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-    $(pageId).classList.add('active');
-    window.scrollTo(0,0);
-}
-function goBack() { switchPage('view-home'); }
-
 // Search
 function handleInput(el) { $('clearBtn').style.display = el.value.length > 0 ? 'block' : 'none'; renderList(); }
 function clearSearch() { $('search').value=''; $('search').focus(); $('clearBtn').style.display='none'; renderList(); }
-window.setSearch = (term) => { $('search').value = term; handleInput($('search')); goBack(); };
+window.setSearch = (term) => { $('search').value = term; handleInput($('search')); };
 
 // --- Loaders ---
 async function fetchXlsx(url) {
@@ -238,13 +213,17 @@ async function init() {
             if(c&&t) { if(!META.concepts[c]) META.concepts[c]=[]; if(!META.concepts[c].includes(t)) META.concepts[c].push(t); }
         });
     }
-    // 2. Revenue (Detailed)
+    // 2. Revenue (Detailed Injection)
     wb = await fetchXlsx(FILES.REV);
     if(wb) {
+        // Month Data
         const sheetM = wb.Sheets['000_月營收']||wb.Sheets[wb.SheetNames[0]];
         const rowsM = XLSX.utils.sheet_to_json(sheetM);
-        const mCols = Object.keys(rowsM[0]||{}).filter(h=>h.includes('單月營收(億)')).sort();
+        const headsM = Object.keys(rowsM[0]||{});
+        // Smart Column Detection
+        const mCols = headsM.filter(h => h.includes('單月營收(億)')).sort();
         
+        // Month Accum Data
         const sheetAcc = wb.Sheets['000_月累營收年增'];
         const rowsAcc = sheetAcc ? XLSX.utils.sheet_to_json(sheetAcc) : [];
         const accMap = {};
@@ -253,12 +232,28 @@ async function init() {
             Object.keys(r).forEach(k => { if(k.includes('累月營收年增')) accMap[c][k.match(/(\d+M\d+)/)[0]] = r[k]; });
         });
 
+        // Year Revenue
+        const sheetY = wb.Sheets['000_年營收'];
+        const rowsY = sheetY ? XLSX.utils.sheet_to_json(sheetY) : [];
+        const headsY = Object.keys(rowsY[0]||{});
+        const yCols = headsY.filter(h => h.includes('年度營收')).sort();
+        const yMap = {};
+        rowsY.forEach(r => {
+            const c = safe(r['代號']); if(!c) return;
+            const d = yCols.map(col=>({d:col.match(/(\d{4})/)[0], rev:r[col]})).filter(i=>i.rev);
+            for(let i=1; i<d.length; i++) d[i].yoy = ((d[i].rev-d[i-1].rev)/d[i-1].rev*100).toFixed(2);
+            yMap[c] = d.reverse();
+        });
+        META.revData.year = yMap;
+
+        // Process Month Data
         rowsM.forEach(r => {
             const c = safe(r['代號']); if(!c) return;
             const data = mCols.map(col => {
                 const date = col.match(/(\d+M\d+)/)[0];
                 return { d: date, rev: r[col], accYoY: accMap[c]?.[date] };
             }).filter(i=>i.rev);
+            
             let accRev = 0;
             for(let i=0; i<data.length; i++) {
                 if(i>0) data[i].mom = ((data[i].rev-data[i-1].rev)/data[i-1].rev*100).toFixed(2);
@@ -272,6 +267,7 @@ async function init() {
             META.revData.month[c] = data.slice(-13).reverse();
         });
 
+        // Quarter Data
         const sheetQ = wb.Sheets['000_季營收'];
         if(sheetQ) {
             const rowsQ = XLSX.utils.sheet_to_json(sheetQ);
@@ -287,27 +283,16 @@ async function init() {
             });
         }
         
-        const sheetY = wb.Sheets['000_年營收'];
-        if(sheetY) {
-            const rowsY = XLSX.utils.sheet_to_json(sheetY);
-            const yCols = Object.keys(rowsY[0]||{}).filter(h=>h.includes('年度營收')).sort();
-            rowsY.forEach(r=>{
-                const c = safe(r['代號']); if(!c) return;
-                const data = yCols.map(col=>({d:col.match(/(\d{4})/)[0], rev:r[col]})).filter(i=>i.rev);
-                for(let i=1; i<data.length; i++) data[i].yoy = ((data[i].rev-data[i-1].rev)/data[i-1].rev*100).toFixed(2);
-                META.revData.year[c] = data.slice(-5).reverse();
-            });
-        }
-        
         const sheetH = wb.Sheets['10_財報備註'];
         if(sheetH) XLSX.utils.sheet_to_json(sheetH).forEach(r => META.revData.highlights[safe(r['代號'])] = r);
     }
 
     // 3. Other DBs
     wb = await fetchXlsx(FILES.NEWS);
-    if(wb) XLSX.utils.sheet_to_json(wb.Sheets['外電綜合報導']||[]).forEach(r=>{ if(safe(r['資料類型'])==='個股報導') { DB.news.push(r); const k=safe(r['股號']); if(k){ if(!META.relatedNews[k]) META.relatedNews[k]=[]; META.relatedNews[k].push(r); } }});
-    DB.news.sort((a,b)=>getDateVal(b['日期'])-getDateVal(a['日期']));
-
+    if(wb) {
+        XLSX.utils.sheet_to_json(wb.Sheets['外電綜合報導']||[]).forEach(r=>{ if(safe(r['資料類型'])==='個股報導') { DB.news.push(r); const k=safe(r['股號']); if(k){ if(!META.relatedNews[k]) META.relatedNews[k]=[]; META.relatedNews[k].push(r); } }});
+        DB.news.sort((a,b)=>getDateVal(b['日期'])-getDateVal(a['日期']));
+    }
     wb = await fetchXlsx(FILES.MEMO);
     if(wb) {
         XLSX.utils.sheet_to_json(wb.Sheets['報告總表']||[]).forEach(r=>{ DB.memo.push(r); const k=safe(r['股號']); if(k){ if(!META.relatedMemo[k]) META.relatedMemo[k]=[]; META.relatedMemo[k].push(r); } });
@@ -317,7 +302,6 @@ async function init() {
         XLSX.utils.sheet_to_json(wb.Sheets['產品結構分析']||[]).forEach(r=>META.products[safe(r['公司'])]=r);
         XLSX.utils.sheet_to_json(wb.Sheets['公司追蹤表']||[]).forEach(r=>META.tracking[safe(r['公司'])]=r);
     }
-
     wb = await fetchXlsx(FILES.REPORTS);
     if(wb) {
         XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r=>DB.reports.push(r));
@@ -328,7 +312,6 @@ async function init() {
             [1,2,3].forEach(n => { const s=safe(r[`首選個股${n}`]); if(s){ if(!META.reportPicks[rid]) META.reportPicks[rid]=[]; META.reportPicks[rid].push({name:s, reason:safe(r[`首選理由${n}`])}); } });
         });
     }
-
     wb = await fetchXlsx(FILES.STRAT);
     if(wb) {
         XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r=>DB.strategy.push(r));
@@ -338,10 +321,10 @@ async function init() {
             if(rid&&c) { if(!META.reportPicks[rid]) META.reportPicks[rid]=[]; META.reportPicks[rid].push({code:c, name:safe(r['公司名稱']), note:safe(r['備註'])}); if(!META.stockInReports[c]) META.stockInReports[c]=[]; META.stockInReports[c].push(rid); }
         });
     }
-
     wb = await fetchXlsx(FILES.CB);
     if(wb) XLSX.utils.sheet_to_json(wb.Sheets['08_最新動態每週基本資料']||[]).forEach(r=>{ DB.cb.push(r); const k=safe(r['轉換標的代碼']); if(k){ if(!META.cbMap[k]) META.cbMap[k]=[]; META.cbMap[k].push(r); } });
 
+    $('loader').classList.add('hidden');
     renderList();
 }
 
@@ -390,7 +373,7 @@ function renderList() {
     $('list').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無相符資料</div>';
 }
 
-// ===== FLAT DETAIL VIEW =====
+// ===== POP-UP MODAL LOGIC =====
 window.openStock = (code) => {
     if(!code || code==='-') return;
     const s = DB.stocks[code] || { '公司名稱': code, '代號': code, '產業分類':'未知', '業務摘要':'' };
@@ -401,11 +384,10 @@ window.openStock = (code) => {
     const revH = META.revData.highlights[code]||{};
 
     $('m-info').innerHTML = `
-        <div class="info-card">
-            <div style="font-size:20px;font-weight:800;margin-bottom:5px;color:#2c3e50;">${name} (${code})</div>
-            <div class="card-meta"><span class="tag ind" onclick="setSearch('${s['產業分類']}')">${s['產業分類']}</span>${concepts.map(c=>`<span class="tag concept" onclick="setSearch('${c}')">#${c}</span>`).join('')}</div>
-            <div style="font-size:14px;color:#666;margin-top:10px;line-height:1.5">${s['業務摘要']}</div>
-        </div>`;
+        <div style="font-size:22px;font-weight:700;margin-bottom:5px">${name} (${code})</div>
+        <div class="card-meta"><span class="tag ind">${s['產業分類']}</span>${concepts.map(c=>`<span class="tag concept">#${c}</span>`).join('')}</div>
+        <div style="font-size:13px;color:#666;margin-top:5px;line-height:1.5">${s['業務摘要']}</div>
+    `;
 
     // 1. Basic
     let tBasic = `<div class="info-row"><span class="info-label">收盤價</span><span class="info-val" style="color:var(--primary)">${s['成交']||'-'}</span></div>
@@ -480,11 +462,11 @@ window.openStock = (code) => {
         <div id="tab-rate" class="tab-pane">${tRate||'<div style="text-align:center;padding:20px;color:#999">無評等</div>'}</div>
     `;
     
-    // Show Stock Nav, Reset Tab
-    $('stock-nav').style.display='grid';
+    // Reset Modal Tab to Basic
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
     document.querySelector('.b-basic').classList.add('active');
-    switchPage('view-detail');
+    // Default to finance if triggered from there (optional, keeping basic for consistency)
+    $('modal').classList.add('show');
 };
 
 window.openReport = (rid, type) => {
@@ -492,27 +474,29 @@ window.openReport = (rid, type) => {
     if (!report) return;
     const picks = META.reportPicks[rid] || [];
 
-    $('stock-nav').style.display='none'; 
     $('m-info').innerHTML = `
-        <div class="info-card">
-            <div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:5px">${report['報告標題']}</div>
-            <div style="font-size:13px;color:#666;">${report['券商名稱']} | ${fmtDate(report['報告日期'])}</div>
-        </div>`;
+        <div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:5px">${report['報告標題']}</div>
+        <div style="font-size:13px;color:#666;">${report['券商名稱']} | ${fmtDate(report['報告日期'])}</div>
+    `;
 
     let html = `<div class="hl-block" style="margin-top:15px;"><b>💡 核心觀點</b><br>${fmtTxt(report['副標題'] || report['大盤觀點'] || '無詳細摘要')}</div>`;
     
     if (picks.length > 0) {
-        html += `<div class="section-head">相關精選個股</div><div class="rep-stock-grid">` + picks.map(p => {
+        html += `<div class="section-head">相關精選個股</div>` + picks.map(p => {
             let code = p.code || (Object.values(DB.stocks).find(s=>s['公司名稱']===p.name)?.['代號']);
             return `<div class="list-item" ${code?`onclick="openStock('${code}')"`:''}>
                 <div style="font-weight:700">${p.name} ${code||''}</div>${p.reason?`<div style="font-size:12px;color:#666;margin-top:2px">${p.reason}</div>`:''}
             </div>`;
-        }).join('') + `</div>`;
+        }).join('');
     }
     if(report['總經觀點摘要']) html += `<div class="section-head">總經觀點</div><div style="font-size:13px;color:#444;line-height:1.6;background:#fff;padding:15px;border-radius:8px;border:1px solid #eee;">${fmtTxt(report['總經觀點摘要'])}</div>`;
     
     $('m-body').innerHTML = html;
-    switchPage('view-detail');
+    
+    // Hide nav grid for reports
+    document.querySelector('.nav-grid').style.display = 'none';
+    $('modal').classList.add('show');
+    // Restore nav grid when closing (handled by closeModal)
 };
 
 window.swTab = (id, el) => {
@@ -520,7 +504,6 @@ window.swTab = (id, el) => {
     el.classList.add('active');
     document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
     $('tab-'+id).classList.add('active');
-    // Hide revenue sub-tabs when not in finance
     if(id!=='fin') document.querySelectorAll('.fin-sub-pane').forEach(p=>p.classList.remove('active'));
     else swFin(0); 
 };
@@ -530,6 +513,12 @@ window.swFin = (idx) => {
     document.querySelectorAll('.fin-sub-pane').forEach((p,i) => p.classList.toggle('active', i===idx));
 };
 
+window.closeModal = (e) => { 
+    if(!e || e.target.id==='modal' || e.target.classList.contains('m-close')) {
+        $('modal').classList.remove('show');
+        setTimeout(() => document.querySelector('.nav-grid').style.display = 'grid', 300); // Reset Nav visibility
+    }
+};
 window.onload = init;
 </script>
 </body>
