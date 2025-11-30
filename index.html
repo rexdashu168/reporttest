@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rex大叔投資研究室 (v16.0 Final Fix)</title>
+    <title>Rex大叔投資研究室 (v17.0 Data Focus)</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>if(typeof XLSX==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');}</script>
     <style>
-        /* ===== v3.0 經典彈窗風格 (100% 還原) ===== */
+        /* ===== v3.0 經典彈窗風格 (100% 保留) ===== */
         :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; --up: #e74c3c; --down: #27ae60; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
@@ -28,6 +28,7 @@
         /* Search Box */
         .search-box { position: relative; margin-bottom: 15px; }
         .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
         .clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; }
 
         /* Card List */
@@ -62,7 +63,7 @@
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
 
-        /* 財務表格專用 */
+        /* 財務表格專用 (營收一頁通) */
         .fin-switcher { display: flex; margin-bottom: 10px; border: 1px solid var(--primary); border-radius: 6px; overflow: hidden; }
         .fin-btn { flex: 1; padding: 8px; text-align: center; font-size: 13px; color: var(--primary); background: #fff; cursor: pointer; font-weight: 600; border-right: 1px solid var(--primary); }
         .fin-btn:last-child { border-right: none; }
@@ -104,7 +105,7 @@
 <div class="container">
     <div class="header">
         <h1>📊 Rex大叔投資研究室</h1>
-        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v16.0</p>
+        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v17.0</p>
     </div>
 
     <div class="db-switcher">
@@ -196,13 +197,14 @@ async function fetchXlsx(url) {
         const res = await fetch(url);
         if(!res.ok) throw new Error();
         return XLSX.read(await res.arrayBuffer(), {type:'array'});
-    } catch(e) { return null; }
+    } catch(e) { console.error('Load Error:', url); return null; }
 }
 
 async function init() {
+    let wb;
     try {
-        // 1. Master
-        let wb = await fetchXlsx(FILES.MASTER);
+        // 1. Master & Concepts
+        wb = await fetchXlsx(FILES.MASTER);
         if(wb) {
             XLSX.utils.sheet_to_json(wb.Sheets['主資料庫']||[]).forEach(r=>{ if(r['代號']) DB.stocks[safe(r['代號'])]=r; });
             XLSX.utils.sheet_to_json(wb.Sheets['💡概念股族群資料庫']||[]).forEach(r=>{
@@ -211,72 +213,65 @@ async function init() {
             });
         }
         
-        // 2. Revenue (FIXED AND OPTIMIZED)
+        // 2. Revenue Data (Simplified & Targeted)
         wb = await fetchXlsx(FILES.REV);
         if(wb) {
             // Month
             const sheetM = wb.Sheets['000_月營收']||wb.Sheets[wb.SheetNames[0]];
             const rowsM = XLSX.utils.sheet_to_json(sheetM);
-            const headersM = Object.keys(rowsM[0]||{});
+            const headsM = Object.keys(rowsM[0]||{});
+            const mCols = headsM.filter(h => h.includes('單月營收(億)')).sort();
+            const accumCols = headsM.filter(h => h.includes('累月營收(億)')).sort(); // Direct read
             
-            // Month Accum
+            // Month Accum YoY
             const sheetAcc = wb.Sheets['000_月累營收年增'];
             const rowsAcc = sheetAcc ? XLSX.utils.sheet_to_json(sheetAcc) : [];
             const accMap = {};
-            // Optimized: Create map for quick lookup
             rowsAcc.forEach(r => {
-                const c = safe(r['代號']); 
-                if(c) {
-                    accMap[c] = r; 
-                }
+                const c = safe(r['代號']); accMap[c] = {};
+                Object.keys(r).forEach(k => { 
+                    if(k.includes('累月營收年增')) {
+                        const m = k.match(/(\d+M\d+)/);
+                        if(m) accMap[c][m[0]] = r[k]; 
+                    }
+                });
             });
 
-            // Identify columns dynamically
-            const monthCols = headersM.filter(h => h.includes('單月營收(億)')).sort();
-            const accumCols = headersM.filter(h => h.includes('累月營收(億)')).sort();
-
-            // Process data row by row
+            // Build Month Data (Last 12)
             rowsM.forEach(r => {
                 const c = safe(r['代號']); if(!c) return;
                 
-                // Build dataset
+                // Get all available periods, then slice last 12
                 const data = [];
-                monthCols.forEach(mCol => {
-                    const dateMatch = mCol.match(/(\d+M\d+)/);
-                    if(!dateMatch) return;
-                    const d = dateMatch[0];
-                    
-                    // Find corresponding accumulated rev col
+                mCols.forEach(col => {
+                    const m = col.match(/(\d+M\d+)/);
+                    if(!m) return;
+                    const d = m[0];
+                    // Find matching accumulated col
                     const accCol = accumCols.find(ac => ac.includes(d));
                     
-                    // Find corresponding accumulated YoY col from the other sheet
-                    const accYoYVal = accMap[c] ? (
-                        Object.entries(accMap[c]).find(([k,v]) => k.includes(d) && k.includes('年增'))?.[1]
-                    ) : null;
-
-                    data.push({
-                        d: d,
-                        rev: r[mCol],
-                        accRev: accCol ? r[accCol] : null,
-                        accYoY: accYoYVal
+                    data.push({ 
+                        d: d, 
+                        rev: r[col], 
+                        accRev: accCol ? r[accCol] : null, // Read directly
+                        accYoY: accMap[c]?.[d] 
                     });
                 });
 
-                // Calculate Missing Metrics
+                // Calc MoM/YoY
                 for(let i=0; i<data.length; i++) {
-                    if(i>0) { // MoM
+                    if(i>0 && data[i-1].rev && data[i].rev) {
                         const prev = parseFloat(data[i-1].rev);
                         const curr = parseFloat(data[i].rev);
                         if(prev) data[i].mom = ((curr-prev)/prev*100).toFixed(2);
                     }
-                    if(i>=12) { // YoY
+                    if(i>=12 && data[i-12].rev && data[i].rev) {
                         const prevY = parseFloat(data[i-12].rev);
                         const curr = parseFloat(data[i].rev);
                         if(prevY) data[i].yoy = ((curr-prevY)/prevY*100).toFixed(2);
                     }
                 }
-                // Store only recent 24 months to save memory
-                META.revData.month[c] = data.slice(-24).reverse();
+                META.revData.month[c] = data.slice(-12).reverse(); // Last 12
             });
 
             // Quarter
@@ -284,15 +279,36 @@ async function init() {
             if(sheetQ) {
                 const rowsQ = XLSX.utils.sheet_to_json(sheetQ);
                 const qCols = Object.keys(rowsQ[0]||{}).filter(h=>h.includes('單季營收')).sort();
+                const qAccumCols = Object.keys(rowsQ[0]||{}).filter(h=>h.includes('累季營收')).sort();
+
                 rowsQ.forEach(r=>{
                     const c = safe(r['代號']); if(!c) return;
-                    const data = qCols.map(col=>{
+                    const data = [];
+                    qCols.forEach(col => {
                         const m = col.match(/(\d+Q\d)/);
-                        return m ? {d:m[0], rev:r[col]} : null;
-                    }).filter(i=>i&&i.rev);
+                        if(!m) return;
+                        const d = m[0];
+                        const accCol = qAccumCols.find(ac => ac.includes(d));
+                        data.push({ d: d, rev: r[col], accRev: accCol ? r[accCol] : null });
+                    });
+
                     for(let i=0; i<data.length; i++) {
-                        if(i>0) data[i].qoq = ((data[i].rev-data[i-1].rev)/data[i-1].rev*100).toFixed(2);
-                        if(i>=4) data[i].yoy = ((data[i].rev-data[i-4].rev)/data[i-4].rev*100).toFixed(2);
+                        if(i>0 && data[i-1].rev && data[i].rev) {
+                            const prev = parseFloat(data[i-1].rev);
+                            const curr = parseFloat(data[i].rev);
+                            if(prev) data[i].qoq = ((curr-prev)/prev*100).toFixed(2);
+                        }
+                        if(i>=4 && data[i-4].rev && data[i].rev) {
+                            const prevY = parseFloat(data[i-4].rev);
+                            const curr = parseFloat(data[i].rev);
+                            if(prevY) data[i].yoy = ((curr-prevY)/prevY*100).toFixed(2);
+                        }
+                        // Accum YoY
+                        if(i>=4 && data[i-4].accRev && data[i].accRev) {
+                             const prevY = parseFloat(data[i-4].accRev);
+                             const curr = parseFloat(data[i].accRev);
+                             if(prevY) data[i].accYoY = ((curr-prevY)/prevY*100).toFixed(2);
+                        }
                     }
                     META.revData.quarter[c] = data.slice(-12).reverse();
                 });
@@ -309,17 +325,20 @@ async function init() {
                         const m = col.match(/(\d{4})/);
                         return m ? {d:m[0], rev:r[col]} : null;
                     }).filter(i=>i&&i.rev);
-                    for(let i=1; i<data.length; i++) data[i].yoy = ((data[i].rev-data[i-1].rev)/data[i-1].rev*100).toFixed(2);
-                    META.revData.year[c] = data.slice(-8).reverse();
+                    for(let i=1; i<data.length; i++) {
+                        const prev = parseFloat(data[i-1].rev);
+                        const curr = parseFloat(data[i].rev);
+                        if(prev) data[i].yoy = ((curr-prev)/prev*100).toFixed(2);
+                    }
+                    META.revData.year[c] = data.slice(-12).reverse();
                 });
             }
             
-            // Highlights
             const sheetH = wb.Sheets['10_財報備註'];
             if(sheetH) XLSX.utils.sheet_to_json(sheetH).forEach(r => META.revData.highlights[safe(r['代號'])] = r);
         }
 
-        // 3. Others (Standard Load)
+        // 3. Other DBs
         wb = await fetchXlsx(FILES.NEWS);
         if(wb) XLSX.utils.sheet_to_json(wb.Sheets['外電綜合報導']||[]).forEach(r=>{ if(safe(r['資料類型'])==='個股報導') { DB.news.push(r); const k=safe(r['股號']); if(k){ if(!META.relatedNews[k]) META.relatedNews[k]=[]; META.relatedNews[k].push(r); } }});
         DB.news.sort((a,b)=>getDateVal(b['日期'])-getDateVal(a['日期']));
@@ -333,7 +352,6 @@ async function init() {
             XLSX.utils.sheet_to_json(wb.Sheets['產品結構分析']||[]).forEach(r=>META.products[safe(r['公司'])]=r);
             XLSX.utils.sheet_to_json(wb.Sheets['公司追蹤表']||[]).forEach(r=>META.tracking[safe(r['公司'])]=r);
         }
-
         wb = await fetchXlsx(FILES.REPORTS);
         if(wb) {
             XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r=>DB.reports.push(r));
@@ -344,7 +362,6 @@ async function init() {
                 [1,2,3].forEach(n => { const s=safe(r[`首選個股${n}`]); if(s){ if(!META.reportPicks[rid]) META.reportPicks[rid]=[]; META.reportPicks[rid].push({name:s, reason:safe(r[`首選理由${n}`])}); } });
             });
         }
-
         wb = await fetchXlsx(FILES.STRAT);
         if(wb) {
             XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r=>DB.strategy.push(r));
@@ -354,11 +371,10 @@ async function init() {
                 if(rid&&c) { if(!META.reportPicks[rid]) META.reportPicks[rid]=[]; META.reportPicks[rid].push({code:c, name:safe(r['公司名稱']), note:safe(r['備註'])}); if(!META.stockInReports[c]) META.stockInReports[c]=[]; META.stockInReports[c].push(rid); }
             });
         }
-
         wb = await fetchXlsx(FILES.CB);
         if(wb) XLSX.utils.sheet_to_json(wb.Sheets['08_最新動態每週基本資料']||[]).forEach(r=>{ DB.cb.push(r); const k=safe(r['轉換標的代碼']); if(k){ if(!META.cbMap[k]) META.cbMap[k]=[]; META.cbMap[k].push(r); } });
 
-    } catch (e) { console.error(e); }
+    } catch (err) { console.error(err); }
 
     $('loader').classList.add('hidden');
     renderList();
@@ -409,7 +425,6 @@ function renderList() {
     $('list').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無相符資料</div>';
 }
 
-// ===== POP-UP MODAL LOGIC =====
 window.openStock = (code) => {
     try {
         if(!code || code==='-') return;
@@ -421,10 +436,11 @@ window.openStock = (code) => {
         const revH = META.revData.highlights[code]||{};
 
         $('m-info').innerHTML = `
-            <div style="font-size:22px;font-weight:700;margin-bottom:5px">${name} (${code})</div>
-            <div class="card-meta"><span class="tag ind">${s['產業分類']}</span>${concepts.map(c=>`<span class="tag concept">#${c}</span>`).join('')}</div>
-            <div style="font-size:13px;color:#666;margin-top:5px;line-height:1.5">${s['業務摘要']}</div>
-        `;
+            <div class="info-card">
+                <div style="font-size:20px;font-weight:800;margin-bottom:5px;color:#2c3e50;">${name} (${code})</div>
+                <div class="card-meta"><span class="tag ind" onclick="setSearch('${s['產業分類']}')">${s['產業分類']}</span>${concepts.map(c=>`<span class="tag concept" onclick="setSearch('${c}')">#${c}</span>`).join('')}</div>
+                <div style="font-size:13px;color:#666;margin-top:10px;line-height:1.5">${s['業務摘要']}</div>
+            </div>`;
 
         // 1. Basic
         let tBasic = `<div class="info-row"><span class="info-label">收盤價</span><span class="info-val" style="color:var(--primary)">${s['成交']||'-'}</span></div>
@@ -456,8 +472,8 @@ window.openStock = (code) => {
         </table></div></div>
 
         <div id="ft-1" class="fin-sub-pane"><div class="table-wrap"><table class="fin-table">
-            <thead><tr><th>季度</th><th>營收(億)</th><th>季增%</th><th>年增%</th></tr></thead>
-            <tbody>${revQ.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev)}</td><td class="${colorClass(r.qoq)}">${fmtNum(r.qoq,true)}</td><td class="${colorClass(r.yoy)}">${fmtNum(r.yoy,true)}</td></tr>`).join('')}</tbody>
+            <thead><tr><th>季度</th><th>營收(億)</th><th>季增%</th><th>年增%</th><th>累計營收</th><th>累計年增%</th></tr></thead>
+            <tbody>${revQ.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev)}</td><td class="${colorClass(r.qoq)}">${fmtNum(r.qoq,true)}</td><td class="${colorClass(r.yoy)}">${fmtNum(r.yoy,true)}</td><td>${fmtNum(r.accRev)}</td><td class="${colorClass(r.accYoY)}">${fmtNum(r.accYoY,true)}</td></tr>`).join('')}</tbody>
         </table></div></div>
 
         <div id="ft-2" class="fin-sub-pane"><div class="table-wrap"><table class="fin-table">
@@ -510,9 +526,10 @@ window.openReport = (rid, type) => {
     const picks = META.reportPicks[rid] || [];
 
     $('m-info').innerHTML = `
-        <div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:5px">${report['報告標題']}</div>
-        <div style="font-size:13px;color:#666;">${report['券商名稱']} | ${fmtDate(report['報告日期'])}</div>
-    `;
+        <div class="info-card">
+            <div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:5px">${report['報告標題']}</div>
+            <div style="font-size:13px;color:#666;">${report['券商名稱']} | ${fmtDate(report['報告日期'])}</div>
+        </div>`;
 
     let html = `<div class="hl-block" style="margin-top:15px;"><b>💡 核心觀點</b><br>${fmtTxt(report['副標題'] || report['大盤觀點'] || '無詳細摘要')}</div>`;
     
@@ -527,7 +544,6 @@ window.openReport = (rid, type) => {
     if(report['總經觀點摘要']) html += `<div class="section-head">總經觀點</div><div style="font-size:13px;color:#444;line-height:1.6;background:#fff;padding:15px;border-radius:8px;border:1px solid #eee;">${fmtTxt(report['總經觀點摘要'])}</div>`;
     
     $('m-body').innerHTML = html;
-    
     document.querySelector('.nav-grid').style.display = 'none';
     $('modal').classList.add('show');
 };
