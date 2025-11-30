@@ -10,8 +10,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
-        @media(min-width: 1024px) { .container { max-width: 1200px; } }
-        @media(min-width: 1400px) { .container { max-width: 1400px; } }
+        @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
+        @media(min-width: 1600px) { .container { max-width: 1600px; } }
 
         .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
         .loading-overlay.hidden { opacity: 0; pointer-events: none; }
@@ -64,12 +64,12 @@
 
         /* CB 列表表格 */
         .cb-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .cb-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; background: #fff; border-radius: 8px; overflow: hidden; }
-        .cb-table th { background: #f8f9fa; padding: 10px 6px; text-align: left; color: #666; font-weight: 600; border-bottom: 2px solid #eee; position: sticky; top: 0; }
-        .cb-table td { padding: 10px 6px; border-bottom: 1px solid #f0f0f0; }
+        .cb-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 8px; overflow: hidden; }
+        .cb-table th { background: #f8f9fa; padding: 12px 10px; text-align: center; color: #666; font-weight: 600; border-bottom: 2px solid #eee; white-space: nowrap; }
+        .cb-table td { padding: 10px; border-bottom: 1px solid #f0f0f0; text-align: center; white-space: nowrap; }
         .cb-table tr:hover td { background: #fffaf8; }
         .cb-table .code { color: var(--primary); font-weight: 600; cursor: pointer; }
-        .cb-table .stock { color: var(--link); cursor: pointer; }
+        .cb-table .stock { color: var(--link); cursor: pointer; text-align: left; }
         .cb-table th.sortable { cursor: pointer; user-select: none; }
         .cb-table th.sortable:hover { background: #eee; }
         .cb-table th .sort-icon { font-size: 10px; color: #999; margin-left: 2px; }
@@ -78,26 +78,12 @@
         .cb-table th.sort-asc .sort-icon::after { content: '↑'; }
         .cb-table th.sort-desc .sort-icon::after { content: '↓'; }
         .cb-table tfoot { background: #f8f9fa; }
-        .cb-table tfoot td { border-top: 2px solid #ddd; padding: 12px 6px; }
+        .cb-table tfoot td { border-top: 2px solid #ddd; padding: 12px 10px; }
         
-        /* 桌機版固定欄寬 */
-        @media(min-width: 1024px) {
-            .cb-table-wrap { overflow-x: visible; }
-            .cb-table { table-layout: fixed; white-space: normal; font-size: 13px; }
-            .cb-table th, .cb-table td { text-align: center; padding: 10px 4px; }
-            .cb-table th:nth-child(1) { width: 6%; }   /* CB代號 */
-            .cb-table th:nth-child(2) { width: 8%; }   /* CB簡稱 */
-            .cb-table th:nth-child(3) { width: 12%; }  /* 標的股票 */
-            .cb-table th:nth-child(4) { width: 10%; }  /* 產業 */
-            .cb-table th:nth-child(5) { width: 6%; }   /* 轉換價 */
-            .cb-table th:nth-child(6) { width: 6%; }   /* 股價 */
-            .cb-table th:nth-child(7) { width: 8%; }   /* 轉換價值 */
-            .cb-table th:nth-child(8) { width: 8%; }   /* 溢折價% */
-            .cb-table th:nth-child(9) { width: 7%; }   /* 掛牌最高 */
-            .cb-table th:nth-child(10) { width: 7%; }  /* 掛牌最低 */
-            .cb-table th:nth-child(11) { width: 7%; }  /* 震幅% */
-            .cb-table th:nth-child(12) { width: 9%; }  /* 到期日 */
-            .cb-table td:nth-child(3) { text-align: left; } /* 標的股票靠左 */
+        /* 桌機版表格寬度自適應 */
+        @media(min-width: 1200px) {
+            .cb-table { font-size: 14px; }
+            .cb-table th, .cb-table td { padding: 12px 15px; }
         }
 
         /* Modal */
