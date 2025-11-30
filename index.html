@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rex大叔投資研究室 - 終極戰情版</title>
+    <title>Rex大叔投資研究室 - 戰情中心版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        /* === 核心基礎樣式 === */
-        :root { --primary: #c96442; --secondary: #2d3436; --bg: #f5f4ef; --white: #ffffff; --accent: #d4a574; --success: #27ae60; --danger: #e74c3c; --link: #3498db; }
+        /* === 核心變數與基礎設定 === */
+        :root { --primary: #c96442; --bg: #f5f4ef; --white: #ffffff; --cb-color: #c2185b; --success: #27ae60; --danger: #e74c3c; --text: #2d2d2d; --gray: #888; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; background: var(--bg); min-height: 100vh; color: var(--secondary); font-size: 14px; line-height: 1.5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); font-size: 14px; line-height: 1.5; }
         .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
         
         /* === Header === */
         .header { text-align: center; padding: 25px 0 20px; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; background: #fff; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
         .header h1 { font-size: 24px; color: var(--primary); margin-bottom: 6px; letter-spacing: 1px; }
-        .header .subtitle { color: #888; font-size: 13px; }
+        .header .subtitle { color: var(--gray); font-size: 13px; }
         
-        /* === 資料庫切換 Tab === */
+        /* === Tab 切換 === */
         .db-switcher { display: flex; justify-content: center; gap: 8px; margin: 20px 0; flex-wrap: wrap; }
         .db-tab { padding: 8px 16px; border: 1px solid #ddd; background: #fff; border-radius: 20px; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .db-tab:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
@@ -26,36 +26,25 @@
         .db-tab.active .count { background: rgba(255,255,255,0.3); }
         
         /* === 搜尋區塊 === */
-        .search-section { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 15px rgba(0,0,0,0.04); }
+        .search-section { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 15px rgba(0,0,0,0.04); position: relative; }
         .main-search { position: relative; margin-bottom: 12px; }
         .main-search::before { content: "🔍"; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #999; }
         #mainSearchInput { width: 100%; padding: 14px 14px 14px 48px; border: 2px solid #eee; border-radius: 30px; background: #fafaf8; font-size: 15px; transition: all 0.3s; }
         #mainSearchInput:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(201,100,66,0.1); }
         
-        /* 智慧搜尋建議 */
         .search-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #eee; border-radius: 12px; margin-top: 6px; max-height: 400px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
-        .search-suggestions.active { display: block; }
-        .suggestion-group { padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
-        .suggestion-group-title { padding: 4px 16px; font-size: 11px; color: #999; font-weight: 700; letter-spacing: 0.5px; }
-        .suggestion-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: background 0.2s; }
-        .suggestion-item:hover { background: #f9f9f9; }
-        .suggestion-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: #eee; }
-        
-        /* 篩選與標籤 */
-        .filter-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-        .filter-select select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-size: 13px; color: #555; cursor: pointer; }
-        .hot-tags-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-        .hot-tag { padding: 4px 10px; background: #fff3e6; color: var(--primary); border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
-        .hot-tag:hover { border-color: var(--primary); background: #fff; }
+        .suggestion-group-title { padding: 8px 16px; font-size: 11px; color: #999; font-weight: 700; background: #f9f9f9; }
+        .suggestion-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #f0f0f0; }
+        .suggestion-item:hover { background: #f5f4ef; }
+        .suggestion-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; background: #eee; }
         
         /* === 列表卡片 === */
-        .reports-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 15px; }
-        .card-base { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        .reports-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        .card-base { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; display: flex; flex-direction: column; }
         .card-base:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.06); border-color: var(--primary); }
         
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         .company-name { font-size: 16px; font-weight: 700; color: #333; }
-        .company-name:hover { color: var(--primary); text-decoration: underline; }
         .stock-code { font-size: 12px; color: #666; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
         
         .card-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
@@ -63,40 +52,44 @@
         .meta-tag.broker { background: #e8f4fd; color: #2980b9; }
         .meta-tag.industry { background: #fdf2e9; color: #d35400; }
         .meta-tag.date { background: #f5f5f5; color: #666; }
-        .meta-tag.cb { background: #fce4ec; color: #c2185b; border: 1px solid #f8bbd0; } /* CB 標籤樣式 */
+        .meta-tag.cb { background: #fce4ec; color: #c2185b; border: 1px solid #f8bbd0; }
         
         .card-content { font-size: 13px; color: #555; margin-bottom: 12px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; flex-grow: 1; }
-        
         .card-footer { margin-top: auto; padding-top: 10px; border-top: 1px solid #f5f5f5; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #888; }
-        .price-info { font-weight: 600; color: #333; }
-        .price-up { color: var(--success); }
-        .price-down { color: var(--danger); }
         
-        /* === Modal 彈窗 (戰情室風格) === */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; backdrop-filter: blur(3px); }
-        .modal-overlay.active { display: flex; justify-content: center; align-items: center; }
-        .modal-content { width: 95%; max-width: 1000px; height: 90vh; background: #fff; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.2); animation: modalIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        /* === Modal 視窗 === */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; backdrop-filter: blur(3px); justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { width: 95%; max-width: 950px; height: 90vh; background: #fff; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px rgba(0,0,0,0.2); animation: modalIn 0.25s ease-out; }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         
-        .modal-header { padding: 16px 20px; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .modal-header { padding: 15px 20px; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .modal-controls { display: flex; gap: 10px; align-items: center; }
-        .modal-back-btn { padding: 6px 12px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
-        .modal-back-btn:hover { background: #e0e0e0; }
-        .modal-close { width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .modal-back-btn { padding: 6px 12px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; transition: 0.2s; color: #555; font-weight: 600; }
+        .modal-back-btn:hover { background: #e0e0e0; color: #333; }
+        .modal-close { width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .modal-close:hover { background: var(--danger); color: #fff; }
         
         .modal-body { flex-grow: 1; overflow-y: auto; padding: 20px; background: #fafaf8; }
         
         /* Modal Tabs */
         .modal-tabs { display: flex; gap: 5px; padding: 10px 20px; background: #fff; border-bottom: 1px solid #eee; overflow-x: auto; flex-shrink: 0; }
-        .modal-tab { padding: 8px 16px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: #666; white-space: nowrap; transition: 0.2s; }
+        .modal-tab { padding: 8px 16px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; color: #666; white-space: nowrap; transition: 0.2s; }
         .modal-tab:hover { background: #f5f5f5; color: var(--primary); }
         .modal-tab.active { background: var(--primary); color: #fff; }
         .tab-pane { display: none; animation: fadeIn 0.3s; }
         .tab-pane.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        /* 內容區塊樣式 */
+        /* CB 專用內部 Tabs (Sub-tabs) */
+        .cb-sub-tabs { display: flex; gap: 15px; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 0; }
+        .cb-sub-tab { cursor: pointer; padding: 8px 5px; font-size: 13px; font-weight: 600; color: #888; border-bottom: 3px solid transparent; transition: 0.2s; }
+        .cb-sub-tab:hover { color: var(--cb-color); }
+        .cb-sub-tab.active { color: var(--cb-color); border-bottom-color: var(--cb-color); }
+        .cb-sub-pane { display: none; padding-top: 10px; }
+        .cb-sub-pane.active { display: block; }
+        
+        /* 內容元件 */
         .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
         .info-card { background: #fff; padding: 12px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); border: 1px solid #eee; }
         .info-label { font-size: 12px; color: #888; margin-bottom: 4px; }
@@ -105,7 +98,7 @@
         .section-box { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #eee; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
         .section-title { font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #f5f4ef; display: flex; align-items: center; gap: 8px; }
         
-        /* 財務與CB表格 */
+        /* 表格樣式 */
         .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .data-table th { text-align: left; padding: 10px; background: #f8f9fa; color: #666; font-weight: 600; border-bottom: 2px solid #eee; white-space: nowrap; }
         .data-table td { padding: 10px; border-bottom: 1px solid #eee; color: #333; }
@@ -117,8 +110,9 @@
         .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #f5f4ef; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; }
         .loading-bar-container { width: 200px; height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; margin-top: 15px; }
         .loading-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.3s; }
-        
         .error-msg { padding: 20px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; color: #c53030; text-align: center; margin: 20px; }
+        
+        @media (max-width: 600px) { .header h1 { font-size: 18px; } .db-tab { padding: 6px 10px; font-size: 11px; } .info-grid { grid-template-columns: 1fr 1fr; } }
     </style>
 </head>
 <body>
@@ -126,14 +120,14 @@
 <div class="loading-overlay" id="loadingOverlay">
     <div style="font-size:40px;margin-bottom:10px;">📊</div>
     <h3 id="loadingText">系統啟動中...</h3>
-    <div style="font-size:12px;color:#888;margin-top:5px;" id="loadingDetail">正在載入資料庫</div>
+    <div style="font-size:12px;color:#888;margin-top:5px;" id="loadingDetail">正在整合財務與CB資料庫</div>
     <div class="loading-bar-container"><div class="loading-bar" id="loadingBar"></div></div>
 </div>
 
 <div class="container">
     <div class="header">
         <h1>📊 Rex大叔投資研究室</h1>
-        <p class="subtitle">全方位投資戰情室：營收 × 報告 × CB可轉債 × 產業趨勢</p>
+        <p class="subtitle">營收 × 研報 × CB可轉債 × 產業趨勢 | 全方位戰情中心</p>
     </div>
 
     <div class="db-switcher">
@@ -146,12 +140,10 @@
 
     <div class="search-section">
         <div class="main-search">
-            <input type="text" id="searchInput" placeholder="輸入代號、公司名、CB名稱或關鍵字 (例如: 2330, 機器人, 世紀鋼八永)...">
+            <input type="text" id="searchInput" placeholder="輸入代號、公司名、CB簡稱 (例如: 2330, 世紀鋼八, 機器人)...">
             <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
-        <div class="hot-tags-list" id="hotTags"></div>
-        <div class="filter-row" id="filterRow">
-            </div>
+        <div style="font-size:12px;color:#888;text-align:right;">* 支援代號、名稱、CB代碼、概念股關鍵字搜尋</div>
     </div>
 
     <div class="reports-list" id="mainList"></div>
@@ -172,360 +164,248 @@
 </div>
 
 <script>
-// === 全域變數與資料庫 ===
-const FILES = {
-    news: '01_news.xlsx',
-    memo: '02_memo.xlsx',
-    report: '03_產業展望報告.xlsx',
-    master: '04_master.xlsx',
-    strategy: '05_Strategy_統一投顧.xlsx',
-    cb: '00_CB.xlsx',
-    revenue: '06_revenue.xlsx'
-};
+// === 全域變數 ===
+const FILES = { news: '01_news.xlsx', memo: '02_memo.xlsx', report: '03_產業展望報告.xlsx', master: '04_master.xlsx', strategy: '05_Strategy_統一投顧.xlsx', cb: '00_CB.xlsx', revenue: '06_revenue.xlsx' };
+let DB = { stocks: {}, revenue: {}, cb: {}, cbList: [], cbDetails: {}, news: [], reports: [], strategy: [] };
+let state = { currentDB: 'stock', history: [], search: '' };
 
-// 資料容器
-let DB = {
-    stocks: {},     // 核心：股票代號 -> 基本資料
-    revenue: {},    // 營收資料
-    cb: {},         // CB資料 (By Stock Code)
-    cbList: [],     // CB列表 (Flat List)
-    cbas: {},       // CBAS報價
-    news: [],       // 新聞
-    reports: [],    // 報告
-    strategy: [],   // 策略
-    concepts: {}    // 概念股
-};
-
-// 狀態管理
-let state = {
-    currentDB: 'stock',
-    history: [], // Modal 歷史堆疊
-    search: '',
-    filters: {}
-};
-
-// === 核心工具函數 ===
 const $ = id => document.getElementById(id);
 const formatNum = (n) => n ? parseFloat(n).toLocaleString() : '-';
-const formatPct = (n) => {
-    if(n === undefined || n === null || n === '') return '-';
-    let val = parseFloat(n);
-    let color = val > 0 ? 'var(--success)' : (val < 0 ? 'var(--danger)' : '#666');
-    return `<span style="color:${color}">${val.toFixed(2)}%</span>`;
-};
 const safeStr = (s) => (s || '').toString().trim();
 
-// === 資料載入核心 (修正 06_revenue 讀取邏輯) ===
+// === 資料載入核心 (優化版) ===
 async function loadData() {
-    const updateProgress = (txt, pct) => {
-        $('loadingText').innerText = txt;
-        $('loadingBar').style.width = pct + '%';
-    };
+    const updateProgress = (txt, pct) => { $('loadingText').innerText = txt; $('loadingBar').style.width = pct + '%'; };
 
     try {
-        // 1. 載入主檔 (建立股票清單)
-        updateProgress('建立股票主檔...', 10);
+        // 1. 載入主檔
+        updateProgress('讀取股票主檔...', 10);
         let buf = await fetch(FILES.master).then(r => r.arrayBuffer());
         let wb = XLSX.read(buf, {type:'array'});
-        let ws = wb.Sheets['主資料庫'];
-        XLSX.utils.sheet_to_json(ws).forEach(r => {
+        XLSX.utils.sheet_to_json(wb.Sheets['主資料庫']).forEach(r => {
             let code = safeStr(r['代號']);
-            if(code) {
-                DB.stocks[code] = {
-                    code: code,
-                    name: safeStr(r['公司名稱']),
-                    industry: safeStr(r['產業分類']),
-                    market: safeStr(r['市場分類']),
-                    price: r['成交'],
-                    cap: r['市值(億)'],
-                    business: safeStr(r['業務摘要']),
-                    tags: []
-                };
-            }
+            if(code) DB.stocks[code] = { code, name: safeStr(r['公司名稱']), industry: safeStr(r['產業分類']), market: safeStr(r['市場分類']), price: r['成交'], cap: r['市值(億)'], business: safeStr(r['業務摘要']), hasCB: false };
         });
 
-        // 2. 載入營收 (關鍵修復：動態欄位讀取)
-        updateProgress('解析財務營收數據...', 30);
+        // 2. 載入營收 (智慧欄位偵測)
+        updateProgress('解析財務營收...', 30);
         buf = await fetch(FILES.revenue).then(r => r.arrayBuffer());
         wb = XLSX.read(buf, {type:'array'});
         
-        // 處理月營收 (自動抓取日期欄位)
         const processRevenueSheet = (sheetName, type) => {
             let sheet = wb.Sheets[sheetName];
             if(!sheet) return;
             let data = XLSX.utils.sheet_to_json(sheet);
             if(data.length > 0) {
-                // 找出所有相關欄位並排序
+                // 智慧抓取欄位: 包含類型關鍵字(如"單月") 但排除"排名"、"成長"等非數值欄位
                 let keys = Object.keys(data[0]);
-                let targetCols = keys.filter(k => k.includes(type) && !k.includes('排名') && !k.includes('成長') && !k.includes('備註'));
-                // 簡單排序: 23M09 < 23M10 (字串排序對這種格式有效)
-                targetCols.sort(); 
+                let targetCols = keys.filter(k => k.includes(type) && !k.includes('排名') && !k.includes('成長') && !k.includes('備註')).sort();
                 
                 data.forEach(r => {
                     let code = safeStr(r['代號']);
                     if(!DB.revenue[code]) DB.revenue[code] = {};
                     if(!DB.revenue[code][type]) DB.revenue[code][type] = [];
-                    
                     // 取最近 12 期
-                    let recentCols = targetCols.slice(-12);
-                    recentCols.forEach(col => {
-                        // 提取日期標籤 (移除 "單月營收(億)" 等字眼)
+                    targetCols.slice(-12).forEach(col => {
                         let period = col.replace(type, '').replace('(億)', '').replace('單季營收', '').replace('年度營收', '');
-                        DB.revenue[code][type].push({
-                            period: period,
-                            value: r[col]
-                        });
+                        DB.revenue[code][type].push({ period, value: r[col] });
                     });
                 });
             }
         };
-
         processRevenueSheet('000_月營收', '單月營收');
-        processRevenueSheet('000_季營收', '單季營收'); // 修改：對應 Excel 標頭
+        processRevenueSheet('000_季營收', '單季營收');
         processRevenueSheet('000_年營收', '年度營收');
         
-        // 讀取財報備註 (營收亮點)
+        // 營收亮點
         let wsNote = wb.Sheets['10_財報備註'];
-        if(wsNote) {
-            XLSX.utils.sheet_to_json(wsNote).forEach(r => {
-                let code = safeStr(r['代號']);
-                if(code) {
-                    if(!DB.revenue[code]) DB.revenue[code] = {};
-                    DB.revenue[code].highlights = {
-                        monthRecord: r['單月營收創紀錄月數'],
-                        monthStreak: r['單月營收連增減月數'],
-                        yearRank: r['單月營收歷年排名'],
-                        qtrStreak: r['單季營收連續增減季數']
-                    };
-                }
-            });
-        }
+        if(wsNote) XLSX.utils.sheet_to_json(wsNote).forEach(r => {
+            let code = safeStr(r['代號']);
+            if(code) {
+                if(!DB.revenue[code]) DB.revenue[code] = {};
+                DB.revenue[code].highlights = { monthRecord: r['單月營收創紀錄月數'], monthStreak: r['單月營收連增減月數'], yearRank: r['單月營收歷年排名'] };
+            }
+        });
 
-        // 3. 載入 CB 資料 (深度整合)
-        updateProgress('整合 CB 可轉債戰情...', 50);
+        // 3. 載入 CB 資料 (深度整合 01-15 Sheets)
+        updateProgress('整合可轉債戰情...', 50);
         buf = await fetch(FILES.cb).then(r => r.arrayBuffer());
         wb = XLSX.read(buf, {type:'array'});
         
-        // 讀取 CB 基本資料
-        let wsCB = wb.Sheets['08_最新動態每週基本資料']; // 最完整的表
-        if(wsCB) {
-            XLSX.utils.sheet_to_json(wsCB).forEach(r => {
-                let stockCode = safeStr(r['轉換標的代碼']);
-                let cbCode = safeStr(r['代號']);
-                let cbName = safeStr(r['名稱']);
-                
-                let cbObj = {
-                    code: cbCode,
-                    name: cbName,
-                    stockCode: stockCode,
-                    stockName: safeStr(r['轉換標的名稱']),
-                    price: 0, // 稍後補
-                    convPrice: parseFloat(r['轉換價格(元)']),
-                    balance: parseFloat(r['最新餘額(百萬)']),
-                    issueDate: safeStr(r['發行日期']),
-                    maturityDate: safeStr(r['到期日']),
-                    remainPct: (parseFloat(r['最新餘額(百萬)']) / parseFloat(r['實際發行總額(百萬)'])) * 100
-                };
-                
-                // 存入清單
-                DB.cbList.push(cbObj);
-                // 歸戶到股票
-                if(!DB.cb[stockCode]) DB.cb[stockCode] = [];
-                DB.cb[stockCode].push(cbObj);
-                
-                // 標註股票有 CB
-                if(DB.stocks[stockCode]) DB.stocks[stockCode].hasCB = true;
-            });
-        }
-        
-        // 讀取 CBAS 報價 (Premium Feature)
-        let wsCBAS = wb.Sheets['11_最新動態CBAS報價表'];
-        if(wsCBAS) {
-            XLSX.utils.sheet_to_json(wsCBAS).forEach(r => {
-                let cbCode = safeStr(r['可轉債代碼']);
-                // 尋找對應的 CB 物件更新
-                let target = DB.cbList.find(c => c.code === cbCode);
-                if(target) {
-                    target.cbasPrice = r['權利金(佰元報價)'];
-                    target.leverage = r['槓桿倍數'] || (target.convPrice / (parseFloat(target.cbasPrice) || 1)); // 估算
-                    target.price = parseFloat(r['CB參考價']) || 0;
-                    target.premium = parseFloat(r['溢(折)價%']);
-                    target.volatility = r['股價波動率120天%'];
-                }
-            });
-        }
+        // 建立 CB 詳細資料索引函數
+        const getCB = (code) => {
+            if (!DB.cbDetails[code]) DB.cbDetails[code] = { code, adjustments: [] };
+            return DB.cbDetails[code];
+        };
 
-        // 4. 載入外電與報告 (簡化流程)
-        updateProgress('載入研報與新聞...', 80);
-        // ... (這部分邏輯與您原本類似，略為加速處理) ...
-        // (此處代碼省略重複部分，直接使用您原本的邏輯載入 News, Memo, Report)
-        // 但為了範例完整，我會放入 News 的載入
+        // 08_基本資料 (核心)
+        let wsCB = wb.Sheets['08_最新動態每週基本資料'];
+        if(wsCB) XLSX.utils.sheet_to_json(wsCB).forEach(r => {
+            let cbCode = safeStr(r['代號']);
+            let stockCode = safeStr(r['轉換標的代碼']);
+            let obj = getCB(cbCode);
+            Object.assign(obj, {
+                stockCode, name: safeStr(r['名稱']), stockName: safeStr(r['轉換標的名稱']),
+                convPrice: parseFloat(r['轉換價格(元)']), balance: parseFloat(r['最新餘額(百萬)']),
+                issueDate: safeStr(r['發行日期']), maturityDate: safeStr(r['到期日']),
+                issueAmount: parseFloat(r['實際發行總額(百萬)']),
+                remainPct: (parseFloat(r['最新餘額(百萬)']) / parseFloat(r['實際發行總額(百萬)'])) * 100
+            });
+            // 歸戶
+            DB.cbList.push(obj);
+            if(!DB.cb[stockCode]) DB.cb[stockCode] = [];
+            DB.cb[stockCode].push(obj);
+            if(DB.stocks[stockCode]) DB.stocks[stockCode].hasCB = true;
+        });
+
+        // 01_基本資料 (補充擔保)
+        let wsBasic = wb.Sheets['01_ALLCB基本資料'];
+        if(wsBasic) XLSX.utils.sheet_to_json(wsBasic).forEach(r => {
+            let obj = getCB(safeStr(r['CB代號']));
+            obj.guarantee = safeStr(r['擔保']);
+            obj.rating = safeStr(r['信評']);
+            obj.underwriter = safeStr(r['發行券商']);
+        });
+
+        // 03_賣回條件 (策略關鍵)
+        let wsPut = wb.Sheets['03_ALLCB賣回條件'];
+        if(wsPut) XLSX.utils.sheet_to_json(wsPut).forEach(r => {
+            let obj = getCB(safeStr(r['CB代號']));
+            obj.putDate = safeStr(r['賣回日期1']);
+            obj.putPrice = safeStr(r['賣回條件']);
+        });
+
+        // 09_日行情 (最新價格)
+        let wsQuote = wb.Sheets['09_最新動態每週日行情'];
+        if(wsQuote) XLSX.utils.sheet_to_json(wsQuote).forEach(r => {
+            let obj = getCB(safeStr(r['代碼']));
+            obj.price = parseFloat(r['CB收盤價']) || 0;
+            obj.premium = parseFloat(r['溢(折)價%']);
+        });
+
+        // 11_CBAS報價 (高階數據)
+        let wsCBAS = wb.Sheets['11_最新動態CBAS報價表'];
+        if(wsCBAS) XLSX.utils.sheet_to_json(wsCBAS).forEach(r => {
+            let obj = getCB(safeStr(r['可轉債代碼']));
+            obj.cbasPrice = r['權利金(佰元報價)'];
+            obj.leverage = r['槓桿倍數'];
+            obj.volatility = r['股價波動率120天%'];
+        });
+
+        // 14_轉換價格調整 (歷史紀錄)
+        let wsAdj = wb.Sheets['14_轉換價格調整'];
+        if(wsAdj) XLSX.utils.sheet_to_json(wsAdj).forEach(r => {
+            let stockCode = safeStr(r['公司代號']);
+            // 將調整紀錄綁定到該公司旗下的所有 CB (簡單對應)
+            if(DB.cb[stockCode]) {
+                DB.cb[stockCode].forEach(cb => {
+                    cb.adjustments.push({ desc: safeStr(r['主旨']) });
+                });
+            }
+        });
+
+        // 4. 載入外電
+        updateProgress('載入外電快報...', 80);
         buf = await fetch(FILES.news).then(r => r.arrayBuffer());
         wb = XLSX.read(buf, {type:'array'});
         XLSX.utils.sheet_to_json(wb.Sheets['外電綜合報導']).forEach(r => {
-            DB.news.push({
-                date: safeStr(r['日期']),
-                title: safeStr(r['公司']),
-                content: safeStr(r['完整報導內容']),
-                broker: safeStr(r['券商來源']),
-                stockCode: safeStr(r['股號'])
-            });
+            DB.news.push({ date: safeStr(r['日期']), title: safeStr(r['公司']), content: safeStr(r['完整報導內容']), broker: safeStr(r['券商來源']), stockCode: safeStr(r['股號']) });
         });
 
-        updateProgress('系統就緒', 100);
-        setTimeout(() => {
-            $('loadingOverlay').style.opacity = 0;
-            setTimeout(() => $('loadingOverlay').style.display = 'none', 500);
-            renderMainList();
-            setupSearch();
-        }, 500);
+        updateProgress('戰情室就緒', 100);
+        setTimeout(() => { $('loadingOverlay').style.display = 'none'; renderMainList(); setupSearch(); }, 500);
 
     } catch (e) {
-        alert('資料載入失敗: ' + e.message);
-        console.error(e);
+        alert('資料載入失敗: ' + e.message); console.error(e);
     }
 }
 
-// === 渲染邏輯 ===
-
+// === 列表渲染邏輯 ===
 function renderMainList() {
     let container = $('mainList');
     container.innerHTML = '';
-    
-    // 根據目前的 Tab 決定渲染內容
     let data = [];
     let renderer = null;
 
-    if(state.currentDB === 'stock') {
-        data = Object.values(DB.stocks);
-        renderer = renderStockCard;
-    } else if (state.currentDB === 'cb') {
-        data = DB.cbList;
-        renderer = renderCBCard;
-    } else if (state.currentDB === 'news') {
-        data = DB.news;
-        renderer = renderNewsCard;
-    }
+    if(state.currentDB === 'stock') { data = Object.values(DB.stocks); renderer = renderStockCard; }
+    else if (state.currentDB === 'cb') { data = DB.cbList; renderer = renderCBCard; }
+    else if (state.currentDB === 'news') { data = DB.news; renderer = renderNewsCard; }
     
     // 搜尋過濾
     if(state.search) {
         let q = state.search.toLowerCase();
-        data = data.filter(item => {
-            let str = JSON.stringify(item).toLowerCase();
-            return str.includes(q);
-        });
+        data = data.filter(item => JSON.stringify(item).toLowerCase().includes(q));
     }
 
-    // 限制顯示數量優化效能
     $('cnt-' + state.currentDB).innerText = data.length;
-    data.slice(0, 50).forEach(item => {
-        container.appendChild(renderer(item));
-    });
+    data.slice(0, 50).forEach(item => container.appendChild(renderer(item)));
 }
 
 function renderStockCard(stock) {
     let div = document.createElement('div');
     div.className = 'card-base';
     div.onclick = () => openStockModal(stock.code);
-    
     let cbTag = stock.hasCB ? `<span class="meta-tag cb">🎫 有CB</span>` : '';
-    
-    div.innerHTML = `
-        <div class="card-header">
-            <span class="company-name">${stock.name} <span class="stock-code">${stock.code}</span></span>
-            ${cbTag}
-        </div>
-        <div class="card-meta">
-            <span class="meta-tag industry">${stock.industry}</span>
-            <span class="meta-tag date">市值 ${formatNum(stock.cap)}億</span>
-        </div>
-        <div class="card-content">${stock.business || '暫無業務說明'}</div>
-        <div class="card-footer">
-            <span class="price-info">股價 ${stock.price}</span>
-        </div>
-    `;
+    div.innerHTML = `<div class="card-header"><span class="company-name">${stock.name} <span class="stock-code">${stock.code}</span></span>${cbTag}</div>
+        <div class="card-meta"><span class="meta-tag industry">${stock.industry}</span><span class="meta-tag date">市值 ${formatNum(stock.cap)}億</span></div>
+        <div class="card-content">${stock.business || '暫無說明'}</div>
+        <div class="card-footer"><span class="price-info">股價 ${stock.price}</span></div>`;
     return div;
 }
 
 function renderCBCard(cb) {
     let div = document.createElement('div');
     div.className = 'card-base';
-    div.style.borderLeft = '4px solid var(--primary)';
-    div.onclick = () => openStockModal(cb.stockCode); // 點擊 CB 卡片也打開個股 Modal
+    div.style.borderLeft = '4px solid var(--cb-color)';
+    div.onclick = () => openStockModal(cb.stockCode); // 點擊 CB 卡片進入個股戰情
     
-    // 計算轉換價值
+    // 簡易計算
     let stock = DB.stocks[cb.stockCode] || {price: 0};
     let convVal = cb.convPrice > 0 ? (stock.price / cb.convPrice) * 100 : 0;
     let premium = cb.price > 0 ? ((cb.price - convVal) / convVal) * 100 : 0;
     
-    div.innerHTML = `
-        <div class="card-header">
-            <span class="company-name">${cb.name} <span class="stock-code">${cb.code}</span></span>
-        </div>
-        <div class="card-meta">
-            <span class="meta-tag date">到期 ${cb.maturityDate}</span>
-            <span class="meta-tag broker">餘額 ${cb.remainPct.toFixed(1)}%</span>
-        </div>
+    div.innerHTML = `<div class="card-header"><span class="company-name">${cb.name} <span class="stock-code">${cb.code}</span></span></div>
+        <div class="card-meta"><span class="meta-tag date">到期 ${cb.maturityDate}</span><span class="meta-tag broker">餘額 ${cb.remainPct.toFixed(1)}%</span></div>
         <div class="info-grid" style="margin:0; gap:5px;">
             <div><div class="info-label">CB市價</div><div class="info-value">${cb.price||'-'}</div></div>
             <div><div class="info-label">標的股價</div><div class="info-value">${stock.price}</div></div>
             <div><div class="info-label">轉換價</div><div class="info-value">${cb.convPrice}</div></div>
             <div><div class="info-label">溢價率</div><div class="info-value ${premium<0?'val-pos':'val-neg'}">${premium?premium.toFixed(1)+'%':'-'}</div></div>
-        </div>
-    `;
+        </div>`;
     return div;
 }
 
 function renderNewsCard(news) {
-    let div = document.createElement('div');
-    div.className = 'card-base';
-    div.innerHTML = `
-        <div class="card-header">
-            <span class="company-name">${news.title}</span>
-            <span class="stock-code">${news.stockCode}</span>
-        </div>
-        <div class="card-meta">
-            <span class="meta-tag date">${news.date}</span>
-            <span class="meta-tag broker">${news.broker}</span>
-        </div>
-        <div class="card-content">${news.content}</div>
-    `;
-    return div;
+    return Object.assign(document.createElement('div'), {
+        className: 'card-base',
+        innerHTML: `<div class="card-header"><span class="company-name">${news.title}</span><span class="stock-code">${news.stockCode}</span></div><div class="card-meta"><span class="meta-tag date">${news.date}</span><span class="meta-tag broker">${news.broker}</span></div><div class="card-content">${news.content}</div>`
+    });
 }
 
-// === 核心 Modal 邏輯 (包含智慧導航) ===
-
+// === Modal 核心邏輯 (包含智慧導航) ===
 function openStockModal(code) {
     let stock = DB.stocks[code];
     if(!stock) return;
     
-    // 智慧歷史紀錄
+    // 智慧歷史導航：如果前一個瀏覽的不是這檔，就推入歷史
     if(state.history.length > 0 && state.history[state.history.length-1] !== code) {
         $('modalBackBtn').style.display = 'flex';
-        $('modalBackBtn').innerText = `⬅️ 返回 ${DB.stocks[state.history[state.history.length-1]].name}`;
-    } else {
+        let prevName = DB.stocks[state.history[state.history.length-1]].name;
+        $('modalBackBtn').innerText = `⬅️ 返回 ${prevName}`;
+    } else { 
+        if(state.history.length === 0) state.history.push(code); 
         $('modalBackBtn').style.display = 'none';
-        // 如果是新開啟，推入歷史
-        state.history.push(code); 
     }
+    // 確保當前 code 在堆疊頂端
+    if(state.history[state.history.length-1] !== code) state.history.push(code);
 
     $('modalOverlay').classList.add('active');
+    $('modalTitleArea').innerHTML = `<h2 style="font-size:20px; font-weight:700;">${stock.name} (${stock.code})</h2><div style="font-size:13px;color:#666;">${stock.industry} | ${stock.market}</div>`;
     
-    // 標題區
-    $('modalTitleArea').innerHTML = `
-        <h2 style="font-size:20px; font-weight:700;">${stock.name} (${stock.code})</h2>
-        <div style="font-size:13px;color:#666;">${stock.industry} | ${stock.market}</div>
-    `;
-    
-    // Tabs
-    let tabsHtml = `
-        <button class="modal-tab active" onclick="switchModalTab('basic')">📊 基本資料</button>
-        <button class="modal-tab" onclick="switchModalTab('financial')">💰 財務營收</button>
-        <button class="modal-tab" onclick="switchModalTab('news')">📰 相關報導</button>
-    `;
-    if(stock.hasCB) {
-        tabsHtml += `<button class="modal-tab" onclick="switchModalTab('cb')" style="color:#c2185b;">🎫 可轉債戰情</button>`;
-    }
+    // 建立 Modal Tabs
+    let tabsHtml = `<button class="modal-tab active" onclick="switchModalTab('basic')">📊 基本資料</button><button class="modal-tab" onclick="switchModalTab('financial')">💰 財務營收</button><button class="modal-tab" onclick="switchModalTab('news')">📰 相關報導</button>`;
+    // 只有當有 CB 時才顯示戰情分頁
+    if(stock.hasCB) tabsHtml += `<button class="modal-tab" onclick="switchModalTab('cb')" style="color:#c2185b;">🎫 可轉債/CBAS</button>`;
     $('modalTabs').innerHTML = tabsHtml;
     
     // 準備資料
@@ -534,75 +414,73 @@ function openStockModal(code) {
     let newsList = DB.news.filter(n => n.stockCode == code).slice(0, 10);
     
     // 1. 基本資料 Tab
-    let basicHtml = `
-        <div class="tab-pane active" id="tab-basic">
-            <div class="section-box">
-                <div class="info-grid">
-                    <div class="info-card"><div class="info-label">成交價</div><div class="info-value" style="font-size:24px;color:var(--primary);">${stock.price}</div></div>
-                    <div class="info-card"><div class="info-label">股本</div><div class="info-value">${formatNum(stock.cap/10)} 億</div></div> <div class="info-card"><div class="info-label">產業地位</div><div class="info-value" style="font-size:13px;font-weight:400;">${stock.industry}</div></div>
-                </div>
-                <div class="section-title">🏢 業務內容</div>
-                <div style="line-height:1.8;color:#444;">${stock.business}</div>
-            </div>
-        </div>
-    `;
+    let basicHtml = `<div class="tab-pane active" id="tab-basic"><div class="section-box"><div class="info-grid">
+        <div class="info-card"><div class="info-label">成交價</div><div class="info-value" style="font-size:24px;color:var(--primary);">${stock.price}</div></div>
+        <div class="info-card"><div class="info-label">股本</div><div class="info-value">${formatNum(stock.cap/10)} 億</div></div>
+        <div class="info-card"><div class="info-label">產業地位</div><div class="info-value" style="font-size:13px;font-weight:400;">${stock.industry}</div></div>
+    </div><div class="section-title">🏢 業務內容</div><div style="line-height:1.8;color:#444;">${stock.business}</div></div></div>`;
     
-    // 2. 財務營收 Tab (修復版)
+    // 2. 財務營收 Tab (動態渲染)
     let revHtml = `<div class="tab-pane" id="tab-financial">`;
-    if(rev.monthly && rev.monthly.length > 0) {
-        // 營收亮點
-        if(rev.highlights) {
-            revHtml += `<div class="info-grid">
-                <div class="info-card" style="background:#f0f9ff;"><div class="info-label">單月紀錄</div><div class="info-value">${rev.highlights.monthRecord||'-'}</div></div>
-                <div class="info-card" style="background:#f0f9ff;"><div class="info-label">連增/減月</div><div class="info-value">${rev.highlights.monthStreak||'-'}</div></div>
-                <div class="info-card" style="background:#fffbe6;"><div class="info-label">歷年排名</div><div class="info-value">${rev.highlights.yearRank||'-'}</div></div>
-            </div>`;
-        }
-        
-        // 營收表格
-        revHtml += `<div class="section-box"><div class="section-title">📈 月營收趨勢 (近12個月)</div>
-        <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>年月</th><th>營收(億)</th></tr></thead><tbody>`;
-        // 反序顯示最近的在上面
-        [...rev.monthly].reverse().forEach(m => {
-            revHtml += `<tr><td>${m.period}</td><td>${m.value}</td></tr>`;
-        });
+    if(rev.monthly) {
+        if(rev.highlights) revHtml += `<div class="info-grid"><div class="info-card" style="background:#f0f9ff;"><div class="info-label">單月紀錄</div><div class="info-value">${rev.highlights.monthRecord||'-'}</div></div><div class="info-card" style="background:#f0f9ff;"><div class="info-label">連增/減月</div><div class="info-value">${rev.highlights.monthStreak||'-'}</div></div></div>`;
+        revHtml += `<div class="section-box"><div class="section-title">📈 月營收趨勢</div><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>年月</th><th>營收(億)</th></tr></thead><tbody>`;
+        [...rev.monthly].reverse().forEach(m => revHtml += `<tr><td>${m.period}</td><td>${m.value}</td></tr>`);
         revHtml += `</tbody></table></div></div>`;
-    } else {
-        revHtml += `<div class="error-msg">⚠️ 暫無詳細營收資料，請確認 06_revenue.xlsx 欄位格式</div>`;
-    }
+    } else revHtml += `<div class="error-msg">⚠️ 暫無詳細營收資料</div>`;
     revHtml += `</div>`;
     
-    // 3. CB 戰情室 Tab (新增)
+    // 3. CB 戰情室 (全新設計：含 Sub-tabs)
     let cbHtml = `<div class="tab-pane" id="tab-cb">`;
     if(cbs.length > 0) {
-        cbs.forEach(cb => {
+        cbs.forEach((cb, idx) => {
             let stockPrice = parseFloat(stock.price) || 0;
             let convVal = (stockPrice / cb.convPrice) * 100;
             let premium = cb.price ? ((cb.price - convVal)/convVal * 100) : 0;
-            let cbasLeverage = cb.cbasPrice ? (stockPrice / parseFloat(cb.cbasPrice)).toFixed(2) : '-';
+            let subTabId = `cbsub-${cb.code}`;
             
-            cbHtml += `
-            <div class="section-box" style="border-left:4px solid #c2185b;">
-                <div class="section-title" style="color:#c2185b;">
-                    ${cb.name} (${cb.code}) 
-                    <span style="font-size:12px;background:#fce4ec;padding:2px 8px;border-radius:10px;color:#c2185b;">剩餘 ${cb.remainPct.toFixed(1)}%</span>
+            cbHtml += `<div class="section-box" style="border-left:4px solid var(--cb-color);">
+                <div class="section-title" style="color:var(--cb-color);">${cb.name} (${cb.code}) <span style="font-size:12px;background:#fce4ec;padding:2px 8px;border-radius:10px;color:var(--cb-color);margin-left:10px;">剩餘 ${cb.remainPct.toFixed(1)}%</span></div>
+                
+                <div class="cb-sub-tabs">
+                    <div class="cb-sub-tab active" onclick="switchSubTab('${subTabId}', 'market')">📊 行情與籌碼</div>
+                    <div class="cb-sub-tab" onclick="switchSubTab('${subTabId}', 'terms')">📝 發行條款</div>
+                    <div class="cb-sub-tab" onclick="switchSubTab('${subTabId}', 'events')">📉 轉換價異動</div>
                 </div>
-                <div class="info-grid">
-                    <div class="info-card"><div class="info-label">轉換價格</div><div class="info-value">${cb.convPrice}</div></div>
-                    <div class="info-card"><div class="info-label">轉換價值(理論價)</div><div class="info-value">${convVal.toFixed(2)}</div></div>
-                    <div class="info-card"><div class="info-label">CB市價</div><div class="info-value">${cb.price || '-'}</div></div>
-                    <div class="info-card"><div class="info-label">溢價率</div><div class="info-value ${premium<0?'val-pos':''}">${premium.toFixed(2)}%</div></div>
-                </div>
-                <div style="background:#f8f9fa;padding:10px;border-radius:8px;margin-top:10px;">
-                    <div style="font-weight:700;margin-bottom:5px;color:#555;">CBAS 選擇權數據</div>
-                    <div style="display:flex;gap:15px;font-size:13px;">
-                        <span>權利金: <b>${cb.cbasPrice || '-'}</b></span>
-                        <span>估計槓桿: <b>${cbasLeverage}x</b></span>
-                        <span>波動率: <b>${cb.volatility || '-'}</b></span>
+
+                <div id="${subTabId}-market" class="cb-sub-pane active">
+                    <div class="info-grid">
+                        <div class="info-card"><div class="info-label">CB市價</div><div class="info-value">${cb.price || '-'}</div></div>
+                        <div class="info-card"><div class="info-label">轉換價格</div><div class="info-value">${cb.convPrice}</div></div>
+                        <div class="info-card"><div class="info-label">轉換價值</div><div class="info-value">${convVal.toFixed(2)}</div></div>
+                        <div class="info-card"><div class="info-label">溢價率</div><div class="info-value ${premium<0?'val-pos':'val-neg'}">${premium.toFixed(2)}%</div></div>
+                    </div>
+                    <div style="background:#f8f9fa;padding:12px;border-radius:8px;">
+                        <div style="font-weight:700;margin-bottom:8px;color:#555;">CBAS 選擇權報價</div>
+                        <div style="display:flex;gap:20px;font-size:14px;">
+                            <span>權利金: <b>${cb.cbasPrice || '-'}</b></span>
+                            <span>槓桿: <b>${cb.leverage || '-'}x</b></span>
+                            <span>波動率: <b>${cb.volatility || '-'}</b></span>
+                        </div>
                     </div>
                 </div>
-                <div style="margin-top:10px;font-size:12px;color:#888;">
-                    發行日: ${cb.issueDate} | 到期日: ${cb.maturityDate}
+
+                <div id="${subTabId}-terms" class="cb-sub-pane">
+                    <table class="data-table">
+                        <tr><td>發行日期</td><td>${cb.issueDate}</td><td>到期日期</td><td>${cb.maturityDate}</td></tr>
+                        <tr><td>發行總額</td><td>${cb.issueAmount} 百萬</td><td>擔保情形</td><td>${cb.guarantee || '無'}</td></tr>
+                        <tr><td>信用評等</td><td>${cb.rating || '-'}</td><td>承銷商</td><td>${cb.underwriter || '-'}</td></tr>
+                        <tr><td style="color:var(--primary);font-weight:bold;">賣回權日期</td><td colspan="3" style="color:var(--primary);font-weight:bold;">${cb.putDate || '-'}</td></tr>
+                        <tr><td>賣回價格</td><td colspan="3">${cb.putPrice || '-'}</td></tr>
+                    </table>
+                </div>
+
+                <div id="${subTabId}-events" class="cb-sub-pane">
+                    <div style="max-height:200px;overflow-y:auto;">
+                        ${(cb.adjustments && cb.adjustments.length > 0) ? 
+                            cb.adjustments.map(a => `<div style="padding:8px 0;border-bottom:1px solid #eee;font-size:13px;">${a.desc}</div>`).join('') : 
+                            '<div style="color:#999;padding:10px;">暫無異動紀錄</div>'}
+                    </div>
                 </div>
             </div>`;
         });
@@ -611,21 +489,13 @@ function openStockModal(code) {
     
     // 4. 新聞 Tab
     let newsHtml = `<div class="tab-pane" id="tab-news"><div class="section-box">`;
-    if(newsList.length > 0) {
-        newsList.forEach(n => {
-            newsHtml += `<div style="padding:10px 0;border-bottom:1px solid #eee;">
-                <div style="font-size:12px;color:#888;">${n.date} | ${n.broker}</div>
-                <div style="font-weight:600;margin-top:4px;">${n.content}</div>
-            </div>`;
-        });
-    } else {
-        newsHtml += `<div style="text-align:center;color:#999;padding:20px;">暫無相關新聞</div>`;
-    }
+    newsList.forEach(n => newsHtml += `<div style="padding:10px 0;border-bottom:1px solid #eee;"><div style="font-size:12px;color:#888;">${n.date} | ${n.broker}</div><div style="font-weight:600;">${n.content}</div></div>`);
     newsHtml += `</div></div>`;
     
     $('modalBody').innerHTML = basicHtml + revHtml + cbHtml + newsHtml;
 }
 
+// === 互動控制函數 ===
 function switchModalTab(tabName) {
     document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -633,33 +503,31 @@ function switchModalTab(tabName) {
     $('tab-' + tabName).classList.add('active');
 }
 
-function closeModal() {
-    $('modalOverlay').classList.remove('active');
-    state.history = []; // 清空歷史
+function switchSubTab(groupId, tabName) {
+    let parent = document.getElementById(groupId + '-' + tabName).parentElement;
+    let tabs = parent.previousElementSibling; // cb-sub-tabs div
+    tabs.querySelectorAll('.cb-sub-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    parent.querySelectorAll('.cb-sub-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById(groupId + '-' + tabName).classList.add('active');
 }
+
+function closeModal() { $('modalOverlay').classList.remove('active'); state.history = []; }
 
 function modalGoBack() {
     state.history.pop(); // 移除當前
-    let prevCode = state.history.pop(); // 取得上一個 (因為 openStockModal 會再 push 一次)
-    if(prevCode) {
-        openStockModal(prevCode);
-    } else {
-        closeModal();
-    }
+    let prevCode = state.history.pop(); // 取得上一個
+    if(prevCode) openStockModal(prevCode); // 重新開啟上一個
+    else closeModal();
 }
 
-// === 互動邏輯 ===
-function switchDB(db) {
-    state.currentDB = db;
-    document.querySelectorAll('.db-tab').forEach(t => t.classList.toggle('active', t.dataset.db === db));
-    renderMainList();
-}
+function switchDB(db) { state.currentDB = db; document.querySelectorAll('.db-tab').forEach(t => t.classList.toggle('active', t.dataset.db === db)); renderMainList(); }
 
 function setupSearch() {
     let inp = $('searchInput');
     inp.addEventListener('input', (e) => {
         state.search = e.target.value.trim();
-        // 智慧建議邏輯 (可擴充)
         if(state.search.length > 0) {
             $('searchSuggestions').style.display = 'block';
             let hits = Object.values(DB.stocks).filter(s => s.code.includes(state.search) || s.name.includes(state.search)).slice(0, 5);
@@ -670,21 +538,14 @@ function setupSearch() {
             if(cbHits.length > 0) html += `<div class="suggestion-group-title">可轉債</div>` + cbHits.map(c => `<div class="suggestion-item" onclick="openStockModal('${c.stockCode}')"><div class="suggestion-icon">🎫</div><div>${c.name}</div></div>`).join('');
             
             $('searchSuggestions').innerHTML = html || '<div style="padding:10px;color:#999;">無符合結果</div>';
-        } else {
-            $('searchSuggestions').style.display = 'none';
-        }
+        } else $('searchSuggestions').style.display = 'none';
         renderMainList();
     });
     
-    // 點擊建議項目關閉選單
-    document.addEventListener('click', (e) => {
-        if(!e.target.closest('.search-section')) $('searchSuggestions').style.display = 'none';
-    });
+    document.addEventListener('click', (e) => { if(!e.target.closest('.search-section')) $('searchSuggestions').style.display = 'none'; });
 }
 
-// 啟動
 window.onload = loadData;
-
 </script>
 </body>
 </html>
