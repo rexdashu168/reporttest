@@ -53,6 +53,7 @@
     .card-list.cb-mode { display: block; }
     .card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; transition: all 0.2s; }
     .card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .card.industry-card { border-left: 4px solid #9b59b6; background: linear-gradient(135deg, #faf8fc 0%, #fff 100%); }
     .card-head { display: flex; justify-content: space-between; margin-bottom: 8px; }
     .card-title { font-weight: 700; font-size: 16px; color: #2c3e50; }
     .card-meta { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -187,6 +188,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
+```
 
 </head>
 <body>
@@ -202,6 +204,8 @@
         <h1>📊 Rex大叔投資研究室</h1>
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
+
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -223,6 +227,7 @@
 
 <div style="font-size:12px;color:#666;margin-bottom:10px;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -321,6 +326,7 @@ async function fetchXlsx(url) {
 }
 
 async function init() {
+  try {
     let wb;
     
     // 1. Master + 概念股
@@ -650,7 +656,8 @@ async function init() {
     $('c-trends').innerText = DB.trends.length;
     $('c-cb').innerText = DB.cb.length;
 
-    $('loader').classList.add('hidden');
+    // 確保隱藏 loader
+    setTimeout(() => { $('loader').classList.add('hidden'); }, 100);
     
     document.querySelectorAll('.db-tab').forEach(tab => {
         tab.onclick = () => {
@@ -662,6 +669,11 @@ async function init() {
     });
     
     renderList();
+  } catch(e) {
+    console.error('Init Error:', e);
+    $('loader').classList.add('hidden');
+    $('loadStatus').innerText = '載入發生錯誤';
+  }
 }
 
 // CB 統計區塊
@@ -809,7 +821,7 @@ function renderList() {
     } else {
         // 其他分頁用卡片
         filtered.slice(0, 100).forEach(i => {
-            let title='', sub='', date='', code='', tagClass='brk', body='', click='';
+            let title='', sub='', date='', code='', tagClass='brk', body='', click='', cardClass='card';
             
             if(CURR_DB==='stocks') {
                 title = i['公司名稱']; code = i['代號']; sub = i['產業分類']; 
@@ -819,19 +831,27 @@ function renderList() {
             else if(CURR_DB==='news') {
                 const dataType = i['資料類型'] || '';
                 const isIndustry = dataType === '產業趨勢';
-                title = isIndustry ? `<span class="news-type ind-type">產業</span> ${i['公司']}` : i['公司']; 
-                code = i['股號']; sub = i['報導重點分類']; 
+                title = i['公司']; 
+                code = i['股號']; 
+                sub = isIndustry ? '產業趨勢' : i['報導重點分類']; 
                 date = i['日期']; 
-                // 產業趨勢用紫色，個股報導用藍色
                 tagClass = isIndustry ? 'trend-ind' : 'ind';
                 body = safe(i['完整報導內容']).substring(0, 150);
                 click = `openNews('${i['編號']}')`;
+                // 產業趨勢卡片加上特殊樣式
+                if(isIndustry) cardClass = 'card industry-card';
             }
             else if(CURR_DB==='memo') {
                 title = i['公司']; code = i['股號']; sub = i['報告類型']; date = i['日期'];
                 const d = META.memoDetail[i['編號']];
                 body = d ? (safe(d['營運重點']).substring(0,100) + '...') : '點擊查看詳情';
                 click = `openMemo('${i['編號']}')`;
+                // 產業相關的 Memo 用紫色
+                const reportType = i['報告類型'] || '';
+                if(reportType.includes('產業')) {
+                    tagClass = 'trend-ind';
+                    cardClass = 'card industry-card';
+                }
             }
             else if(CURR_DB==='reports') {
                 title = i['報告標題']; sub = i['券商名稱'] + ' - ' + safe(i['產業名稱']); 
@@ -851,7 +871,7 @@ function renderList() {
                 click = `openTrend('${i['產業']}')`;
             }
 
-            html += `<div class="card" onclick="${click}">
+            html += `<div class="${cardClass}" onclick="${click}">
                 <div class="card-head"><div class="card-title">${title} ${code?`<span style="color:#999;font-weight:400">${code}</span>`:''}</div></div>
                 <div class="card-meta"><span class="tag ${tagClass}">${sub||'一般'}</span>${date?`<span class="tag dt">${fmtDate(date)}</span>`:''}</div>
                 <div class="card-body">${body}</div>
