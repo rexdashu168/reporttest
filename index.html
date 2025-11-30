@@ -18,7 +18,7 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; background: #f5f4ef; min-height: 100vh; color: #2d2d2d; }
         .container { max-width: 1200px; margin: 0 auto; padding: 12px; padding-bottom: 80px; }
         
-        /* ===== 新版 Loading 樣式 (依照截圖) ===== */
+        /* ===== Loading 畫面樣式 ===== */
         .loading-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: #f5f4ef;
@@ -166,7 +166,7 @@
         .related-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
         .empty-state { text-align: center; padding: 50px 20px; color: #8b8b8b; }
         .error-box { background: #fff3f3; border: 1px solid #d64545; border-radius: 12px; padding: 20px; margin: 20px; text-align: center; }
-
+        
         @media (max-width: 600px) { .header h1 { font-size: 18px; } .db-tab { padding: 6px 10px; font-size: 11px; } .filter-row { flex-direction: column; } .filter-select { min-width: 100%; } .info-grid { grid-template-columns: 1fr 1fr; } .tab-btn { padding: 6px 10px; font-size: 11px; } }
     </style>
 </head>
@@ -329,105 +329,151 @@
         return str;
     }
 
-    // ===== 載入邏輯 =====
-    async function loadData() {
-        // CB Data
+    // ===== 載入邏輯 (修復重點：拆分回獨立函數) =====
+    async function loadCBData() {
         try {
-            const wbCB = XLSX.read(await fetchFile(CB_FILE), { type: 'array' });
-            const ws16 = wbCB.Sheets['16_產業分類'];
-            if (ws16) XLSX.utils.sheet_to_json(ws16).forEach(r => { if(r['股票代號']) cbIndustry[String(r['股票代號'])] = { industry: r['產業分類'] || '其他', name: r['公司名稱'] }; });
+            const data = await fetchFile(CB_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
             
-            const ws08 = wbCB.Sheets['08_最新動態每週基本資料'];
-            if (ws08) XLSX.utils.sheet_to_json(ws08).forEach(r => {
-                if (!r['轉換標的代碼']) return;
-                const stockCode = String(r['轉換標的代碼']).trim();
-                const issue = parseFloat(r['實際發行總額(百萬)']) || 0;
-                const remain = parseFloat(r['最新餘額(百萬)']) || 0;
-                const cbInfo = {
-                    cbCode: String(r['代號']), cbName: String(r['名稱']), stockCode: stockCode, stockName: String(r['轉換標的名稱']),
-                    conversionPrice: parseFloat(r['轉換價格(元)']) || 0, maturityDate: excelDateToStr(r['到期日']),
-                    remainAmount: remain, remainPct: issue>0 ? ((remain/issue)*100).toFixed(1) : '0',
-                    industry: cbIndustry[stockCode]?.industry || '其他'
-                };
-                if (!cbData[stockCode]) cbData[stockCode] = [];
-                cbData[stockCode].push(cbInfo);
-                cbList.push(cbInfo);
-            });
+            const ws16 = wb.Sheets['16_產業分類'];
+            if (ws16) {
+                XLSX.utils.sheet_to_json(ws16).forEach(r => {
+                    if (!r['股票代號']) return;
+                    cbIndustry[String(r['股票代號'])] = { industry: r['產業分類'] || '其他', name: r['公司名稱'] };
+                });
+            }
+            
+            const ws08 = wb.Sheets['08_最新動態每週基本資料'];
+            if (ws08) {
+                XLSX.utils.sheet_to_json(ws08).forEach(r => {
+                    if (!r['轉換標的代碼']) return;
+                    const stockCode = String(r['轉換標的代碼']).trim();
+                    const issue = parseFloat(r['實際發行總額(百萬)']) || 0;
+                    const remain = parseFloat(r['最新餘額(百萬)']) || 0;
+                    
+                    const cbInfo = {
+                        cbCode: String(r['代號']),
+                        cbName: String(r['名稱']),
+                        stockCode: stockCode,
+                        stockName: String(r['轉換標的名稱']),
+                        conversionPrice: parseFloat(r['轉換價格(元)']) || 0,
+                        maturityDate: excelDateToStr(r['到期日']),
+                        remainAmount: remain,
+                        remainPct: issue > 0 ? ((remain/issue)*100).toFixed(1) : '0',
+                        industry: cbIndustry[stockCode]?.industry || '其他'
+                    };
+                    
+                    if (!cbData[stockCode]) cbData[stockCode] = [];
+                    cbData[stockCode].push(cbInfo);
+                    cbList.push(cbInfo);
+                });
+            }
         } catch(e) { console.warn('CB載入失敗', e); }
+    }
 
-        // News
+    async function loadNewsData() {
         try {
-            const wbNews = XLSX.read(await fetchFile(NEWS_FILE), { type: 'array' });
-            const wsNews = wbNews.Sheets['外電綜合報導'];
-            if (wsNews) XLSX.utils.sheet_to_json(wsNews).forEach(r => {
-                if (!r['編號']) return;
-                if (safeStr(r['資料類型']) === '個股報導') {
-                    newsData.push({ id: safeStr(r['編號']), date: safeStr(r['日期']), company: safeStr(r['公司']), stockCode: safeStr(r['股號']), broker: safeStr(r['券商來源']), category: safeStr(r['報導重點分類']), importance: safeStr(r['重要性']), tags: safeStr(r['標籤']) });
-                    newsContent[safeStr(r['編號'])] = safeStr(r['完整報導內容']);
-                } else if (safeStr(r['資料類型']) === '產業趨勢') {
-                    trendsData.push({ id: safeStr(r['編號']), date: safeStr(r['日期']), topic: safeStr(r['公司']), broker: safeStr(r['券商來源']), content: safeStr(r['完整報導內容']), companies: safeStr(r['股號']), tags: safeStr(r['標籤']) });
-                }
-            });
+            const data = await fetchFile(NEWS_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
+            const wsNews = wb.Sheets['外電綜合報導'];
+            if (wsNews) {
+                XLSX.utils.sheet_to_json(wsNews).forEach(r => {
+                    if (!r['編號']) return;
+                    if (safeStr(r['資料類型']) === '個股報導') {
+                        newsData.push({ id: safeStr(r['編號']), date: safeStr(r['日期']), company: safeStr(r['公司']), stockCode: safeStr(r['股號']), broker: safeStr(r['券商來源']), category: safeStr(r['報導重點分類']), importance: safeStr(r['重要性']), tags: safeStr(r['標籤']) });
+                        newsContent[safeStr(r['編號'])] = safeStr(r['完整報導內容']);
+                    } else if (safeStr(r['資料類型']) === '產業趨勢') {
+                        trendsData.push({ id: safeStr(r['編號']), date: safeStr(r['日期']), topic: safeStr(r['公司']), broker: safeStr(r['券商來源']), content: safeStr(r['完整報導內容']), companies: safeStr(r['股號']), tags: safeStr(r['標籤']) });
+                    }
+                });
+            }
         } catch(e) { console.warn('News載入失敗', e); throw e; }
+    }
 
-        // Memo
+    async function loadMemoData() {
         try {
-            const wbMemo = XLSX.read(await fetchFile(MEMO_FILE), { type: 'array' });
-            const s1 = wbMemo.Sheets['報告總表'];
+            const data = await fetchFile(MEMO_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
+            
+            const s1 = wb.Sheets['報告總表'];
             if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { if(r['編號']) memoReports.push({ id: safeStr(r['編號']), date: safeStr(r['日期']), company: safeStr(r['公司']), stockCode: safeStr(r['股號']), broker: safeStr(r['券商']), type: safeStr(r['報告類型']), importance: safeStr(r['重要性']), industry: safeStr(r['產業']), revenueYoY: safeStr(r['營收YoY']), grossMargin: safeStr(r['毛利率']), eps: safeStr(r['EPS']) }); });
-            const s2 = wbMemo.Sheets['詳細內容庫'];
+            
+            const s2 = wb.Sheets['詳細內容庫'];
             if(s2) XLSX.utils.sheet_to_json(s2).forEach(r => { if(r['編號']) memoDetails[safeStr(r['編號'])] = { operation: safeStr(r['營運重點']), strategy: safeStr(r['策略方向']), qa: safeStr(r['重要QA摘要']), rexView: safeStr(r['Rex觀察']), followUp: safeStr(r['後續追蹤']), tags: safeStr(r['標籤']) }; });
-            const s3 = wbMemo.Sheets['公司追蹤表'];
+            
+            const s3 = wb.Sheets['公司追蹤表'];
             if(s3) XLSX.utils.sheet_to_json(s3).forEach(r => { if(r['編號']) memoTracking[safeStr(r['公司'])] = { rating: safeStr(r['投資評等']), targetPrice: safeStr(r['目標價']), trackStatus: safeStr(r['追蹤狀態']) }; });
-            const s4 = wbMemo.Sheets['財務數據彙總'];
+            
+            const s4 = wb.Sheets['財務數據彙總'];
             if(s4) XLSX.utils.sheet_to_json(s4).forEach(r => { if(r['公司']) memoFinance[safeStr(r['公司'])] = { revenue3Q: safeStr(r['3Q25營收']), revenueYoY: safeStr(r['營收YoY']), grossMargin: safeStr(r['毛利率']), eps: safeStr(r['EPS']), guidance4Q: safeStr(r['4Q25指引']) }; });
-            const s5 = wbMemo.Sheets['產品結構分析'];
+            
+            const s5 = wb.Sheets['產品結構分析'];
             if(s5) XLSX.utils.sheet_to_json(s5).forEach(r => { if(r['公司']) memoProducts[safeStr(r['公司'])] = { products: [{name:safeStr(r['主要產品1']),ratio:safeStr(r['佔比/表現1'])},{name:safeStr(r['主要產品2']),ratio:safeStr(r['佔比/表現2'])}].filter(p=>p.name), driver: safeStr(r['關鍵成長動能']), outlook2026: safeStr(r['2026展望']) }; });
-            const s5_time = wbMemo.Sheets['關鍵時程追蹤'];
+            
+            const s5_time = wb.Sheets['關鍵時程追蹤'];
             if(s5_time) XLSX.utils.sheet_to_json(s5_time).forEach(r => { if(r['公司']) memoTimeline.push({ time: safeStr(r['時間']), company: safeStr(r['公司']), stockCode: safeStr(r['股號']), event: safeStr(r['事件']), type: safeStr(r['類型']), impact: safeStr(r['預期影響']), status: safeStr(r['追蹤狀態']) }); });
-            const s6 = wbMemo.Sheets['產業趨勢總覽'];
+            
+            const s6 = wb.Sheets['產業趨勢總覽'];
             if(s6) XLSX.utils.sheet_to_json(s6).forEach(r => { if(r['產業']) memoIndustryTrends.push({ industry: safeStr(r['產業']), trend: safeStr(r['趨勢判斷']), companies: safeStr(r['代表公司']), stockCodes: safeStr(r['股號']), driver: safeStr(r['關鍵驅動因素']), risk: safeStr(r['風險因素']), outlook: safeStr(r['2026展望']), suggestion: safeStr(r['投資建議']) }); });
         } catch(e) { console.warn('Memo載入失敗', e); }
+    }
 
-        // Reports
+    async function loadReportsData() {
         try {
-            const wbRep = XLSX.read(await fetchFile(REPORTS_FILE), { type: 'array' });
-            const s1 = wbRep.Sheets['報告總覽'];
+            const data = await fetchFile(REPORTS_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
+            
+            const s1 = wb.Sheets['報告總覽'];
             if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { if(r['報告編號']) reportsData.push({ id: safeStr(r['報告編號']), broker: safeStr(r['券商名稱']), date: formatDate(r['報告日期']), industry: safeStr(r['產業名稱']), title: safeStr(r['報告標題']), highlights: [safeStr(r['核心重點1']), safeStr(r['核心重點2'])] }); });
-            const s2 = wbRep.Sheets['焦點分析內容'];
+            
+            const s2 = wb.Sheets['焦點分析內容'];
             if(s2) XLSX.utils.sheet_to_json(s2).forEach(r => { if(r['報告編號']) { const id=safeStr(r['報告編號']); if(!reportDetails[id]) reportDetails[id]=[]; reportDetails[id].push({ sectionTitle: safeStr(r['段落標題']), content: safeStr(r['段落內容']), marketSize: safeStr(r['市場規模數據']) }); }});
-            const s4 = wbRep.Sheets['首選個股評價'];
+            
+            const s4 = wb.Sheets['首選個股評價'];
             if(s4) XLSX.utils.sheet_to_json(s4).forEach(r => { if(r['報告編號']) { const id=safeStr(r['報告編號']); if(!reportStocksData[id]) reportStocksData[id]=[]; reportStocksData[id].push({ name: safeStr(r['公司名稱']), code: safeStr(r['股票代號']), rating: safeStr(r['評等']), target: r['目標價'], eps25: r['EPS_FY25F'], highlight: safeStr(r['投資亮點']) }); }});
         } catch(e) { console.warn('Reports載入失敗', e); }
+    }
 
-        // Strategy
+    async function loadStrategyData() {
         try {
-            const wbStrat = XLSX.read(await fetchFile(STRATEGY_FILE), { type: 'array' });
-            const s1 = wbStrat.Sheets['報告總覽'];
+            const data = await fetchFile(STRATEGY_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
+            
+            const s1 = wb.Sheets['報告總覽'];
             if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { if(r['報告編號']) strategyReports.push({ id: safeStr(r['報告編號']), broker: safeStr(r['券商名稱']), date: formatDate(r['報告日期']), type: safeStr(r['報告類型']), title: safeStr(r['報告標題']), indexLow: r['指數預測區間_低'], indexHigh: r['指數預測區間_高'], macroSummary: safeStr(r['總經觀點摘要']) }); });
-            const s4 = wbStrat.Sheets['題材與趨勢'];
+            
+            const s4 = wb.Sheets['題材與趨勢'];
             if(s4) XLSX.utils.sheet_to_json(s4).forEach(r => { if(r['報告編號']) { const id=safeStr(r['報告編號']); if(!strategyThemes[id]) strategyThemes[id]=[]; strategyThemes[id].push({ topic: safeStr(r['題材主題']), content: safeStr(r['題材內容']), data: safeStr(r['相關數據']), value: safeStr(r['數據值']) }); }});
-            const s7 = wbStrat.Sheets['季度行情規劃'];
+            
+            const s7 = wb.Sheets['季度行情規劃'];
             if(s7) XLSX.utils.sheet_to_json(s7).forEach(r => { if(r['報告編號']) { const id=safeStr(r['報告編號']); if(!strategyQuarters[id]) strategyQuarters[id]=[]; strategyQuarters[id].push({ quarter: safeStr(r['季度']), indexLow: r['指數預測_低'], indexHigh: r['指數預測_高'], positives: [safeStr(r['利多因素1'])].filter(Boolean), negatives: [safeStr(r['利空因素1'])].filter(Boolean) }); }});
-            const s8 = wbStrat.Sheets['選股策略'];
+            
+            const s8 = wb.Sheets['選股策略'];
             if(s8) XLSX.utils.sheet_to_json(s8).forEach(r => { if(r['報告編號']) { const id=safeStr(r['報告編號']); if(!strategyPicks[id]) strategyPicks[id]=[]; strategyPicks[id].push({ industry: safeStr(r['產業分類']), theme: safeStr(r['投資題材']), stockCode: safeStr(r['股票代號']), stockName: safeStr(r['公司名稱']), q1: safeStr(r['26Q1']), q2: safeStr(r['26Q2']) }); }});
         } catch(e) { console.warn('Strategy載入失敗', e); }
+    }
 
-        // Master & Revenue
+    async function loadMasterData() {
         try {
-            const wbMaster = XLSX.read(await fetchFile(MASTER_FILE), { type: 'array' });
-            const s1 = wbMaster.Sheets['主資料庫'];
+            const data = await fetchFile(MASTER_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
+            const s1 = wb.Sheets['主資料庫'];
             if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { if(r['代號']) { const d = { code: safeStr(r['代號']), name: safeStr(r['公司名稱']), market: safeStr(r['市場分類']), industry: safeStr(r['產業分類']), price: safeStr(r['成交']), change: safeStr(r['漲跌價']), changePercent: safeStr(r['漲跌幅']), marketCap: safeStr(r['市值(億)']), business: safeStr(r['業務摘要']), listedYears: safeStr(r['掛牌年數']), capital: safeStr(r['股本(億)']) }; masterStocks[d.code] = d; masterStocks[d.name] = d; } });
-            
-            const wbRev = XLSX.read(await fetchFile(REVENUE_FILE), { type: 'array' });
-            const wsMonth = wbRev.Sheets['000_月營收'];
+        } catch(e) { console.warn('Master載入失敗', e); }
+    }
+
+    async function loadRevenueData() {
+        try {
+            const data = await fetchFile(REVENUE_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
+            const wsMonth = wb.Sheets['000_月營收'];
             if(wsMonth) {
                 const rows = XLSX.utils.sheet_to_json(wsMonth);
                 const headers = Object.keys(rows[0]||{});
                 const monthCols = headers.filter(h=>h.includes('單月營收'));
                 rows.forEach(r => { if(r['代號']) { const c=String(r['代號']).trim(); revenueData[c] = { monthly: monthCols.slice(-12).map(col => ({ period: col.replace('單月營收(億)',''), value: r[col]||'' })) }; } });
             }
-        } catch(e) { console.warn('Master/Rev載入失敗', e); }
+        } catch(e) { console.warn('Revenue載入失敗', e); }
     }
 
     // ===== 主程式啟動 =====
@@ -446,7 +492,8 @@
             await loadStrategyData();
             
             updateLoadingStatus('解析財務營收...', '正在整合財務與 CB 資料庫', 80);
-            await loadData(); // 確保 CB 資料載入
+            await loadCBData();
+            await loadRevenueData();
             
             updateLoadingStatus('即將完成...', '正在建構智慧搜尋引擎', 95);
             buildSearchIndex();
