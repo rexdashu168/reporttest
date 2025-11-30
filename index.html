@@ -1678,10 +1678,10 @@ function openMemoModal(id) {
     </div>`;
     
     // 營運重點
-    html += `<div class="tab-content" id="tab-operation">${detail.operation ? `<div class="content-block" style="background:#fafaf8;padding:15px;border-radius:8px;line-height:1.8;">${formatContent(detail.operation)}</div>` : '<p style="color:#8b8b8b;">暫無營運重點資料</p>'}</div>`;
+    html += `<div class="tab-content" id="tab-operation">${detail.operation ? `<div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${formatContent(detail.operation)}</div>` : '<p style="color:#8b8b8b;">暫無營運重點資料</p>'}</div>`;
     
     // 策略方向
-    html += `<div class="tab-content" id="tab-strategy">${detail.strategy ? `<div class="content-block" style="background:#fafaf8;padding:15px;border-radius:8px;line-height:1.8;">${formatContent(detail.strategy)}</div>` : '<p style="color:#8b8b8b;">暫無策略方向資料</p>'}</div>`;
+    html += `<div class="tab-content" id="tab-strategy">${detail.strategy ? `<div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${formatContent(detail.strategy)}</div>` : '<p style="color:#8b8b8b;">暫無策略方向資料</p>'}</div>`;
     
     // 財務數據
     html += `<div class="tab-content" id="tab-finance">${Object.keys(finance).length > 0 ? `
