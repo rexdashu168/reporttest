@@ -235,6 +235,7 @@ const REPORTS_FILE = '03_reports.xlsx';
 const MASTER_FILE = '04_master.xlsx';
 const STRATEGY_FILE = '05_Strategy.xlsx';
 const CB_FILE = '00_CB.xlsx';
+const REVENUE_FILE = '06_revenue.xlsx';
 
 // ===== 全域資料變數 =====
 let newsData = [], newsContent = {}, trendsData = [];
@@ -242,6 +243,7 @@ let cbData = {}; // 股票代號 -> [CB資訊陣列]
 let cbIndustry = {}; // 股票代號 -> 產業分類
 let cbList = []; // 所有CB列表
 let cbPriceRange = {}; // CB代號 -> {high, low}
+let revenueData = {}; // 股票代號 -> {股本, 市值, 營收年增, 1年高低, 產業地位}
 let memoReports = [], memoTracking = {}, memoFinance = {}, memoProducts = {}, memoTimeline = [], memoIndustryTrends = [], memoDetails = {}, memoAnalysts = [];
 let reportsData = [], reportDetails = {}, reportStocksData = {}, reportConclusions = {};
 let masterStocks = {}, conceptStocks = [];
@@ -437,6 +439,76 @@ async function loadCBData() {
     } catch (e) { console.warn('CB資料載入失敗:', e); }
 }
 
+
+// 載入營收財務資料
+async function loadRevenueData() {
+    try {
+        const data = await fetchFile(REVENUE_FILE);
+        const wb = XLSX.read(data, { type: 'array' });
+        
+        // 讀取公司基本資料
+        const ws12 = wb.Sheets['12_公司基本資料'];
+        if (ws12) {
+            XLSX.utils.sheet_to_json(ws12).forEach(r => {
+                if (!r['代號']) return;
+                const code = String(r['代號']).trim();
+                revenueData[code] = {
+                    capital: r['股本(億)'] || '',
+                    marketCap: r['市值(億)'] || '',
+                    industry: r['產業別'] || '',
+                    chairman: r['董事長'] || '',
+                    ceo: r['總經理'] || '',
+                    business: r['主要業務'] || '',
+                    concepts: r['相關概念'] || ''
+                };
+            });
+        }
+        
+        // 讀取月累營收年增
+        const wsRev = wb.Sheets['000_月累營收年增'];
+        if (wsRev) {
+            const rows = XLSX.utils.sheet_to_json(wsRev);
+            const headers = Object.keys(rows[0] || {});
+            // 找最新的營收年增欄位
+            const revCol = headers.filter(h => h.includes('累月營收年增')).pop();
+            rows.forEach(r => {
+                if (!r['代號']) return;
+                const code = String(r['代號']).trim();
+                if (revenueData[code] && revCol) {
+                    revenueData[code].revenueYoY = r[revCol] || '';
+                }
+            });
+        }
+        
+        // 讀取1年高低價
+        const ws13 = wb.Sheets['13_歷史高低'];
+        if (ws13) {
+            XLSX.utils.sheet_to_json(ws13).forEach(r => {
+                if (!r['代號']) return;
+                const code = String(r['代號']).trim();
+                if (revenueData[code]) {
+                    revenueData[code].yearHigh = r['1年最高股價'] || '';
+                    revenueData[code].yearLow = r['1年最低股價'] || '';
+                }
+            });
+        }
+        
+        // 讀取產業地位
+        const wsPos = wb.Sheets['上市櫃產業地位'];
+        if (wsPos) {
+            XLSX.utils.sheet_to_json(wsPos).forEach(r => {
+                if (!r['代碼']) return;
+                const code = String(r['代碼']).trim();
+                if (revenueData[code]) {
+                    revenueData[code].position = r['產業地位'] || '';
+                    revenueData[code].subIndustry = r['細產業'] || '';
+                }
+            });
+        }
+        
+    } catch (e) { console.warn('營收資料載入失敗:', e); }
+}
+
 // ===== 主程式入口 =====
 window.onload = async function() {
     const overlay = document.getElementById('loadingOverlay');
@@ -456,10 +528,13 @@ window.onload = async function() {
         updateLoadingStatus('正在載入投資策略...', STRATEGY_FILE, 85);
         await loadStrategyData();
         
-        updateLoadingStatus('正在載入可轉債資料...', CB_FILE, 90);
+        updateLoadingStatus('正在載入可轉債資料...', CB_FILE, 88);
         await loadCBData();
         
-        updateLoadingStatus('正在建立索引...', '', 95);
+        updateLoadingStatus('正在載入營收資料...', REVENUE_FILE, 93);
+        await loadRevenueData();
+        
+        updateLoadingStatus('正在建立索引...', '', 97);
         buildSearchIndex();
         buildFilters();
         buildHotTags();
