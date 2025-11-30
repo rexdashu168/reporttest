@@ -9,11 +9,19 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; background: #f5f4ef; min-height: 100vh; color: #2d2d2d; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 12px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 12px; overflow: hidden; }
         .header { text-align: center; padding: 20px 0 15px; border-bottom: 1px solid #e5e3dc; margin-bottom: 15px; }
         .header h1 { font-size: 22px; color: #c96442; margin-bottom: 4px; }
         .header .subtitle { color: #6b6b6b; font-size: 13px; }
-        .db-switcher { display: flex; justify-content: center; gap: 6px; margin: 15px 0; flex-wrap: wrap; }
+        .db-switcher { 
+            display: flex; 
+            justify-content: center; 
+            gap: 6px; 
+            margin: 15px 0; 
+            flex-wrap: wrap; 
+            padding: 0; 
+            overflow: visible;
+        }
         .db-tab { padding: 8px 14px; border: 2px solid #e5e3dc; background: #fff; border-radius: 20px; font-size: 12px; font-weight: 600; color: #6b6b6b; cursor: pointer; transition: all 0.2s; }
         .db-tab:hover { border-color: #c96442; color: #c96442; }
         .db-tab.active { background: #c96442; border-color: #c96442; color: #fff; }
@@ -1858,7 +1866,7 @@ function openMemoModal(id) {
     </div>`;
     
     document.getElementById('modalBody').innerHTML = html;
-    document.getElementById('detailModal').classList.add('show');
+    document.getElementById('modalOverlay').classList.add('active');
 }
 
 
@@ -2123,8 +2131,264 @@ function switchRevTab(tabId) {
     document.querySelectorAll('.rev-content').forEach(c => c.style.display = 'none');
     document.getElementById('rev-' + tabId).style.display = 'block';
 }
-</script>
+
+// ===== 補上缺失的 Modal 功能函數 =====
+
+// 1. Memo Modal 的分頁切換功能
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    const targetContent = document.getElementById('tab-' + tabId);
+    if (targetContent) {
+        targetContent.classList.add('active');
+    }
+}
+
+// 2. 開啟產業報告 Modal
+function openReportModal(id) {
+    const report = reportsData.find(r => r.id == id);
+    if (!report) return;
+    
+    const details = reportDetails[id] || [];
+    const stocks = reportStocksData[id] || [];
+    const conclusion = reportConclusions[id] || {};
+    
+    document.getElementById('modalHeaderInfo').innerHTML = `
+        <div class="modal-meta">
+            <span class="meta-tag broker">${report.broker}</span>
+            <span class="meta-tag industry">${report.industry}</span>
+            <span class="meta-tag date">${report.date}</span>
+            ${report.rating ? `<span class="meta-tag rating">${report.rating}</span>` : ''}
+        </div>
+        <h2 class="modal-title">${report.title}</h2>
+        <p class="modal-subtitle">${report.subtitle || ''} | ${report.analyst || ''}</p>
+    `;
+    
+    let html = `<div class="modal-section"><h3 class="section-title">✨ 核心重點</h3>
+        <ul style="padding-left:20px;line-height:1.8;">
+            ${report.highlights.map(h => `<li>${h}</li>`).join('')}
+        </ul>
+    </div>`;
+    
+    if (details.length > 0) {
+        html += `<div class="modal-section"><h3 class="section-title">📊 焦點分析</h3>
+            ${details.map(d => `
+                <div style="margin-bottom:15px;background:#fafaf8;padding:15px;border-radius:10px;border-left:4px solid #3b82f6;">
+                    <div style="font-weight:700;color:#1e40af;margin-bottom:8px;font-size:15px;">${d.sectionTitle}</div>
+                    <div class="content-text" style="line-height:1.7;">${d.content}</div>
+                    ${d.marketSize ? `<div style="margin-top:8px;font-size:12px;color:#666;background:#e0f2fe;padding:6px 10px;border-radius:6px;">📈 市場規模: ${d.marketSize} ${d.growthRate ? `| 成長率: ${d.growthRate}` : ''}</div>` : ''}
+                </div>
+            `).join('')}
+        </div>`;
+    }
+    
+    if (conclusion.content) {
+        html += `<div class="modal-section"><h3 class="section-title">💡 券商觀點</h3>
+            <div class="content-block" style="background:#fef3c7;border-left-color:#f59e0b;">${conclusion.content}</div>
+            ${conclusion.picks && conclusion.picks.length > 0 ? `
+                <div style="margin-top:12px;"><strong>首選個股：</strong>
+                    ${conclusion.picks.map(p => `<span class="mini-tag" style="margin:3px;">${p.name} - ${p.reason}</span>`).join('')}
+                </div>
+            ` : ''}
+        </div>`;
+    }
+    
+    if (stocks.length > 0) {
+        html += `<div class="modal-section"><h3 class="section-title">🏆 首選個股評價</h3>
+            <div style="display:grid;gap:12px;">
+            ${stocks.map(s => `
+                <div class="card-base" onclick="closeModal();setTimeout(()=>openStockModal('${s.code}'), 100);" style="border-left:4px solid #10b981;cursor:pointer;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-weight:700;font-size:15px;">${s.name} <span style="color:#666;font-size:13px;">(${s.code})</span></span>
+                        <span style="color:#10b981;font-weight:700;">目標價 ${s.target}</span>
+                    </div>
+                    <div style="font-size:12px;color:#666;margin:6px 0;">
+                        評等: <strong>${s.rating || '-'}</strong> | 
+                        EPS: 25F(${s.eps25 || '-'}) / 26F(${s.eps26 || '-'}) | 
+                        PE: ${s.pe26 || '-'}x
+                    </div>
+                    ${s.highlight ? `<div style="font-size:13px;color:#374151;">${s.highlight}</div>` : ''}
+                </div>
+            `).join('')}
+            </div>
+        </div>`;
+    }
+    
+    document.getElementById('modalBody').innerHTML = html;
+    openModal();
+}
+
+// 3. 開啟投資策略 Modal
+function openStrategyModal(id) {
+    const report = strategyReports.find(r => r.id == id);
+    if (!report) return;
+    
+    const themes = strategyThemes[id] || [];
+    const quarters = strategyQuarters[id] || [];
+    const picks = strategyPicks[id] || [];
+    
+    document.getElementById('modalHeaderInfo').innerHTML = `
+        <div class="modal-meta">
+            <span class="meta-tag broker">${report.broker}</span>
+            <span class="meta-tag date">${report.date}</span>
+            <span class="meta-tag trend">${report.type || '投資策略'}</span>
+        </div>
+        <h2 class="modal-title">${report.title}</h2>
+        ${report.indexLow && report.indexHigh ? `
+            <div style="margin-top:10px;padding:12px;background:linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);border-radius:10px;color:#1e40af;font-weight:600;text-align:center;">
+                📊 指數區間觀點：${report.indexLow} ~ ${report.indexHigh}
+            </div>
+        ` : ''}
+    `;
+    
+    let html = '';
+    
+    if (report.macroSummary || report.marketView) {
+        html += `<div class="modal-section"><h3 class="section-title">🌍 總經與市場觀點</h3>
+            <div class="content-block">${report.macroSummary || report.marketView}</div>
+        </div>`;
+    }
+    
+    if (themes.length > 0) {
+        html += `<div class="modal-section"><h3 class="section-title">🔥 投資題材</h3>
+            <div style="display:grid;gap:12px;">
+            ${themes.map(t => `
+                <div style="background:#fffbeb;padding:15px;border-radius:10px;border-left:4px solid #f59e0b;">
+                    <div style="font-weight:700;color:#b45309;margin-bottom:6px;">${t.topic}</div>
+                    <div style="font-size:14px;line-height:1.6;">${t.content}</div>
+                    ${t.companies ? `<div style="margin-top:8px;font-size:12px;color:#666;">相關個股: ${t.companies}</div>` : ''}
+                </div>
+            `).join('')}
+            </div>
+        </div>`;
+    }
+    
+    if (quarters.length > 0) {
+        html += `<div class="modal-section"><h3 class="section-title">📅 季度行情規劃</h3>
+            <div style="display:grid;gap:10px;">
+            ${quarters.map(q => `
+                <div style="background:#f0fdf4;padding:12px;border-radius:8px;border-left:4px solid #22c55e;">
+                    <div style="font-weight:700;color:#166534;">${q.quarter}</div>
+                    <div style="font-size:13px;margin-top:4px;">
+                        ${q.positives ? `<div>✅ 利多: ${q.positives}</div>` : ''}
+                        ${q.negatives ? `<div>⚠️ 利空: ${q.negatives}</div>` : ''}
+                        ${q.indexRange ? `<div>📊 預估區間: ${q.indexRange}</div>` : ''}
+                    </div>
+                </div>
+            `).join('')}
+            </div>
+        </div>`;
+    }
+    
+    if (picks.length > 0) {
+        html += `<div class="modal-section"><h3 class="section-title">🎯 選股策略 (${picks.length}檔)</h3>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;font-size:13px;border-collapse:collapse;">
+                    <tr style="background:#f1f5f9;">
+                        <th style="padding:10px;text-align:left;">代號</th>
+                        <th style="padding:10px;text-align:left;">名稱</th>
+                        <th style="padding:10px;text-align:left;">題材</th>
+                        <th style="padding:10px;text-align:center;">Q1</th>
+                        <th style="padding:10px;text-align:center;">Q2</th>
+                    </tr>
+                    ${picks.map(p => `
+                        <tr style="border-bottom:1px solid #e2e8f0;cursor:pointer;" onclick="closeModal();setTimeout(()=>openStockModal('${p.stockCode}'), 100);" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+                            <td style="padding:10px;font-weight:600;color:#c96442;">${p.stockCode}</td>
+                            <td style="padding:10px;">${p.stockName}</td>
+                            <td style="padding:10px;"><span class="mini-tag">${p.theme}</span></td>
+                            <td style="padding:10px;text-align:center;">${p.q1 || '-'}</td>
+                            <td style="padding:10px;text-align:center;">${p.q2 || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+            </div>
+        </div>`;
+    }
+    
+    document.getElementById('modalBody').innerHTML = html;
+    openModal();
+}
+
+// 4. 開啟產業趨勢 Modal
+function openTrendModal(id) {
+    const item = trendsData.find(t => t.id == id);
+    if (!item) return;
+    
+    const tags = parseTags(item.tags);
+    
+    document.getElementById('modalHeaderInfo').innerHTML = `
+        <div class="modal-meta">
+            <span class="meta-tag broker">${item.broker}</span>
+            <span class="meta-tag date">${item.date}</span>
+        </div>
+        <h2 class="modal-title">${item.topic}</h2>
+    `;
+    
+    document.getElementById('modalBody').innerHTML = `
+        <div class="modal-section">
+            <h3 class="section-title">📖 趨勢分析</h3>
+            <div class="content-text full-content" style="line-height:1.8;">${formatContent(item.content)}</div>
+        </div>
+        ${item.companies ? `
+            <div class="modal-section">
+                <h3 class="section-title">🔗 相關個股</h3>
+                <div style="font-size:15px;color:#166534;font-weight:600;">${item.companies}</div>
+            </div>
+        ` : ''}
+        ${tags.length > 0 ? `
+            <div class="modal-section">
+                <h3 class="section-title">🏷️ 標籤</h3>
+                <div class="tags-container">${tags.map(t => `<span class="tag-chip">${t}</span>`).join('')}</div>
+            </div>
+        ` : ''}
+    `;
+    openModal();
+}
+
+// 5. 開啟產業動態 Modal
+function openIndustryModal(idx) {
+    const item = memoIndustryTrends[idx];
+    if (!item) return;
+    
+    document.getElementById('modalHeaderInfo').innerHTML = `
+        <div class="modal-meta">
+            <span class="meta-tag trend">${item.trend}</span>
+            <span class="meta-tag industry">${item.industry}</span>
+        </div>
+        <h2 class="modal-title">${item.industry} 產業動態</h2>
+    `;
+    
+    document.getElementById('modalBody').innerHTML = `
+        <div class="info-grid" style="margin-bottom:20px;">
+            <div class="info-item"><div class="info-label">趨勢判斷</div><div class="info-value">${item.trend}</div></div>
+            <div class="info-item"><div class="info-label">景氣位置</div><div class="info-value">${item.cycle}</div></div>
+            <div class="info-item"><div class="info-label">代表公司</div><div class="info-value">${item.companies}</div></div>
+            <div class="info-item"><div class="info-label">股號</div><div class="info-value">${item.stockCodes}</div></div>
+        </div>
+        <div class="modal-section">
+            <h3 class="section-title">🔥 關鍵驅動因素</h3>
+            <div class="content-block">${item.drivers}</div>
+        </div>
+        <div class="modal-section">
+            <h3 class="section-title">⚠️ 風險因素</h3>
+            <div class="content-block" style="background:#fef2f2;border-left-color:#ef4444;">${item.risks}</div>
+        </div>
+        <div class="modal-section">
+            <h3 class="section-title">🔮 2026展望</h3>
+            <div class="content-block" style="background:#f0fdf4;border-left-color:#22c55e;">${item.outlook2026}</div>
+        </div>
+        ${item.suggestion ? `
+            <div class="modal-section">
+                <h3 class="section-title">💡 投資建議</h3>
+                <div class="content-block" style="background:#faf5ff;border-left-color:#a855f7;">${item.suggestion}</div>
+            </div>
+        ` : ''}
+    `;
+    openModal();
+}
 ```
 
+</script>
 </body>
 </html>
