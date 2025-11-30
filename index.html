@@ -829,6 +829,11 @@ function renderList() {
     }
     
     $('list').innerHTML = html || '<div style="text-align:center;padding:30px;color:#999">無相符資料</div>';
+    
+    // CB 表格排序初始化
+    if(CURR_DB === 'cb') {
+        setTimeout(initCbSort, 50);
+    }
 }
 
 // Modal 相關
@@ -928,15 +933,6 @@ window.initCbSort = () => {
             rows.forEach(row => tbody.appendChild(row));
         });
     });
-};
-
-// 在 render 後初始化排序
-const origRender = render;
-render = function() {
-    origRender.apply(this, arguments);
-    if(CURR_DB === 'cb') {
-        setTimeout(initCbSort, 100);
-    }
 };
 
 // 開啟個股
