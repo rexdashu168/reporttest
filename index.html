@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rex大叔投資研究室 (Classic Flat)</title>
+    <title>Rex大叔投資研究室 (Final Complete)</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>if(typeof XLSX==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');}</script>
     <style>
-        /* ===== 1. 回歸您喜歡的 v3.0 設計風格 ===== */
+        /* ===== v3.0 的豐富視覺 + v5.0 的單純架構 ===== */
         :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", "Heiti TC", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
         .container { max-width: 1200px; margin: 0 auto; padding: 12px; }
 
@@ -21,29 +21,31 @@
         .splash-progress { width: 0%; height: 100%; background: var(--primary); transition: width 0.3s; }
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 
-        /* 視圖切換機制 (無彈窗) */
+        /* 平面視圖切換 (無彈窗) */
         .view-page { display: none; animation: fadeIn 0.3s ease; }
         .view-page.active { display: block; }
         @keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
 
-        /* Header & Search */
+        /* Header */
         .header { text-align: center; padding: 20px 0; border-bottom: 1px solid var(--border); }
         .header h1 { color: var(--primary); font-size: 22px; margin-bottom: 5px; font-weight: 800; }
+        
+        /* Tabs */
         .db-switcher { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 15px 0; }
         .db-tab { padding: 6px 14px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--gray); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
         .db-tab:hover { background: #fafafa; }
         .db-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 2px 5px rgba(201, 100, 66, 0.3); }
         .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
         
-        /* 搜尋框優化 (含清除按鈕) */
+        /* Search Box (含清除鍵) */
         .search-box { position: relative; margin-bottom: 15px; }
         .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; transition: border 0.2s; }
         .search-input:focus { border-color: var(--primary); }
         .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
         .clear-btn { 
             position: absolute; right: 14px; top: 50%; transform: translateY(-50%); 
-            width: 18px; height: 18px; background: #ccc; color: #fff; border-radius: 50%; 
-            font-size: 12px; line-height: 18px; text-align: center; cursor: pointer; display: none; 
+            width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; 
+            font-size: 14px; line-height: 20px; text-align: center; cursor: pointer; display: none; 
         }
         .clear-btn:hover { background: #999; }
 
@@ -63,15 +65,16 @@
         .tag.concept { background: #8e44ad; }
         .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* Detail Page (Flat View) */
+        /* Detail Navigation Bar */
         .detail-navbar { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; display: flex; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); margin-bottom: 10px; }
         .back-btn { 
             background: #fff; border: 1px solid var(--border); padding: 8px 20px; border-radius: 20px; 
-            color: var(--primary); font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 5px;
+            color: var(--primary); font-weight: 700; font-size: 14px; cursor: pointer; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 5px;
         }
         .back-btn:active { transform: scale(0.95); }
 
-        /* Inner Content Styling (Same as v3.0) */
+        /* Content Blocks (v3.0 Style) */
         .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
         .info-label { color: #888; }
         .info-val { font-weight: 600; color: #333; text-align: right; max-width: 70%; }
@@ -86,10 +89,15 @@
         .list-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #2c3e50; }
         .list-sub { font-size: 11px; color: #888; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         
+        .memo-content { font-size: 13px; color: #444; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0e0e0; line-height: 1.6; }
+        .memo-tag { display: inline-block; background: #eee; color: #666; font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-right: 5px; cursor: pointer; }
+
         .grid-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
         .stat-box { background: #f8f9fa; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #eee; }
         .stat-label { font-size: 11px; color: #888; margin-bottom: 3px; }
         .stat-val { font-size: 15px; font-weight: 700; color: #2c3e50; }
+        
+        /* Revenue Table */
         .rev-table td { padding: 6px 4px; font-size: 12px; border: 1px solid #eee; text-align: center; }
         .rev-table .rev-h { font-size: 10px; color: #888; margin-bottom: 2px; }
         .rev-table .rev-v { font-weight: 600; color: #333; }
@@ -97,15 +105,16 @@
         /* Report Links */
         .rep-stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 10px; }
         .rep-stock-btn { border: 1px solid #eee; padding: 8px; text-align: center; border-radius: 6px; font-size: 13px; cursor: pointer; background: #fff; }
+        .rep-stock-btn:hover { background: #e3f2fd; border-color: #2980b9; color: #2980b9; }
 
-        /* Link Styles */
+        /* Smart Links */
         .tag-link { color: var(--link); cursor: pointer; font-weight: 600; margin: 0 2px; }
         .tag-link:hover { text-decoration: underline; background: #eaf6ff; border-radius: 4px; }
         .stock-link { color: #c0392b; font-weight: 700; cursor: pointer; border-bottom: 1px dashed #c0392b; }
         .clickable-area { cursor: pointer; transition: opacity 0.2s; }
         .clickable-area:hover { opacity: 0.7; }
         
-        /* Nav Tabs in Detail */
+        /* Nav Tabs Grid */
         .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
         .nav-btn { padding: 8px 5px; border-radius: 8px; border: none; background: #f5f5f5; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
         .nav-btn.active.b-basic { background: #e3f2fd; color: #1565c0; } 
@@ -114,8 +123,11 @@
         .nav-btn.active.b-rep { background: #f3e5f5; color: #7b1fa2; } 
         .nav-btn.active.b-time { background: #ffebee; color: #c62828; } 
         .nav-btn.active.b-rate { background: #e0f2f1; color: #00695c; } 
-        .tab-pane { display: none; }
+        .tab-pane { display: none; animation: fadeIn 0.3s; }
         .tab-pane.active { display: block; }
+
+        /* Highlight Search */
+        .highlight { background-color: #fff3cd; color: #856404; font-weight: bold; padding: 0 2px; border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -123,7 +135,7 @@
 <div class="loading-overlay" id="loader">
     <div class="splash-icon">📊</div>
     <div style="font-weight:700;font-size:18px;margin-bottom:5px" id="loadTitle">系統啟動中...</div>
-    <div style="font-size:13px;color:#888" id="loadSub">正在同步 Rex大叔資料庫</div>
+    <div style="font-size:13px;color:#888" id="loadSub">正在連結 Rex大叔資料庫</div>
     <div class="splash-bar"><div class="splash-progress" id="loadBar"></div></div>
 </div>
 
@@ -197,12 +209,18 @@ const fmtDate = v => {
     if(typeof v === 'number' && v > 20000) { const d=new Date((v-25569)*86400000); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
     const s = String(v); if(s.match(/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/)) return s.split(' ')[0]; return v;
 };
-// Smart Text Formatter
+
+// --- Ultimate Text Formatter: Links Tags AND Stock Codes (Restored from v3.0) ---
 const fmtTxt = (t) => {
     if(!t) return '';
     let html = safe(t).replace(/\n/g, '<br>').replace(/•/g, '<br>• ');
+    // Link Hashtags
     html = html.replace(/#(\S+)/g, '<span class="tag-link" onclick="setSearch(\'#$1\'); event.stopPropagation();">#$1</span>');
-    html = html.replace(/(\d{4})/g, (match) => DB.stocks[match] ? `<span class="stock-link" onclick="openStock('${match}'); event.stopPropagation();">${match}</span>` : match);
+    // Link Stock Codes
+    html = html.replace(/(\d{4})/g, (match) => {
+        if(DB.stocks[match]) return `<span class="stock-link" onclick="openStock('${match}'); event.stopPropagation();">${match}</span>`;
+        return match;
+    });
     return html;
 };
 
@@ -214,12 +232,12 @@ function switchPage(pageId) {
 }
 function goBack() { switchPage('view-home'); }
 
-// Search Input Logic
+// Search Logic
 function handleInput(el) { $('clearBtn').style.display = el.value.length > 0 ? 'block' : 'none'; renderList(); }
 function clearSearch() { $('search').value=''; $('search').focus(); $('clearBtn').style.display='none'; renderList(); }
 window.setSearch = (term) => { $('search').value = term; handleInput($('search')); goBack(); }
 
-// --- Loaders ---
+// --- Loaders (Complete Data Set) ---
 const loadStep = (t,s,p) => { $('loadTitle').innerText=t; $('loadSub').innerText=s; $('loadBar').style.width=p+'%'; };
 async function fetchXlsx(url) {
     try {
@@ -299,42 +317,76 @@ async function init() {
 function setDB(db) { CURR_DB=db; document.querySelectorAll('.db-tab').forEach(t=>t.classList.remove('active')); event.currentTarget.classList.add('active'); renderList(); }
 function updateCounts() { $('c-news').innerText=DB.news.length; $('c-memo').innerText=DB.memo.length; $('c-reports').innerText=DB.reports.length; $('c-strategy').innerText=DB.strategy.length; $('c-stocks').innerText=Object.keys(DB.stocks).length; $('c-cb').innerText=DB.cb.length; }
 
+// --- Render List with Highlight ---
 function renderList() {
     const q = $('search').value.toLowerCase().trim();
     let list = [], html = '';
-    if(CURR_DB==='news') list=DB.news; else if(CURR_DB==='memo') list=DB.memo; else if(CURR_DB==='reports') list=DB.reports; else if(CURR_DB==='strategy') list=DB.strategy; else if(CURR_DB==='stocks') list=Object.values(DB.stocks); else if(CURR_DB==='cb') list=DB.cb;
+    
+    if(CURR_DB==='news') list=DB.news; 
+    else if(CURR_DB==='memo') list=DB.memo; 
+    else if(CURR_DB==='reports') list=DB.reports; 
+    else if(CURR_DB==='strategy') list=DB.strategy; 
+    else if(CURR_DB==='stocks') list=Object.values(DB.stocks); 
+    else if(CURR_DB==='cb') list=DB.cb;
 
     const filtered = list.filter(i => {
-        if(CURR_DB==='memo'&&i['編號']) { const d=META.memoDetail[i['編號']]; if(d&&JSON.stringify(d).toLowerCase().includes(q)) return true; }
+        if(CURR_DB==='memo'&&i['編號']) { 
+            const d=META.memoDetail[i['編號']]; 
+            if(d&&JSON.stringify(d).toLowerCase().includes(q)) return true; 
+        }
         return JSON.stringify(i).toLowerCase().includes(q);
     });
     $('resCount').innerText = filtered.length;
 
+    const hl = (text) => {
+        if(!q || q.length === 0) return text;
+        const safeQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+        const re = new RegExp(`(${safeQ})`, 'gi');
+        return text.replace(re, '<span class="highlight">$1</span>');
+    };
+
     filtered.slice(0,100).forEach(i => {
         let title='', sub='', date='', code='', tagClass='brk', body='', click='';
-        if(CURR_DB==='stocks') { title=i['公司名稱']; code=i['代號']; sub=i['產業分類']; body=i['業務摘要']; click=`openStock('${code}')`; }
-        else if(CURR_DB==='cb') { title=i['名稱']; code=i['轉換標的代碼']; sub=`轉價:${i['轉換價格(元)']}`; body=`餘額:${i['最新餘額(百萬)']}M | 到期:${fmtDate(i['到期日'])}`; click=`openStock('${code}')`; }
-        else if(CURR_DB==='news') { title=i['公司']; code=i['股號']; sub=i['報導重點分類']; date=i['日期']; tagClass='ind'; body=fmtTxt(i['完整報導內容']); click=`openStock('${code}')`; }
+        
+        if(CURR_DB==='stocks') { 
+            title=i['公司名稱']; code=i['代號']; sub=i['產業分類']; body=i['業務摘要']; 
+            click=`openStock('${code}')`; 
+        }
+        else if(CURR_DB==='cb') { 
+            title=i['名稱']; code=i['轉換標的代碼']; sub=`轉價:${i['轉換價格(元)']}`; body=`餘額:${i['最新餘額(百萬)']}M | 到期:${fmtDate(i['到期日'])}`; 
+            click=`openStock('${code}')`; 
+        }
+        else if(CURR_DB==='news') { 
+            title=i['公司']; code=i['股號']; sub=i['報導重點分類']; date=i['日期']; tagClass='ind'; 
+            body=fmtTxt(i['完整報導內容']); 
+            click=`openStock('${code}')`; 
+        }
         else if(CURR_DB==='memo') { 
             title=i['公司']; code=i['股號']; sub=i['報告類型']; date=i['日期']; 
-            const d=META.memoDetail[i['編號']]; body=d?(d['營運重點']||d['Rex觀察']):'點擊查看詳情';
-            if(d&&d['標籤']) { const t=d['標籤'].split(' ').map(t=>t.startsWith('#')?t:'#'+t).map(t=>`<span class="tag-link" onclick="setSearch('${t}'); event.stopPropagation();" style="font-size:11px;color:#2980b9;">${t}</span>`).join(' '); body+=`<div style="margin-top:5px;border-top:1px dashed #eee;padding-top:4px">${t}</div>`; }
+            const d=META.memoDetail[i['編號']]; 
+            body=d?(d['營運重點']||d['Rex觀察']):'點擊查看詳情';
+            if(d&&d['標籤']) { 
+                const t=d['標籤'].split(' ').map(t=>t.startsWith('#')?t:'#'+t).map(t=>`<span class="tag-link" onclick="setSearch('${t}'); event.stopPropagation();" style="font-size:11px;color:#2980b9;">${t}</span>`).join(' '); 
+                body+=`<div style="margin-top:5px;border-top:1px dashed #eee;padding-top:4px">${t}</div>`; 
+            }
             click=`openStock('${code}')`; 
         }
         else if(CURR_DB==='reports'||CURR_DB==='strategy') {
-            title=i['報告標題']; sub=i['券商名稱']; date=i['報告日期']; body=i['副標題']||i['大盤觀點']||'查看詳情'; click=`openReport('${i['報告編號']}', '${CURR_DB}')`;
+            title=i['報告標題']; sub=i['券商名稱']; date=i['報告日期']; 
+            body=i['副標題']||i['大盤觀點']||'查看詳情'; 
+            click=`openReport('${i['報告編號']}', '${CURR_DB}')`;
         }
 
         html += `<div class="card" onclick="${click}">
-            <div class="card-head"><div class="card-title">${title} ${code?`<span class="stock-code">${code}</span>`:''}</div></div>
-            <div class="card-meta"><span class="tag ${tagClass} clickable-area" onclick="setSearch('${sub}'); event.stopPropagation();">${sub||'一般'}</span>${date?`<span class="tag dt">${fmtDate(date)}</span>`:''}</div>
+            <div class="card-head"><div class="card-title">${hl(title)} ${code?`<span class="stock-code">${hl(code)}</span>`:''}</div></div>
+            <div class="card-meta"><span class="tag ${tagClass} clickable-area" onclick="setSearch('${sub}'); event.stopPropagation();">${hl(sub)||'一般'}</span>${date?`<span class="tag dt">${fmtDate(date)}</span>`:''}</div>
             <div class="card-body" style="overflow:visible;max-height:none;display:block;">${CURR_DB==='news'?body:(body.length>100&&!body.includes('tag-link')?body.substring(0,100)+'...':body)}</div>
         </div>`;
     });
     $('list').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無相符資料</div>';
 }
 
-// ===== FLAT DETAIL PAGES =====
+// ===== FLAT DETAIL PAGES (Full Data) =====
 
 // 1. Stock Detail
 window.openStock = (code) => {
@@ -344,6 +396,8 @@ window.openStock = (code) => {
     
     // Aggregation
     const cbs = META.cbMap[code], rev = META.revenue[code], memos = META.relatedMemo[code]||[], news = META.relatedNews[code]||[], fin = META.finance[name]||{}, prod = META.products[name]||{}, track = META.tracking[name]||{}, rate = META.ratings[code]||{}, concepts = META.concepts[code]||[];
+    
+    // Concepts Tag
     const conceptHtml = concepts.map(c => `<span class="tag concept clickable-area" onclick="setSearch('${c}')">#${c}</span>`).join(' ');
 
     $('m-info').innerHTML = `
@@ -379,14 +433,22 @@ window.openStock = (code) => {
     if(prod['主要產品1']) tProd += `<div class="section-head">產品組合</div>` + [1,2,3].map(n=>prod[`主要產品${n}`]?`<div class="list-item"><div class="list-title">${prod[`主要產品${n}`]}</div><div class="list-sub">${prod[`佔比/表現${n}`]||''}</div></div>`:'').join('');
     if(prod['關鍵成長動能']) tProd += `<div class="hl-block hl-green"><b>🚀 成長動能</b><br>${fmtTxt(prod['關鍵成長動能'])}</div>`;
 
-    // 4. Reports
+    // 4. Reports (Full Details from Memo)
     let tRep = '', timelineEvents = [];
     if(memos.length) tRep += `<div class="section-head">券商訪談報告 (${memos.length})</div>` + memos.map(m=> {
         const d = META.memoDetail[safe(m['編號'])];
         if(d&&d['關鍵時程']) timelineEvents.push({date:m['日期'], event:d['關鍵時程']});
-        return `<div class="list-item"><div class="list-title">${m['券商']} - ${m['報告類型']}</div><div class="list-sub">${fmtDate(m['日期'])} | 重要性:${m['重要性']}</div>${d?`<div style="font-size:13px;color:#444;margin-top:5px;border-top:1px dashed #eee;padding-top:5px;">${fmtTxt(d['營運重點'])}</div>`:''}</div>`;
+        return `<div class="list-item">
+            <div class="list-title">${m['券商']} - ${m['報告類型']}</div>
+            <div class="list-sub">${fmtDate(m['日期'])} | 重要性:${m['重要性']}</div>
+            ${d ? `<div class="memo-content">
+                ${d['營運重點']?`<div><span class="memo-tag">營運重點</span>${fmtTxt(d['營運重點'])}</div>`:''}
+                ${d['Rex觀察']?`<div style="margin-top:8px"><span class="memo-tag" style="background:#e3f2fd;color:#1565c0">Rex觀察</span>${fmtTxt(d['Rex觀察'])}</div>`:''}
+            </div>`:''}
+        </div>`;
     }).join('');
-    if(news.length) tRep += `<div class="section-head">外電報導 (${news.length})</div>` + news.map(n=>`<div class="list-item"><div class="list-title">${n['報導重點分類']}</div><div class="list-sub">${fmtDate(n['日期'])}</div><div style="font-size:13px;color:#555;margin-top:5px">${fmtTxt(n['完整報導內容'])}</div></div>`).join('');
+    
+    if(news.length) tRep += `<div class="section-head">外電報導 (${news.length})</div>` + news.map(n=>`<div class="list-item"><div class="list-title">${n['報導重點分類']}</div><div class="list-sub">${fmtDate(n['日期'])}</div><div class="memo-content">${fmtTxt(n['完整報導內容'])}</div></div>`).join('');
 
     // 5. Timeline
     let tTime = timelineEvents.length ? timelineEvents.map(e=>`<div class="hl-block hl-blue"><b>📅 ${fmtDate(e.date)}</b><br>${fmtTxt(e.event)}</div>`).join('') : '<div style="padding:20px;text-align:center;color:#999">無時程資料</div>';
@@ -394,7 +456,7 @@ window.openStock = (code) => {
     // 6. Ratings
     let tRate = '';
     if(track['投資評等']) tRate += `<div class="section-head">追蹤狀態</div><div class="info-row"><span class="info-label">評等</span><span class="info-val">${track['投資評等']}</span></div><div class="info-row"><span class="info-label">目標價</span><span class="info-val" style="color:var(--primary)">${track['目標價']}</span></div>`;
-    if(rate['評等']) tRate += `<div class="section-head">個股報告評價</div><div class="grid-stats"><div class="stat-box"><div class="stat-label">FY25 EPS</div><div class="stat-val">${rate['EPS_FY25F']||'-'}</div></div><div class="stat-box"><div class="stat-label">目標價</div><div class="stat-val" style="color:#c0392b">${rate['目標價']||'-'}</div></div></div>`;
+    if(rate['評等']) tRate += `<div class="section-head">個股報告評價</div><div class="grid-stats"><div class="stat-box"><div class="stat-label">FY25 EPS</div><div class="stat-val">${rate['EPS_FY25F']||'-'}</div></div><div class="stat-box"><div class="stat-label">目標價</div><div class="stat-val" style="color:#c0392b">${rate['目標價']||'-'}</div></div></div><div class="hl-block hl-green"><b>💡 投資亮點</b><br>${rate['投資亮點']||'無'}</div>`;
 
     $('m-body').innerHTML = `
         <div id="tab-basic" class="tab-pane active">${tBasic}</div>
@@ -405,7 +467,6 @@ window.openStock = (code) => {
         <div id="tab-rate" class="tab-pane">${tRate||'<div style="color:#999;text-align:center;padding:20px">無評等</div>'}</div>
     `;
 
-    // Show Stock Nav
     $('stock-nav').style.display='grid';
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
     document.querySelector('.b-basic').classList.add('active');
@@ -418,7 +479,7 @@ window.openReport = (rid, type) => {
     if (!report) return;
     const picks = META.reportPicks[rid] || [];
 
-    $('stock-nav').style.display='none'; // Hide stock nav for report
+    $('stock-nav').style.display='none'; 
     $('m-info').innerHTML = `
         <div style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 5px rgba(0,0,0,0.03);margin-bottom:15px;">
             <div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:5px">${report['報告標題']}</div>
