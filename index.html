@@ -725,27 +725,106 @@ async function loadMemoData() {
         const ab = await fetchFile(MEMO_FILE);
         const wb = XLSX.read(ab, { type: 'array' });
         
+        // 用於整合的臨時 Map（key: 股號+日期+券商）
+        const integratedMap = new Map();
+        const detailById = {};
+        
+        // 1. 先讀取詳細內容庫（用編號關聯）
+        const s8 = wb.Sheets['詳細內容庫'];
+        if (s8) {
+            XLSX.utils.sheet_to_json(s8).forEach(r => {
+                if (!r['編號']) return;
+                detailById[safeStr(r['編號'])] = {
+                    operation: safeStr(r['營運重點']),
+                    strategy: safeStr(r['策略方向']),
+                    qa: safeStr(r['重要QA摘要']),
+                    rexView: safeStr(r['Rex觀察']),
+                    followUp: safeStr(r['後續追蹤']),
+                    tags: safeStr(r['標籤'])
+                };
+            });
+        }
+        
+        // 2. 讀取報告總表，用 股號+日期+券商 整合
         const s1 = wb.Sheets['報告總表'];
         if (s1) {
             XLSX.utils.sheet_to_json(s1).forEach(r => {
                 if (!r['編號']) return;
-                memoReports.push({
-                    id: safeStr(r['編號']),
-                    date: safeStr(r['日期']),
-                    company: safeStr(r['公司']),
-                    stockCode: safeStr(r['股號']),
-                    broker: safeStr(r['券商']),
-                    analyst: safeStr(r['分析師']),
-                    type: safeStr(r['報告類型']),
-                    importance: safeStr(r['重要性']),
-                    industry: safeStr(r['產業']),
-                    revenueYoY: safeStr(r['營收YoY']),
-                    grossMargin: safeStr(r['毛利率']),
-                    eps: safeStr(r['EPS'])
-                });
+                const id = safeStr(r['編號']);
+                const company = safeStr(r['公司']);
+                const stockCode = safeStr(r['股號']);
+                const date = safeStr(r['日期']);
+                const broker = safeStr(r['券商']);
+                const intKey = `${stockCode || company}_${date}_${broker}`;
+                
+                if (!integratedMap.has(intKey)) {
+                    integratedMap.set(intKey, {
+                        ids: [id],
+                        date, company, stockCode, broker,
+                        analyst: safeStr(r['分析師']),
+                        types: [safeStr(r['報告類型'])].filter(t => t),
+                        importance: safeStr(r['重要性']),
+                        industry: safeStr(r['產業']),
+                        revenueYoY: safeStr(r['營收YoY']),
+                        grossMargin: safeStr(r['毛利率']),
+                        eps: safeStr(r['EPS']),
+                        rating: safeStr(r['投資評等']),
+                        targetPrice: safeStr(r['目標價']),
+                        detailList: detailById[id] ? [detailById[id]] : []
+                    });
+                } else {
+                    const exist = integratedMap.get(intKey);
+                    exist.ids.push(id);
+                    const newType = safeStr(r['報告類型']);
+                    if (newType && !exist.types.includes(newType)) exist.types.push(newType);
+                    if (!exist.revenueYoY && r['營收YoY']) exist.revenueYoY = safeStr(r['營收YoY']);
+                    if (!exist.grossMargin && r['毛利率']) exist.grossMargin = safeStr(r['毛利率']);
+                    if (!exist.eps && r['EPS']) exist.eps = safeStr(r['EPS']);
+                    if (!exist.rating && r['投資評等']) exist.rating = safeStr(r['投資評等']);
+                    if (!exist.targetPrice && r['目標價']) exist.targetPrice = safeStr(r['目標價']);
+                    if (detailById[id]) exist.detailList.push(detailById[id]);
+                }
             });
         }
         
+        // 3. 轉換為 memoReports 並整合 memoDetails
+        integratedMap.forEach((data, key) => {
+            const mainId = data.ids[0];
+            memoReports.push({
+                id: mainId,
+                ids: data.ids,
+                date: data.date,
+                company: data.company,
+                stockCode: data.stockCode,
+                broker: data.broker,
+                analyst: data.analyst,
+                type: data.types.join(' + '),
+                types: data.types,
+                importance: data.importance,
+                industry: data.industry,
+                revenueYoY: data.revenueYoY,
+                grossMargin: data.grossMargin,
+                eps: data.eps,
+                rating: data.rating,
+                targetPrice: data.targetPrice
+            });
+            
+            // 整合多筆詳細內容
+            if (data.detailList.length > 0) {
+                const merged = { operation:'', strategy:'', qa:'', rexView:'', followUp:'', tags:'' };
+                data.detailList.forEach(d => {
+                    if (d.operation && !merged.operation.includes(d.operation)) merged.operation += (merged.operation ? '; ' : '') + d.operation;
+                    if (d.strategy && !merged.strategy.includes(d.strategy)) merged.strategy += (merged.strategy ? '; ' : '') + d.strategy;
+                    if (d.qa && !merged.qa.includes(d.qa)) merged.qa += (merged.qa ? '; ' : '') + d.qa;
+                    if (d.rexView && !merged.rexView.includes(d.rexView)) merged.rexView += (merged.rexView ? '; ' : '') + d.rexView;
+                    if (d.followUp && !merged.followUp.includes(d.followUp)) merged.followUp += (merged.followUp ? '; ' : '') + d.followUp;
+                    if (d.tags) merged.tags += (merged.tags ? ',' : '') + d.tags;
+                });
+                memoDetails[mainId] = merged;
+            }
+        });
+        
+        // 4. 讀取公司追蹤表
         const s2 = wb.Sheets['公司追蹤表'];
         if (s2) {
             XLSX.utils.sheet_to_json(s2).forEach(r => {
@@ -760,6 +839,7 @@ async function loadMemoData() {
             });
         }
         
+        // 5. 讀取財務數據彙總
         const s3 = wb.Sheets['財務數據彙總'];
         if (s3) {
             XLSX.utils.sheet_to_json(s3).forEach(r => {
@@ -778,6 +858,7 @@ async function loadMemoData() {
             });
         }
         
+        // 6. 讀取產品結構分析
         const s4 = wb.Sheets['產品結構分析'];
         if (s4) {
             XLSX.utils.sheet_to_json(s4).forEach(r => {
@@ -794,6 +875,7 @@ async function loadMemoData() {
             });
         }
         
+        // 7. 讀取關鍵時程追蹤
         const s5 = wb.Sheets['關鍵時程追蹤'];
         if (s5) {
             XLSX.utils.sheet_to_json(s5).forEach(r => {
@@ -806,12 +888,12 @@ async function loadMemoData() {
                     type: safeStr(r['類型']),
                     importance: safeStr(r['重要性']),
                     impact: safeStr(r['預期影響']),
-                    status: safeStr(r['追蹤狀態']),
-                    note: safeStr(r['備註'])
+                    status: safeStr(r['追蹤狀態'])
                 });
             });
         }
         
+        // 8. 讀取產業趨勢總覽
         const s6 = wb.Sheets['產業趨勢總覽'];
         if (s6) {
             XLSX.utils.sheet_to_json(s6).forEach(r => {
@@ -819,35 +901,20 @@ async function loadMemoData() {
                 memoIndustryTrends.push({
                     industry: safeStr(r['產業']),
                     trend: safeStr(r['趨勢判斷']),
-                    position: safeStr(r['景氣位置']),
+                    cycle: safeStr(r['景氣位置']),
                     companies: safeStr(r['代表公司']),
                     stockCodes: safeStr(r['股號']),
-                    driver: safeStr(r['關鍵驅動因素']),
-                    risk: safeStr(r['風險因素']),
-                    outlook: safeStr(r['2026展望']),
+                    drivers: safeStr(r['關鍵驅動因素']),
+                    risks: safeStr(r['風險因素']),
+                    outlook2026: safeStr(r['2026展望']),
                     suggestion: safeStr(r['投資建議'])
                 });
             });
         }
         
-        const s8 = wb.Sheets['詳細內容庫'];
-        if (s8) {
-            XLSX.utils.sheet_to_json(s8).forEach(r => {
-                if (!r['編號']) return;
-                memoDetails[safeStr(r['編號'])] = {
-                    company: safeStr(r['公司']),
-                    stockCode: safeStr(r['股號']),
-                    operation: safeStr(r['營運重點']),
-                    strategy: safeStr(r['策略方向']),
-                    qa: safeStr(r['重要QA摘要']),
-                    rexView: safeStr(r['Rex觀察']),
-                    followUp: safeStr(r['後續追蹤']),
-                    tags: safeStr(r['標籤'])
-                };
-            });
-        }
     } catch (e) { console.warn('Memo載入失敗:', e); }
 }
+
 
 async function loadReportsData() {
     try {
