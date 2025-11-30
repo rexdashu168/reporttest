@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -57,10 +59,13 @@
     .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 500; }
     .tag.brk { background: var(--primary); }
     .tag.ind { background: #2980b9; }
+    .tag.trend-ind { background: #8e44ad; }
     .tag.dt { background: #e0e0e0; color: #666; }
     .tag.concept { background: #8e44ad; }
     .tag.trend-up { background: #27ae60; }
     .tag.trend-down { background: #e74c3c; }
+    .news-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: 600; }
+    .news-type.ind-type { background: #9b59b6; color: #fff; }
     .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
     /* CB 列表表格 */
@@ -197,7 +202,6 @@
         <h1>📊 Rex大叔投資研究室</h1>
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
-
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -813,8 +817,13 @@ function renderList() {
                 click = `openStock('${code}')`;
             }
             else if(CURR_DB==='news') {
-                title = i['公司']; code = i['股號']; sub = i['報導重點分類']; 
-                date = i['日期']; tagClass = 'ind';
+                const dataType = i['資料類型'] || '';
+                const isIndustry = dataType === '產業趨勢';
+                title = isIndustry ? `<span class="news-type ind-type">產業</span> ${i['公司']}` : i['公司']; 
+                code = i['股號']; sub = i['報導重點分類']; 
+                date = i['日期']; 
+                // 產業趨勢用紫色，個股報導用藍色
+                tagClass = isIndustry ? 'trend-ind' : 'ind';
                 body = safe(i['完整報導內容']).substring(0, 150);
                 click = `openNews('${i['編號']}')`;
             }
