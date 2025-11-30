@@ -1866,7 +1866,7 @@ function openStockModal(codeOrName) {
     const relatedTimeline = memoTimeline.filter(t => t.stockCode === stock.code || t.company === stock.name).slice(0, 5);
     
     document.getElementById('modalHeaderInfo').innerHTML = `
-        <div class="modal-meta"><span class="meta-tag" style="background:#6b8cce;color:#fff;">${stock.market}</span><span class="meta-tag industry">${stock.industry}</span>${tracking.rating ? `<span class="meta-tag rating">${tracking.rating}</span>` : ''}</div>
+        <div class="modal-meta"><span class="meta-tag" style="background:#6b8cce;color:#fff;">${stock.market}</span><span class="meta-tag industry">${stock.industry}</span></div>
         <h2 class="modal-title">${stock.name} (${stock.code})</h2>
         <p class="modal-subtitle">${stock.subIndustry || ''}</p>
     `;
@@ -1877,6 +1877,7 @@ function openStockModal(codeOrName) {
         <button class="tab-btn" onclick="switchStockTab('products')">📦 產品結構</button>
         <button class="tab-btn" onclick="switchStockTab('news')">📰 相關報導</button>
         <button class="tab-btn" onclick="switchStockTab('timeline')">📅 重要時程</button>
+        <button class="tab-btn" onclick="switchStockTab('ratings')">⭐ 券商評等</button>
     </div>`;
     
     // 基本資料
@@ -2036,6 +2037,38 @@ function openStockModal(codeOrName) {
     
     // 重要時程
     html += `<div class="tab-content" id="stock-timeline">${relatedTimeline.length > 0 ? relatedTimeline.map(t => `<div class="timeline-item"><div class="timeline-date">📅 ${t.time}</div><div class="timeline-event">${t.event}</div><div class="timeline-note">${t.impact}</div><span class="timeline-status">${t.status}</span></div>`).join('') : '<p style="color:#8b8b8b;padding:20px;">暫無重要時程</p>'}</div>`;
+    
+    // 券商評等 Tab
+    const stockRatings = memoReports.filter(m => (m.stockCode === stock.code || m.company === stock.name) && (m.rating || m.targetPrice));
+    html += `<div class="tab-content" id="stock-ratings">${stockRatings.length > 0 ? `
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                    <tr style="background:#f8f6f1;">
+                        <th style="padding:10px 8px;border:1px solid #e0dcd3;text-align:left;">日期</th>
+                        <th style="padding:10px 8px;border:1px solid #e0dcd3;text-align:left;">券商</th>
+                        <th style="padding:10px 8px;border:1px solid #e0dcd3;text-align:center;">評等</th>
+                        <th style="padding:10px 8px;border:1px solid #e0dcd3;text-align:right;">目標價</th>
+                        <th style="padding:10px 8px;border:1px solid #e0dcd3;text-align:left;">報告類型</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${stockRatings.map(r => `
+                        <tr style="cursor:pointer;" onclick="closeModal();setTimeout(function(){openMemoModal('${r.id}');},100);">
+                            <td style="padding:8px;border:1px solid #e0dcd3;">${r.date || '-'}</td>
+                            <td style="padding:8px;border:1px solid #e0dcd3;">${r.broker || '-'}</td>
+                            <td style="padding:8px;border:1px solid #e0dcd3;text-align:center;"><span style="background:${r.rating && r.rating.includes('買') ? '#27ae60' : (r.rating && r.rating.includes('賣') ? '#e74c3c' : '#f39c12')};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;">${r.rating || '-'}</span></td>
+                            <td style="padding:8px;border:1px solid #e0dcd3;text-align:right;font-weight:600;color:#2e7d46;">${r.targetPrice || '-'}</td>
+                            <td style="padding:8px;border:1px solid #e0dcd3;">${r.type || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        ${tracking.rating ? `<div style="margin-top:15px;padding:12px;background:#f0f8f0;border-radius:8px;border-left:3px solid #27ae60;">
+            <strong>最新評等：</strong>${tracking.rating}${tracking.targetPrice ? ` | <strong>目標價：</strong>${tracking.targetPrice}` : ''}
+        </div>` : ''}
+    ` : '<p style="color:#8b8b8b;padding:20px;">暫無券商評等資料</p>'}</div>`;
     
     html += `<div style="text-align:center;margin-top:20px;padding-top:15px;border-top:1px solid #eceae3;font-size:13px;color:#8b8b8b;">資料更新：${stock.updateDate || '-'}</div>`;
     
