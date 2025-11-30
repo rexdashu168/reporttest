@@ -66,6 +66,15 @@
         .cb-table tr:hover td { background: #fffaf8; }
         .cb-table .code { color: var(--primary); font-weight: 600; cursor: pointer; }
         .cb-table .stock { color: var(--link); cursor: pointer; }
+        .cb-table th.sortable { cursor: pointer; user-select: none; }
+        .cb-table th.sortable:hover { background: #eee; }
+        .cb-table th .sort-icon { font-size: 10px; color: #999; margin-left: 2px; }
+        .cb-table th.sort-asc .sort-icon { color: var(--primary); }
+        .cb-table th.sort-desc .sort-icon { color: var(--primary); }
+        .cb-table th.sort-asc .sort-icon::after { content: '↑'; }
+        .cb-table th.sort-desc .sort-icon::after { content: '↓'; }
+        .cb-table tfoot { background: #f8f9fa; }
+        .cb-table tfoot td { border-top: 2px solid #ddd; padding: 12px 8px; }
 
         /* Modal */
         .modal { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: flex-end; }
@@ -517,6 +526,25 @@ async function init() {
     // 7. CB - 完整讀取
     wb = await fetchXlsx(FILES.CB);
     if(wb) {
+        // 先讀取掛牌高低資料 (00工作表)
+        const cbHighLow = {};
+        const sheet00Name = wb.SheetNames.find(n => n.startsWith('00_'));
+        if(sheet00Name) {
+            XLSX.utils.sheet_to_json(wb.Sheets[sheet00Name]||[]).forEach(r => {
+                const cbCode = safe(r['代號']);
+                if(cbCode) {
+                    const high = parseFloat(r['掛牌最高']) || 0;
+                    const low = parseFloat(r['掛牌最低']) || 0;
+                    cbHighLow[cbCode] = {
+                        high: high,
+                        low: low,
+                        range: low > 0 ? ((high - low) / low * 100) : 0, // 震幅%
+                        avgVol: r['月均成交']
+                    };
+                }
+            });
+        }
+        
         // 日行情 (有產業資訊) - 先讀取建立產業對照
         const dailyMap = {};
         XLSX.utils.sheet_to_json(wb.Sheets['09_最新動態每週日行情']||[]).forEach(r => {
@@ -543,11 +571,12 @@ async function init() {
             }
         });
         
-        // 基本資料 - 合併日行情資料
+        // 基本資料 - 合併日行情資料和掛牌高低
         XLSX.utils.sheet_to_json(wb.Sheets['08_最新動態每週基本資料']||[]).forEach(r => {
             const cbCode = safe(r['代號']);
             const stockCode = normalizeCode(r['轉換標的代碼']);
             const daily = dailyMap[cbCode] || {};
+            const hl = cbHighLow[cbCode] || {};
             
             const cbData = {
                 ...r,
@@ -559,7 +588,10 @@ async function init() {
                 '_cbPrice': daily.cbPrice,
                 '_stockPrice': daily.stockPrice,
                 '_convValue': daily.convValue,
-                '_premium': daily.premium
+                '_premium': daily.premium,
+                '_high': hl.high || 0,
+                '_low': hl.low || 0,
+                '_range': hl.range || 0
             };
             
             DB.cb.push(cbData);
@@ -679,10 +711,30 @@ function renderList() {
     
     // CB 用表格形式
     if(CURR_DB === 'cb') {
-        html = `<div class="cb-table-wrap"><table class="cb-table">
+        // 計算平均值
+        const validData = filtered.filter(r => r['_premium'] !== null && r['_premium'] !== undefined);
+        const avgConvPrice = validData.reduce((s, r) => s + (parseFloat(r['轉換價格(元)']) || 0), 0) / (validData.length || 1);
+        const avgStockPrice = validData.reduce((s, r) => s + (parseFloat(r['_stockPrice']) || 0), 0) / (validData.length || 1);
+        const avgConvValue = validData.reduce((s, r) => s + (parseFloat(r['_convValue']) || 0), 0) / (validData.length || 1);
+        const avgPremium = validData.reduce((s, r) => s + (parseFloat(r['_premium']) || 0), 0) / (validData.length || 1);
+        const avgHigh = validData.reduce((s, r) => s + (parseFloat(r['_high']) || 0), 0) / (validData.length || 1);
+        const avgLow = validData.reduce((s, r) => s + (parseFloat(r['_low']) || 0), 0) / (validData.length || 1);
+        const avgRange = validData.reduce((s, r) => s + (parseFloat(r['_range']) || 0), 0) / (validData.length || 1);
+        
+        html = `<div class="cb-table-wrap"><table class="cb-table" id="cbTable">
             <thead><tr>
-                <th>CB代號</th><th>CB簡稱</th><th>標的股票</th><th>產業</th>
-                <th>轉換價</th><th>股價</th><th>轉換價值</th><th>溢折價%</th><th>到期日</th>
+                <th class="sortable" data-col="_cbCode" data-type="string">CB代號 <span class="sort-icon">⇅</span></th>
+                <th>CB簡稱</th>
+                <th>標的股票</th>
+                <th class="sortable" data-col="_industry" data-type="string">產業 <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="convPrice" data-type="num">轉換價 <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="_stockPrice" data-type="num">股價 <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="_convValue" data-type="num">轉換價值 <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="_premium" data-type="num">溢折價% <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="_high" data-type="num">掛牌最高 <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="_low" data-type="num">掛牌最低 <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="_range" data-type="num">震幅% <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="expDate" data-type="date">到期日 <span class="sort-icon">⇅</span></th>
             </tr></thead><tbody>`;
         
         filtered.slice(0, 100).forEach(r => {
@@ -695,8 +747,10 @@ function renderList() {
             const stockPrice = r['_stockPrice'];
             const convValue = r['_convValue'];
             const premium = r['_premium'];
+            const high = r['_high'];
+            const low = r['_low'];
+            const range = r['_range'];
             const expDate = fmtDate(r['到期日']);
-            const premClass = colorClass(premium);
             
             html += `<tr>
                 <td class="code">${cbCode}</td>
@@ -706,12 +760,26 @@ function renderList() {
                 <td>${fmtNum(convPrice, 1)}</td>
                 <td>${fmtNum(stockPrice, 2)}</td>
                 <td class="${colorClass(convValue)}">${fmtNum(convValue, 2)}</td>
-                <td class="${premClass}">${premium ? fmtNum(premium, 1)+'%' : '-'}</td>
+                <td class="${colorClass(premium)}">${premium ? fmtNum(premium, 1)+'%' : '-'}</td>
+                <td>${fmtNum(high, 1)}</td>
+                <td>${fmtNum(low, 1)}</td>
+                <td class="${colorClass(range)}">${fmtNum(range, 1)}%</td>
                 <td>${expDate}</td>
             </tr>`;
         });
         
-        html += `</tbody></table></div>`;
+        // 合計列
+        html += `</tbody><tfoot><tr class="summary-row">
+            <td colspan="4"><b>平均值 (${validData.length} 筆)</b></td>
+            <td><b>${fmtNum(avgConvPrice, 1)}</b></td>
+            <td><b>${fmtNum(avgStockPrice, 2)}</b></td>
+            <td><b>${fmtNum(avgConvValue, 2)}</b></td>
+            <td class="${colorClass(avgPremium)}"><b>${fmtNum(avgPremium, 1)}%</b></td>
+            <td><b>${fmtNum(avgHigh, 1)}</b></td>
+            <td><b>${fmtNum(avgLow, 1)}</b></td>
+            <td><b>${fmtNum(avgRange, 1)}%</b></td>
+            <td></td>
+        </tr></tfoot></table></div>`;
     } else {
         // 其他分頁用卡片
         filtered.slice(0, 100).forEach(i => {
@@ -800,6 +868,74 @@ window.closeModal = e => {
             tagsEl.innerHTML = '';
             tagsEl.classList.remove('show');
         }
+    }
+};
+
+// CB 表格排序
+let cbSortCol = null;
+let cbSortDir = 'asc';
+
+window.initCbSort = () => {
+    document.querySelectorAll('.cb-table th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.col;
+            const type = th.dataset.type;
+            
+            // 切換排序方向
+            if(cbSortCol === col) {
+                cbSortDir = cbSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                cbSortCol = col;
+                cbSortDir = 'asc';
+            }
+            
+            // 更新樣式
+            document.querySelectorAll('.cb-table th.sortable').forEach(h => {
+                h.classList.remove('sort-asc', 'sort-desc');
+            });
+            th.classList.add(cbSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+            
+            // 取得 tbody 並排序
+            const tbody = document.querySelector('.cb-table tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                let aVal, bVal;
+                const aIndex = Array.from(th.parentNode.children).indexOf(th);
+                
+                // 取得對應欄位的值
+                aVal = a.children[aIndex]?.textContent?.trim() || '';
+                bVal = b.children[aIndex]?.textContent?.trim() || '';
+                
+                // 移除 % 符號
+                aVal = aVal.replace('%', '');
+                bVal = bVal.replace('%', '');
+                
+                if(type === 'num') {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                } else if(type === 'date') {
+                    aVal = aVal.replace(/\//g, '');
+                    bVal = bVal.replace(/\//g, '');
+                }
+                
+                if(aVal < bVal) return cbSortDir === 'asc' ? -1 : 1;
+                if(aVal > bVal) return cbSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            // 重新排列
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
+};
+
+// 在 render 後初始化排序
+const origRender = render;
+render = function() {
+    origRender.apply(this, arguments);
+    if(CURR_DB === 'cb') {
+        setTimeout(initCbSort, 100);
     }
 };
 
