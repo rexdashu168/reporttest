@@ -3,19 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rex大叔投資研究室 (v19.0 Data Force)</title>
+    <title>Rex大叔投資研究室 (v20.0 Perfect Loading)</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>if(typeof XLSX==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');}</script>
     <style>
-        /* ===== v3.0 經典彈窗風格 (100% 保留) ===== */
+        /* ===== v3.0 經典風格 ===== */
         :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; --up: #e74c3c; --down: #27ae60; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
 
-        /* Loading */
-        .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
+        /* Loading Overlay (修正版) */
+        .loading-overlay { 
+            position: fixed; top:0; left:0; right:0; bottom:0; 
+            background: var(--bg); z-index: 9999; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            transition: opacity 0.5s ease-out; /* 優雅淡出 */
+        }
         .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+        .splash-icon { font-size: 48px; animation: bounce 2s infinite; margin-bottom: 15px; }
+        .splash-bar { width: 200px; height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; margin-top: 15px; }
+        .splash-progress { width: 0%; height: 100%; background: var(--primary); transition: width 0.3s; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 
         /* Header & Tabs */
         .header { text-align: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
@@ -25,9 +34,10 @@
         .db-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
         .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
 
-        /* Search Box (含 X 鍵) */
+        /* Search Box */
         .search-box { position: relative; margin-bottom: 15px; }
         .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
         .clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; }
 
         /* Card List */
@@ -42,7 +52,7 @@
         .tag.dt { background: #e0e0e0; color: #666; }
         .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* ===== Modal (v3.0 核心) ===== */
+        /* ===== Modal (v3.0 彈出視窗) ===== */
         .modal { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: flex-end; }
         .modal.show { display: flex; }
         .modal-inner { background: #fff; width: 100%; max-width: 600px; height: 90vh; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s; }
@@ -62,7 +72,7 @@
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
 
-        /* 財務表格專用 */
+        /* 財務表格 (營收一頁通) */
         .fin-switcher { display: flex; margin-bottom: 10px; border: 1px solid var(--primary); border-radius: 6px; overflow: hidden; }
         .fin-btn { flex: 1; padding: 8px; text-align: center; font-size: 13px; color: var(--primary); background: #fff; cursor: pointer; font-weight: 600; border-right: 1px solid var(--primary); }
         .fin-btn:last-child { border-right: none; }
@@ -96,15 +106,16 @@
 <body>
 
 <div class="loading-overlay" id="loader">
-    <div style="font-size:30px;margin-bottom:10px">📊</div>
-    <div style="font-weight:700">Rex大叔投資研究室</div>
-    <div style="font-size:12px;color:#888;margin-top:5px">資料處理中...</div>
+    <div class="splash-icon">📊</div>
+    <div style="font-weight:700;font-size:18px;margin-bottom:5px" id="loadTitle">Rex大叔投資研究室</div>
+    <div style="font-size:13px;color:#888" id="loadSub">正在連結資料庫...</div>
+    <div class="splash-bar"><div class="splash-progress" id="loadBar"></div></div>
 </div>
 
 <div class="container">
     <div class="header">
         <h1>📊 Rex大叔投資研究室</h1>
-        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v19.0</p>
+        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v20.0</p>
     </div>
 
     <div class="db-switcher">
@@ -163,7 +174,6 @@ let CURR_DB = 'news';
 const $ = id => document.getElementById(id);
 const safe = v => (v==null||v==undefined?'':String(v).trim());
 const getCode = (row) => {
-    // 暴力抓取代號：嘗試所有可能的欄位名稱
     const possibleKeys = ['代號', '股票代號', '股號', 'Code', 'Symbol', '股票', '代碼'];
     for(let k of possibleKeys) {
         const val = row[Object.keys(row).find(key => key.trim().includes(k))]; 
@@ -189,10 +199,9 @@ const fmtTxt = (t) => {
 };
 const getDateVal = (v) => { if(!v) return 0; if(typeof v === 'number') return (v - 25569) * 86400000; return new Date(v).getTime(); };
 const fmtNum = (v, pct=false) => {
-    // Show 0 instead of - for real zero values
     if(v===undefined || v===null || v==='') return '-';
     let n = parseFloat(String(v).replace(/,/g,''));
-    if(isNaN(n)) return v;
+    if(isNaN(n)) return v; // Display original if not a number
     return pct ? n.toFixed(2)+'%' : n.toLocaleString();
 };
 const colorClass = (v) => {
@@ -206,6 +215,9 @@ function handleInput(el) { $('clearBtn').style.display = el.value.length > 0 ? '
 function clearSearch() { $('search').value=''; $('search').focus(); $('clearBtn').style.display='none'; renderList(); }
 window.setSearch = (term) => { $('search').value = term; handleInput($('search')); };
 
+// Loading Helper
+const loadStep = (t,s,p) => { $('loadTitle').innerText=t; $('loadSub').innerText=s; $('loadBar').style.width=p+'%'; };
+
 async function fetchXlsx(url) {
     try {
         const res = await fetch(url);
@@ -218,6 +230,7 @@ async function init() {
     let wb;
     try {
         // 1. Master
+        loadStep('建立主索引...', 'Master DB', 10);
         wb = await fetchXlsx(FILES.MASTER);
         if(wb) {
             XLSX.utils.sheet_to_json(wb.Sheets['主資料庫']||[]).forEach(r=>{ if(r['代號']) DB.stocks[safe(r['代號'])]=r; });
@@ -227,15 +240,15 @@ async function init() {
             });
         }
         
-        // 2. Revenue (Wide Search Logic)
+        // 2. Revenue (FIXED)
+        loadStep('解析財務大數據...', 'Revenue', 30);
         wb = await fetchXlsx(FILES.REV);
         if(wb) {
             // Month
             const sheetM = wb.Sheets['000_月營收']||wb.Sheets[wb.SheetNames[0]];
             const rowsM = XLSX.utils.sheet_to_json(sheetM);
             const headsM = Object.keys(rowsM[0]||{});
-            // Match any column containing "單月營收" or "營收" with date pattern
-            const mCols = headsM.filter(h => h.match(/\d{2,3}M\d{2}/) && (h.includes('單月') || h.includes('營收'))).sort();
+            const mCols = headsM.filter(h => h.includes('單月營收(億)')).sort();
             
             // Accum YoY
             const sheetAcc = wb.Sheets['000_月累營收年增'];
@@ -260,19 +273,17 @@ async function init() {
                     const m = col.match(/(\d+M\d+)/);
                     if(!m) return null;
                     const d = m[0];
-                    // Also get '累月營收' dynamically
                     const accCol = headsM.find(h => h.includes(d) && h.includes('累月'));
                     const accVal = accCol ? r[accCol] : null;
                     
                     return { 
                         d: d, 
-                        rev: r[col], // Allow 0
+                        rev: r[col], // Keep 0
                         accRev: accVal, 
                         accYoY: accMap[c]?.[d] 
                     };
-                }).filter(i => i); // Don't filter by value, keep 0s
+                }).filter(i => i); // Keep all entries
                 
-                // Calculate
                 let accRev = 0;
                 for(let i=0; i<data.length; i++) {
                     const curr = parseFloat(data[i].rev || 0);
@@ -325,7 +336,7 @@ async function init() {
                 rowsY.forEach(r=>{
                     const c = getCode(r); if(!c) return;
                     const data = yCols.map(col=>{
-                        const m = col.match(/(\d{4})/);
+                        const m = col.match(/(\d+Q\d)/) || col.match(/(\d{4})/);
                         return m ? {d:m[0], rev:r[col]} : null;
                     }).filter(i=>i);
                     for(let i=1; i<data.length; i++) {
@@ -345,10 +356,12 @@ async function init() {
         }
 
         // 3. Others
+        loadStep('讀取外電...', 'News', 50);
         wb = await fetchXlsx(FILES.NEWS);
         if(wb) XLSX.utils.sheet_to_json(wb.Sheets['外電綜合報導']||[]).forEach(r=>{ if(safe(r['資料類型'])==='個股報導') { DB.news.push(r); const k=getCode(r); if(k){ if(!META.relatedNews[k]) META.relatedNews[k]=[]; META.relatedNews[k].push(r); } }});
         DB.news.sort((a,b)=>getDateVal(b['日期'])-getDateVal(a['日期']));
 
+        loadStep('解析Memo...', 'Memo', 60);
         wb = await fetchXlsx(FILES.MEMO);
         if(wb) {
             XLSX.utils.sheet_to_json(wb.Sheets['報告總表']||[]).forEach(r=>{ DB.memo.push(r); const k=getCode(r); if(k){ if(!META.relatedMemo[k]) META.relatedMemo[k]=[]; META.relatedMemo[k].push(r); } });
@@ -358,6 +371,8 @@ async function init() {
             XLSX.utils.sheet_to_json(wb.Sheets['產品結構分析']||[]).forEach(r=>META.products[safe(r['公司'])]=r);
             XLSX.utils.sheet_to_json(wb.Sheets['公司追蹤表']||[]).forEach(r=>META.tracking[safe(r['公司'])]=r);
         }
+        
+        loadStep('整合報告...', 'Reports', 80);
         wb = await fetchXlsx(FILES.REPORTS);
         if(wb) {
             XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r=>DB.reports.push(r));
@@ -377,12 +392,15 @@ async function init() {
                 if(rid&&c) { if(!META.reportPicks[rid]) META.reportPicks[rid]=[]; META.reportPicks[rid].push({code:c, name:safe(r['公司名稱']), note:safe(r['備註'])}); if(!META.stockInReports[c]) META.stockInReports[c]=[]; META.stockInReports[c].push(rid); }
             });
         }
+        
+        loadStep('讀取CB...', 'CB', 90);
         wb = await fetchXlsx(FILES.CB);
         if(wb) XLSX.utils.sheet_to_json(wb.Sheets['08_最新動態每週基本資料']||[]).forEach(r=>{ DB.cb.push(r); const k=safe(r['轉換標的代碼']); if(k){ if(!META.cbMap[k]) META.cbMap[k]=[]; META.cbMap[k].push(r); } });
 
     } catch (err) { console.error(err); }
 
-    $('loader').classList.add('hidden');
+    loadStep('完成', 'Ready', 100);
+    setTimeout(() => $('loader').classList.add('hidden'), 500); // 確保動畫跑完
     renderList();
 }
 
@@ -431,7 +449,7 @@ function renderList() {
     $('list').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無相符資料</div>';
 }
 
-// ===== POP-UP MODAL LOGIC =====
+// ===== POP-UP MODAL =====
 window.openStock = (code) => {
     try {
         if(!code || code==='-') return;
