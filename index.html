@@ -446,36 +446,54 @@ async function loadRevenueData() {
         const data = await fetchFile(REVENUE_FILE);
         const wb = XLSX.read(data, { type: 'array' });
         
-        // 讀取公司基本資料
+        // 初始化基本資料
         const ws12 = wb.Sheets['12_公司基本資料'];
         if (ws12) {
             XLSX.utils.sheet_to_json(ws12).forEach(r => {
                 if (!r['代號']) return;
                 const code = String(r['代號']).trim();
-                revenueData[code] = {
-                    capital: r['股本(億)'] || '',
-                    marketCap: r['市值(億)'] || '',
-                    industry: r['產業別'] || '',
-                    business: r['主要業務'] || '',
-                    monthly: [],
-                    quarterly: [],
-                    yearly: []
-                };
+                revenueData[code] = { monthly: [], quarterly: [], yearly: [], highlights: {}, priceHistory: {} };
             });
         }
         
-        // 讀取月營收（最近12個月）
+        // 讀取財報備註（營收亮點）
+        const ws10 = wb.Sheets['10_財報備註'];
+        if (ws10) {
+            XLSX.utils.sheet_to_json(ws10).forEach(r => {
+                if (!r['代號']) return;
+                const code = String(r['代號']).trim();
+                if (revenueData[code]) {
+                    revenueData[code].highlights = {
+                        monthRank: r['單月營收歷月排名'] || '',
+                        monthRecord: r['單月營收創紀錄月數'] || '',
+                        monthStreak: r['單月營收連增減月數'] || '',
+                        yearRank: r['單月營收歷年排名'] || '',
+                        yearRecord: r['單月營收創紀錄年數'] || '',
+                        cumYearRank: r['累月營收歷年排名'] || '',
+                        cumYearRecord: r['累月營收創紀錄年數'] || '',
+                        cumStreak: r['累月營收連增減年數'] || '',
+                        qtrRank: r['單季營收歷季排名'] || '',
+                        qtrGrossRank: r['單季毛利率歷季排名'] || '',
+                        qtrStreak: r['單季營收連續增減季數'] || '',
+                        grossStreak: r['單季毛利率連續增減季數'] || '',
+                        profitStreak: r['單季淨利連續損益季數'] || ''
+                    };
+                }
+            });
+        }
+        
+        // 讀取月營收
         const wsMonth = wb.Sheets['000_月營收'];
         if (wsMonth) {
             const rows = XLSX.utils.sheet_to_json(wsMonth);
             const headers = Object.keys(rows[0] || {});
             const monthCols = headers.filter(h => h.includes('單月營收'));
-            const last12Months = monthCols.slice(-12);
+            const last12 = monthCols.slice(-12);
             rows.forEach(r => {
                 if (!r['代號']) return;
                 const code = String(r['代號']).trim();
                 if (revenueData[code]) {
-                    revenueData[code].monthly = last12Months.map(col => ({
+                    revenueData[code].monthly = last12.map(col => ({
                         period: col.replace('單月營收(億)', ''),
                         value: r[col] || ''
                     }));
@@ -483,18 +501,18 @@ async function loadRevenueData() {
             });
         }
         
-        // 讀取季營收（最近12季）
-        const wsQuarter = wb.Sheets['000_季營收'];
-        if (wsQuarter) {
-            const rows = XLSX.utils.sheet_to_json(wsQuarter);
+        // 讀取季營收
+        const wsQtr = wb.Sheets['000_季營收'];
+        if (wsQtr) {
+            const rows = XLSX.utils.sheet_to_json(wsQtr);
             const headers = Object.keys(rows[0] || {});
-            const quarterCols = headers.filter(h => h.includes('單季營收'));
-            const last12Quarters = quarterCols.slice(-12);
+            const qtrCols = headers.filter(h => h.includes('單季營收'));
+            const last12 = qtrCols.slice(-12);
             rows.forEach(r => {
                 if (!r['代號']) return;
                 const code = String(r['代號']).trim();
                 if (revenueData[code]) {
-                    revenueData[code].quarterly = last12Quarters.map(col => ({
+                    revenueData[code].quarterly = last12.map(col => ({
                         period: col.replace('單季營收(億)', ''),
                         value: r[col] || ''
                     }));
@@ -502,18 +520,18 @@ async function loadRevenueData() {
             });
         }
         
-        // 讀取年營收（最近12年）
+        // 讀取年營收
         const wsYear = wb.Sheets['000_年營收'];
         if (wsYear) {
             const rows = XLSX.utils.sheet_to_json(wsYear);
             const headers = Object.keys(rows[0] || {});
             const yearCols = headers.filter(h => h.includes('年度營收'));
-            const last12Years = yearCols.slice(-12);
+            const last12 = yearCols.slice(-12);
             rows.forEach(r => {
                 if (!r['代號']) return;
                 const code = String(r['代號']).trim();
                 if (revenueData[code]) {
-                    revenueData[code].yearly = last12Years.map(col => ({
+                    revenueData[code].yearly = last12.map(col => ({
                         period: col.replace('年度營收(億)', ''),
                         value: r[col] || ''
                     }));
@@ -521,30 +539,63 @@ async function loadRevenueData() {
             });
         }
         
-        // 讀取月累營收年增
-        const wsRevYoY = wb.Sheets['000_月累營收年增'];
-        if (wsRevYoY) {
-            const rows = XLSX.utils.sheet_to_json(wsRevYoY);
+        // 讀取累計營收年增率
+        const wsYoY = wb.Sheets['000_月累營收年增'];
+        if (wsYoY) {
+            const rows = XLSX.utils.sheet_to_json(wsYoY);
             const headers = Object.keys(rows[0] || {});
-            const revCol = headers.filter(h => h.includes('累月營收年增')).pop();
+            const yoyCols = headers.filter(h => h.includes('累月營收年增'));
+            const last12 = yoyCols.slice(-12);
             rows.forEach(r => {
                 if (!r['代號']) return;
                 const code = String(r['代號']).trim();
-                if (revenueData[code] && revCol) {
-                    revenueData[code].revenueYoY = r[revCol] || '';
+                if (revenueData[code]) {
+                    revenueData[code].yoyTrend = last12.map(col => ({
+                        period: col.replace('累月營收年增(%)', ''),
+                        value: r[col] || ''
+                    }));
                 }
             });
         }
         
-        // 讀取1年高低價
+        // 讀取歷史高低價
         const ws13 = wb.Sheets['13_歷史高低'];
         if (ws13) {
             XLSX.utils.sheet_to_json(ws13).forEach(r => {
                 if (!r['代號']) return;
                 const code = String(r['代號']).trim();
                 if (revenueData[code]) {
-                    revenueData[code].yearHigh = r['1年最高股價'] || '';
-                    revenueData[code].yearLow = r['1年最低股價'] || '';
+                    revenueData[code].priceHistory = {
+                        histLow: r['歷史最低股價'] || '',
+                        y10Low: r['10年最低股價'] || '',
+                        y5Low: r['5年最低股價'] || '',
+                        y3Low: r['3年最低股價'] || '',
+                        y1Low: r['1年最低股價'] || '',
+                        histHigh: r['歷史最高股價'] || '',
+                        y10High: r['10年最高股價'] || '',
+                        y5High: r['5年最高股價'] || '',
+                        y3High: r['3年最高股價'] || '',
+                        y1High: r['1年最高股價'] || ''
+                    };
+                }
+            });
+        }
+        
+        // 讀取年漲跌幅
+        const ws19 = wb.Sheets['19_年月周漲跌幅'];
+        if (ws19) {
+            const rows = XLSX.utils.sheet_to_json(ws19);
+            const headers = Object.keys(rows[0] || {});
+            const pctCols = headers.filter(h => h.includes('漲跌幅') && !h.includes('月') && !h.includes('周'));
+            const last10 = pctCols.slice(-10);
+            rows.forEach(r => {
+                if (!r['代號']) return;
+                const code = String(r['代號']).trim();
+                if (revenueData[code]) {
+                    revenueData[code].yearPct = last10.map(col => ({
+                        period: col.replace('漲跌幅', ''),
+                        value: r[col] || ''
+                    }));
                 }
             });
         }
@@ -1859,46 +1910,114 @@ function openStockModal(codeOrName) {
     </div>`;
     
     // 財務數據
-    const hasRevenue = revenue.capital || revenue.revenueYoY || revenue.yearHigh;
-    const hasFinance = Object.keys(finance).length > 0;
     const hasRevenueData = revenue.monthly && revenue.monthly.length > 0;
+    const hl = revenue.highlights || {};
+    const ph = revenue.priceHistory || {};
     
-    // 生成營收表格函數
-    const genRevenueTable = (data, type) => {
-        if (!data || data.length === 0) return '<p style="color:#8b8b8b;text-align:center;">無資料</p>';
-        const validData = data.filter(d => d.value !== '' && d.value !== null);
-        if (validData.length === 0) return '<p style="color:#8b8b8b;text-align:center;">無資料</p>';
-        return `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
-            <tr style="background:#f5f5f5;">${validData.map(d => `<th style="padding:8px 4px;border:1px solid #ddd;white-space:nowrap;">${d.period}</th>`).join('')}</tr>
-            <tr>${validData.map(d => `<td style="padding:8px 4px;border:1px solid #ddd;text-align:right;font-weight:500;">${d.value ? parseFloat(d.value).toLocaleString() : '-'}</td>`).join('')}</tr>
+    // 營收表格生成
+    const genTable = (data) => {
+        if (!data || data.length === 0) return '<p style="color:#999;text-align:center;padding:10px;">無資料</p>';
+        const valid = data.filter(d => d.value !== '' && d.value !== null);
+        if (valid.length === 0) return '<p style="color:#999;text-align:center;padding:10px;">無資料</p>';
+        return `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <tr style="background:#f8f6f1;">${valid.map(d => `<th style="padding:6px 3px;border:1px solid #e0dcd3;white-space:nowrap;">${d.period}</th>`).join('')}</tr>
+            <tr>${valid.map(d => `<td style="padding:6px 3px;border:1px solid #e0dcd3;text-align:right;">${d.value ? parseFloat(d.value).toLocaleString() : '-'}</td>`).join('')}</tr>
         </table></div>`;
     };
     
-    html += `<div class="tab-content" id="stock-finance">${(hasRevenue || hasFinance || hasRevenueData) ? `
-        <div class="info-grid">
-            ${revenue.capital ? `<div class="info-item"><div class="info-label">股本</div><div class="info-value">${revenue.capital}億</div></div>` : ''}
-            ${revenue.marketCap ? `<div class="info-item"><div class="info-label">市值</div><div class="info-value">${parseFloat(revenue.marketCap).toLocaleString()}億</div></div>` : ''}
-            ${revenue.revenueYoY ? `<div class="info-item"><div class="info-label">累計營收YoY</div><div class="info-value" style="color:${parseFloat(revenue.revenueYoY)>=0?'#27ae60':'#e74c3c'};">${revenue.revenueYoY}%</div></div>` : ''}
-            ${revenue.yearHigh ? `<div class="info-item"><div class="info-label">1年最高</div><div class="info-value" style="color:#27ae60;">${revenue.yearHigh}</div></div>` : ''}
-            ${revenue.yearLow ? `<div class="info-item"><div class="info-label">1年最低</div><div class="info-value" style="color:#e74c3c;">${revenue.yearLow}</div></div>` : ''}
-            ${finance.grossMargin ? `<div class="info-item"><div class="info-label">毛利率</div><div class="info-value">${finance.grossMargin}</div></div>` : ''}
-            ${finance.eps ? `<div class="info-item"><div class="info-label">EPS</div><div class="info-value large">${finance.eps}</div></div>` : ''}
-        </div>
-        ${revenue.position ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🏆 產業地位</h3><div class="content-block" style="background:#fff3e0;border-left:3px solid #ff9800;padding:12px;">${revenue.position}</div></div>` : ''}
-        ${hasRevenueData ? `
-        <div class="modal-section" style="margin-top:15px;">
-            <h3 class="section-title">📈 營收資料 (億元)</h3>
-            <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;">
-                <button class="rev-tab-btn active" onclick="switchRevTab('monthly')" style="padding:6px 12px;border:1px solid #d4a574;background:#d4a574;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">近12月</button>
-                <button class="rev-tab-btn" onclick="switchRevTab('quarterly')" style="padding:6px 12px;border:1px solid #d4a574;background:#fff;color:#d4a574;border-radius:4px;cursor:pointer;font-size:12px;">近12季</button>
-                <button class="rev-tab-btn" onclick="switchRevTab('yearly')" style="padding:6px 12px;border:1px solid #d4a574;background:#fff;color:#d4a574;border-radius:4px;cursor:pointer;font-size:12px;">近12年</button>
+    // YoY表格（帶顏色）
+    const genYoYTable = (data) => {
+        if (!data || data.length === 0) return '<p style="color:#999;text-align:center;padding:10px;">無資料</p>';
+        const valid = data.filter(d => d.value !== '' && d.value !== null);
+        if (valid.length === 0) return '<p style="color:#999;text-align:center;padding:10px;">無資料</p>';
+        return `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <tr style="background:#f8f6f1;">${valid.map(d => `<th style="padding:6px 3px;border:1px solid #e0dcd3;white-space:nowrap;">${d.period}</th>`).join('')}</tr>
+            <tr>${valid.map(d => {
+                const v = parseFloat(d.value);
+                const color = v >= 0 ? '#27ae60' : '#e74c3c';
+                return `<td style="padding:6px 3px;border:1px solid #e0dcd3;text-align:right;color:${color};font-weight:500;">${d.value ? v.toFixed(1) + '%' : '-'}</td>`;
+            }).join('')}</tr>
+        </table></div>`;
+    };
+    
+    html += `<div class="tab-content" id="stock-finance">${hasRevenueData ? `
+        <!-- 營收亮點 -->
+        ${Object.values(hl).some(v => v) ? `
+        <div class="modal-section">
+            <h3 class="section-title">⭐ 營收亮點</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                ${hl.monthRank ? `<span style="background:#e8f5e9;color:#2e7d32;padding:4px 10px;border-radius:12px;font-size:12px;">📊 單月營收 ${hl.monthRank}</span>` : ''}
+                ${hl.monthRecord ? `<span style="background:#fff3e0;color:#e65100;padding:4px 10px;border-radius:12px;font-size:12px;">🏆 ${hl.monthRecord}</span>` : ''}
+                ${hl.monthStreak ? `<span style="background:#e3f2fd;color:#1565c0;padding:4px 10px;border-radius:12px;font-size:12px;">📈 ${hl.monthStreak}</span>` : ''}
+                ${hl.yearRecord ? `<span style="background:#fce4ec;color:#c2185b;padding:4px 10px;border-radius:12px;font-size:12px;">🎯 ${hl.yearRecord}</span>` : ''}
+                ${hl.cumStreak ? `<span style="background:#f3e5f5;color:#7b1fa2;padding:4px 10px;border-radius:12px;font-size:12px;">🔥 累計${hl.cumStreak}</span>` : ''}
+                ${hl.qtrStreak ? `<span style="background:#e0f7fa;color:#00838f;padding:4px 10px;border-radius:12px;font-size:12px;">📆 季營收${hl.qtrStreak}</span>` : ''}
+                ${hl.profitStreak ? `<span style="background:#fff8e1;color:#ff8f00;padding:4px 10px;border-radius:12px;font-size:12px;">💰 獲利${hl.profitStreak}</span>` : ''}
             </div>
-            <div id="rev-monthly" class="rev-content">${genRevenueTable(revenue.monthly, 'monthly')}</div>
-            <div id="rev-quarterly" class="rev-content" style="display:none;">${genRevenueTable(revenue.quarterly, 'quarterly')}</div>
-            <div id="rev-yearly" class="rev-content" style="display:none;">${genRevenueTable(revenue.yearly, 'yearly')}</div>
         </div>
         ` : ''}
-        ${finance.guidance4Q ? `<div class="modal-section"><h3 class="section-title">📈 4Q25展望指引</h3><div class="content-block">${finance.guidance4Q}</div></div>` : ''}
+        
+        <!-- 營收數據標籤切換 -->
+        <div class="modal-section" style="margin-top:15px;">
+            <h3 class="section-title">📈 營收數據 (億元)</h3>
+            <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;">
+                <button class="rev-tab-btn active" onclick="switchRevTab('monthly')" style="padding:5px 10px;border:1px solid #d4a574;background:#d4a574;color:#fff;border-radius:4px;cursor:pointer;font-size:11px;">月營收</button>
+                <button class="rev-tab-btn" onclick="switchRevTab('quarterly')" style="padding:5px 10px;border:1px solid #d4a574;background:#fff;color:#d4a574;border-radius:4px;cursor:pointer;font-size:11px;">季營收</button>
+                <button class="rev-tab-btn" onclick="switchRevTab('yearly')" style="padding:5px 10px;border:1px solid #d4a574;background:#fff;color:#d4a574;border-radius:4px;cursor:pointer;font-size:11px;">年營收</button>
+                <button class="rev-tab-btn" onclick="switchRevTab('yoy')" style="padding:5px 10px;border:1px solid #d4a574;background:#fff;color:#d4a574;border-radius:4px;cursor:pointer;font-size:11px;">累計YoY</button>
+            </div>
+            <div id="rev-monthly" class="rev-content">${genTable(revenue.monthly)}</div>
+            <div id="rev-quarterly" class="rev-content" style="display:none;">${genTable(revenue.quarterly)}</div>
+            <div id="rev-yearly" class="rev-content" style="display:none;">${genTable(revenue.yearly)}</div>
+            <div id="rev-yoy" class="rev-content" style="display:none;">${genYoYTable(revenue.yoyTrend)}</div>
+        </div>
+        
+        <!-- 股價區間 -->
+        ${ph.y1High ? `
+        <div class="modal-section" style="margin-top:15px;">
+            <h3 class="section-title">📉 歷史股價區間</h3>
+            <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <tr style="background:#f8f6f1;">
+                    <th style="padding:6px;border:1px solid #e0dcd3;">區間</th>
+                    <th style="padding:6px;border:1px solid #e0dcd3;">1年</th>
+                    <th style="padding:6px;border:1px solid #e0dcd3;">3年</th>
+                    <th style="padding:6px;border:1px solid #e0dcd3;">5年</th>
+                    <th style="padding:6px;border:1px solid #e0dcd3;">10年</th>
+                </tr>
+                <tr>
+                    <td style="padding:6px;border:1px solid #e0dcd3;font-weight:500;">最高</td>
+                    <td style="padding:6px;border:1px solid #e0dcd3;text-align:right;color:#27ae60;">${ph.y1High || '-'}</td>
+                    <td style="padding:6px;border:1px solid #e0dcd3;text-align:right;color:#27ae60;">${ph.y3High || '-'}</td>
+                    <td style="padding:6px;border:1px solid #e0dcd3;text-align:right;color:#27ae60;">${ph.y5High || '-'}</td>
+                    <td style="padding:6px;border:1px solid #e0dcd3;text-align:right;color:#27ae60;">${ph.y10High || '-'}</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px;border:1px solid #e0dcd3;font-weight:500;">最低</td>
+                    <td style="padding:6px;border:1px solid #e0dcd3;text-align:right;color:#e74c3c;">${ph.y1Low || '-'}</td>
+                    <td style="padding:6px;border:1px solid #e0dcd3;text-align:right;color:#e74c3c;">${ph.y3Low || '-'}</td>
+                    <td style="padding:6px;border:1px solid #e0dcd3;text-align:right;color:#e74c3c;">${ph.y5Low || '-'}</td>
+                    <td style="padding:6px;border:1px solid #e0dcd3;text-align:right;color:#e74c3c;">${ph.y10Low || '-'}</td>
+                </tr>
+            </table></div>
+        </div>
+        ` : ''}
+        
+        <!-- 年度漲跌幅 -->
+        ${revenue.yearPct && revenue.yearPct.length > 0 ? `
+        <div class="modal-section" style="margin-top:15px;">
+            <h3 class="section-title">📊 年度漲跌幅</h3>
+            ${genYoYTable(revenue.yearPct)}
+        </div>
+        ` : ''}
+        
+        <!-- 產業地位 -->
+        ${revenue.position ? `
+        <div class="modal-section" style="margin-top:15px;">
+            <h3 class="section-title">🏆 產業地位</h3>
+            <div style="background:#fff3e0;border-left:3px solid #ff9800;padding:12px;border-radius:4px;">${revenue.position}</div>
+        </div>
+        ` : ''}
+        
     ` : '<p style="color:#8b8b8b;padding:20px;">暫無詳細財務數據</p>'}</div>`;
     
     // 產品結構
