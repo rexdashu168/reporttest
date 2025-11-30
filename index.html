@@ -305,75 +305,100 @@ async function init() {
         // 月營收
         const sheetM = wb.Sheets['000_月營收'];
         if(sheetM) {
-            const rows = XLSX.utils.sheet_to_json(sheetM);
-            const headers = Object.keys(rows[0]||{});
-            const mCols = headers.filter(h => h.includes('單月營收')).sort();
-            const accCols = headers.filter(h => h.includes('累月營收(億)')).sort();
-            
-            rows.forEach(r => {
-                const code = normalizeCode(r['代號']);
-                if(!code || code.length > 5) return; // 過濾 ETF
+            const rows = XLSX.utils.sheet_to_json(sheetM, {defval: null});
+            if(rows.length > 0) {
+                const headers = Object.keys(rows[0]);
+                const mCols = headers.filter(h => h.includes('單月營收')).sort();
+                const accCols = headers.filter(h => h.includes('累月營收(億)') && !h.includes('單月')).sort();
                 
-                const data = mCols.slice(-12).map(col => {
-                    const m = col.match(/(\d+M\d+)/);
-                    if(!m) return null;
-                    const period = m[0];
-                    const accCol = accCols.find(c => c.includes(period));
-                    return { 
-                        d: period, 
-                        rev: r[col],
-                        acc: accCol ? r[accCol] : null
-                    };
-                }).filter(i => i && i.rev);
+                console.log('月營收欄位:', mCols.length, '累計欄位:', accCols.length);
                 
-                if(data.length > 0) META.revData.month[code] = data.reverse();
-            });
+                rows.forEach(r => {
+                    const code = normalizeCode(r['代號']);
+                    if(!code || code.length > 5 || code.startsWith('0')) return; // 過濾 ETF
+                    
+                    const data = [];
+                    mCols.slice(-12).forEach(col => {
+                        const m = col.match(/(\d+M\d+)/);
+                        if(m && r[col] !== null && r[col] !== undefined) {
+                            const period = m[0];
+                            const accCol = accCols.find(c => c.includes(period));
+                            data.push({ 
+                                d: period, 
+                                rev: r[col],
+                                acc: accCol ? r[accCol] : null
+                            });
+                        }
+                    });
+                    
+                    if(data.length > 0) {
+                        META.revData.month[code] = data.reverse();
+                    }
+                });
+                console.log('月營收載入公司數:', Object.keys(META.revData.month).length);
+            }
         }
         
         // 季營收
         const sheetQ = wb.Sheets['000_季營收'];
         if(sheetQ) {
-            const rows = XLSX.utils.sheet_to_json(sheetQ);
-            const headers = Object.keys(rows[0]||{});
-            const qCols = headers.filter(h => h.includes('單季營收')).sort();
-            
-            rows.forEach(r => {
-                const code = normalizeCode(r['代號']);
-                if(!code || code.length > 5) return;
+            const rows = XLSX.utils.sheet_to_json(sheetQ, {defval: null});
+            if(rows.length > 0) {
+                const headers = Object.keys(rows[0]);
+                const qCols = headers.filter(h => h.includes('單季營收')).sort();
                 
-                const data = qCols.slice(-12).map(col => {
-                    const m = col.match(/(\d+Q\d)/);
-                    return m ? { d: m[0], rev: r[col] } : null;
-                }).filter(i => i && i.rev);
-                
-                if(data.length > 0) META.revData.quarter[code] = data.reverse();
-            });
+                rows.forEach(r => {
+                    const code = normalizeCode(r['代號']);
+                    if(!code || code.length > 5 || code.startsWith('0')) return;
+                    
+                    const data = [];
+                    qCols.slice(-12).forEach(col => {
+                        const m = col.match(/(\d+Q\d)/);
+                        if(m && r[col] !== null && r[col] !== undefined) {
+                            data.push({ d: m[0], rev: r[col] });
+                        }
+                    });
+                    
+                    if(data.length > 0) {
+                        META.revData.quarter[code] = data.reverse();
+                    }
+                });
+                console.log('季營收載入公司數:', Object.keys(META.revData.quarter).length);
+            }
         }
         
         // 年營收
         const sheetY = wb.Sheets['000_年營收'];
         if(sheetY) {
-            const rows = XLSX.utils.sheet_to_json(sheetY);
-            const headers = Object.keys(rows[0]||{});
-            const yCols = headers.filter(h => h.includes('年度營收')).sort();
-            
-            rows.forEach(r => {
-                const code = normalizeCode(r['代號']);
-                if(!code || code.length > 5) return;
+            const rows = XLSX.utils.sheet_to_json(sheetY, {defval: null});
+            if(rows.length > 0) {
+                const headers = Object.keys(rows[0]);
+                const yCols = headers.filter(h => h.includes('年度營收')).sort();
                 
-                const data = yCols.map(col => {
-                    const m = col.match(/(\d{4})/);
-                    return m ? { d: m[0], rev: r[col] } : null;
-                }).filter(i => i && i.rev);
-                
-                if(data.length > 0) META.revData.year[code] = data.reverse();
-            });
+                rows.forEach(r => {
+                    const code = normalizeCode(r['代號']);
+                    if(!code || code.length > 5 || code.startsWith('0')) return;
+                    
+                    const data = [];
+                    yCols.forEach(col => {
+                        const m = col.match(/(\d{4})/);
+                        if(m && r[col] !== null && r[col] !== undefined) {
+                            data.push({ d: m[0], rev: r[col] });
+                        }
+                    });
+                    
+                    if(data.length > 0) {
+                        META.revData.year[code] = data.reverse();
+                    }
+                });
+                console.log('年營收載入公司數:', Object.keys(META.revData.year).length);
+            }
         }
         
         // 財報備註
         const sheetH = wb.Sheets['10_財報備註'];
         if(sheetH) {
-            XLSX.utils.sheet_to_json(sheetH).forEach(r => {
+            XLSX.utils.sheet_to_json(sheetH, {defval: null}).forEach(r => {
                 const code = normalizeCode(r['代號']);
                 if(code) META.revData.highlights[code] = r;
             });
@@ -759,33 +784,45 @@ window.openStock = code => {
     // Tab 2: 營收
     let tFin = '';
     
+    // Debug info
+    console.log('營收資料:', code, '月:', revM.length, '季:', revQ.length, '年:', revY.length);
+    
     // 營收亮點
     if(revH['單月營收創紀錄月數']) {
         tFin += `<div style="margin-bottom:15px"><span class="tag trend-up">🔥 歷史新高 ${revH['單月營收創紀錄月數']} 次</span></div>`;
     }
     
-    if(revM.length || revQ.length || revY.length) {
+    if(revM.length > 0 || revQ.length > 0 || revY.length > 0) {
         tFin += `
             <div class="fin-switcher">
                 <div class="fin-btn active" onclick="swFin(0)">月營收</div>
                 <div class="fin-btn" onclick="swFin(1)">季營收</div>
                 <div class="fin-btn" onclick="swFin(2)">年營收</div>
             </div>
-            <div id="ft-0" class="fin-sub-pane active"><div class="table-wrap"><table class="fin-table">
-                <thead><tr><th>月份</th><th>營收(億)</th><th>累計(億)</th></tr></thead>
-                <tbody>${revM.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev, 1)}</td><td>${r.acc ? fmtNum(r.acc, 1) : '-'}</td></tr>`).join('')}</tbody>
-            </table></div></div>
-            <div id="ft-1" class="fin-sub-pane"><div class="table-wrap"><table class="fin-table">
-                <thead><tr><th>季度</th><th>營收(億)</th></tr></thead>
-                <tbody>${revQ.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev, 1)}</td></tr>`).join('')}</tbody>
-            </table></div></div>
-            <div id="ft-2" class="fin-sub-pane"><div class="table-wrap"><table class="fin-table">
-                <thead><tr><th>年度</th><th>營收(億)</th></tr></thead>
-                <tbody>${revY.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev, 1)}</td></tr>`).join('')}</tbody>
-            </table></div></div>
+            
+            <div id="ft-0" class="fin-sub-pane active">
+                ${revM.length > 0 ? `<div class="table-wrap"><table class="fin-table">
+                    <thead><tr><th>月份</th><th>營收(億)</th><th>累計(億)</th></tr></thead>
+                    <tbody>${revM.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev, 1)}</td><td>${r.acc ? fmtNum(r.acc, 1) : '-'}</td></tr>`).join('')}</tbody>
+                </table></div>` : '<div style="text-align:center;padding:20px;color:#999">無月營收資料</div>'}
+            </div>
+            
+            <div id="ft-1" class="fin-sub-pane">
+                ${revQ.length > 0 ? `<div class="table-wrap"><table class="fin-table">
+                    <thead><tr><th>季度</th><th>營收(億)</th></tr></thead>
+                    <tbody>${revQ.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev, 1)}</td></tr>`).join('')}</tbody>
+                </table></div>` : '<div style="text-align:center;padding:20px;color:#999">無季營收資料</div>'}
+            </div>
+            
+            <div id="ft-2" class="fin-sub-pane">
+                ${revY.length > 0 ? `<div class="table-wrap"><table class="fin-table">
+                    <thead><tr><th>年度</th><th>營收(億)</th></tr></thead>
+                    <tbody>${revY.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev, 1)}</td></tr>`).join('')}</tbody>
+                </table></div>` : '<div style="text-align:center;padding:20px;color:#999">無年營收資料</div>'}
+            </div>
         `;
     } else {
-        tFin = '<div style="text-align:center;padding:30px;color:#999">無營收資料</div>';
+        tFin = '<div style="text-align:center;padding:30px;color:#999">無營收資料<br><small>請確認 06_revenue.xlsx 已正確載入</small></div>';
     }
     
     if(fin['4Q25指引']) tFin += `<div class="hl-block" style="margin-top:15px"><b>🔮 未來指引</b><br>${fmtTxt(fin['4Q25指引'])}</div>`;
