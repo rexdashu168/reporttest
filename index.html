@@ -2,16 +2,24 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rex大叔投資研究室 (Final Complete)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rex大叔投資研究室 (Finance Unlocked)</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>if(typeof XLSX==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');}</script>
     <style>
-        /* ===== v3.0 的豐富視覺 + v5.0 的單純架構 ===== */
-        :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; }
+        /* ===== 基礎設定 (手機優先) ===== */
+        :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; --up: #e74c3c; --down: #27ae60; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", "Heiti TC", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 12px; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; 
+            background: var(--bg); color: var(--text); padding-bottom: 60px;
+            overflow-x: hidden; 
+        }
+
+        .container { 
+            width: 100%; max-width: 600px; margin: 0 auto; padding: 16px; position: relative;
+        }
 
         /* Loading */
         .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
@@ -21,113 +29,112 @@
         .splash-progress { width: 0%; height: 100%; background: var(--primary); transition: width 0.3s; }
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 
-        /* 平面視圖切換 (無彈窗) */
-        .view-page { display: none; animation: fadeIn 0.3s ease; }
+        /* 視圖切換 */
+        .view-page { display: none; animation: fadeIn 0.25s ease-out; width: 100%; }
         .view-page.active { display: block; }
-        @keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+        @keyframes fadeIn { from{opacity:0; transform:translateY(5px);} to{opacity:1; transform:translateY(0);} }
 
         /* Header */
-        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid var(--border); }
-        .header h1 { color: var(--primary); font-size: 22px; margin-bottom: 5px; font-weight: 800; }
+        .header { text-align: center; padding: 10px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
+        .header h1 { color: var(--primary); font-size: 20px; margin-bottom: 4px; font-weight: 800; }
         
         /* Tabs */
-        .db-switcher { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 15px 0; }
-        .db-tab { padding: 6px 14px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--gray); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
-        .db-tab:hover { background: #fafafa; }
+        .db-switcher { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .db-switcher::-webkit-scrollbar { display: none; }
+        .db-tab { flex: 0 0 auto; padding: 6px 14px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--gray); cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .db-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 2px 5px rgba(201, 100, 66, 0.3); }
         .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
         
-        /* Search Box (含清除鍵) */
+        /* Search */
         .search-box { position: relative; margin-bottom: 15px; }
-        .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; transition: border 0.2s; }
+        .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; }
         .search-input:focus { border-color: var(--primary); }
         .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
-        .clear-btn { 
-            position: absolute; right: 14px; top: 50%; transform: translateY(-50%); 
-            width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; 
-            font-size: 14px; line-height: 20px; text-align: center; cursor: pointer; display: none; 
-        }
-        .clear-btn:hover { background: #999; }
+        .clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; }
 
         /* Card List */
         .card-list { display: flex; flex-direction: column; gap: 12px; }
         .card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; transition: transform 0.1s; position: relative; }
         .card:active { transform: scale(0.98); }
         .card-head { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: flex-start; }
-        .card-title { font-weight: 700; font-size: 16px; color: #2c3e50; }
+        .card-title { font-weight: 700; font-size: 16px; color: #2c3e50; line-height: 1.3; }
         .stock-code { color: #999; font-weight: 400; font-size: 14px; margin-left: 5px; }
         .card-meta { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
-        .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 500; }
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 500; white-space: nowrap; }
         .tag.brk { background: var(--primary); }
         .tag.ind { background: #2980b9; }
         .tag.dt { background: #e0e0e0; color: #666; }
         .tag.st { background: #27ae60; }
         .tag.concept { background: #8e44ad; }
-        .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .card-body { font-size: 13px; color: #555; line-height: 1.6; word-break: break-word; }
 
-        /* Detail Navigation Bar */
-        .detail-navbar { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; display: flex; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); margin-bottom: 10px; }
-        .back-btn { 
-            background: #fff; border: 1px solid var(--border); padding: 8px 20px; border-radius: 20px; 
-            color: var(--primary); font-weight: 700; font-size: 14px; cursor: pointer; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 5px;
+        /* Detail Navbar */
+        .detail-navbar { 
+            position: sticky; top: 0; background: var(--bg); 
+            padding: 10px 0; z-index: 100; margin-bottom: 10px;
+            box-shadow: 0 4px 6px -4px rgba(0,0,0,0.1); 
+            margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px;
         }
-        .back-btn:active { transform: scale(0.95); }
+        .back-btn { 
+            background: #fff; border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; 
+            color: var(--primary); font-weight: 700; font-size: 14px; cursor: pointer; 
+            display: inline-flex; align-items: center; gap: 5px;
+        }
 
-        /* Content Blocks (v3.0 Style) */
+        /* Info Blocks */
+        .info-card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
         .info-label { color: #888; }
-        .info-val { font-weight: 600; color: #333; text-align: right; max-width: 70%; }
+        .info-val { font-weight: 600; color: #333; text-align: right; max-width: 65%; }
         
-        .hl-block { background: #fafaf8; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; line-height: 1.6; }
+        .hl-block { background: #fafaf8; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; line-height: 1.6; word-break: break-word; }
         .hl-orange { border-color: #f39c12; background: #fef9e7; }
         .hl-green { border-color: #27ae60; background: #eafaf1; }
         .hl-blue { border-color: #2980b9; background: #ebf5fb; }
         
-        .section-head { font-size: 14px; font-weight: 700; color: #555; margin: 20px 0 10px; padding-left: 8px; border-left: 4px solid #ccc; display: flex; align-items: center; }
-        .list-item { padding: 12px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 8px; background: #fff; }
-        .list-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #2c3e50; }
-        .list-sub { font-size: 11px; color: #888; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .section-head { font-size: 14px; font-weight: 700; color: #555; margin: 20px 0 10px; padding-left: 8px; border-left: 4px solid #ccc; }
         
+        /* Finance Table Styling */
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 10px; border-radius: 8px; border: 1px solid #eee; }
+        .fin-table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: 13px; }
+        .fin-table th { background: #fafafa; padding: 8px; border-bottom: 1px solid #eee; color: #666; font-weight: 600; text-align: right; }
+        .fin-table td { padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: #333; }
+        .fin-table th:first-child, .fin-table td:first-child { text-align: left; position: sticky; left: 0; background: inherit; border-right: 1px solid #eee; z-index: 1; }
+        .fin-table tr:nth-child(even) { background-color: #fcfcfc; }
+        .t-up { color: var(--up); }
+        .t-down { color: var(--down); }
+
         .memo-content { font-size: 13px; color: #444; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0e0e0; line-height: 1.6; }
-        .memo-tag { display: inline-block; background: #eee; color: #666; font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-right: 5px; cursor: pointer; }
+        .memo-tag { display: inline-block; background: #eee; color: #666; font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-right: 5px; margin-bottom: 2px; cursor: pointer; }
 
         .grid-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
         .stat-box { background: #f8f9fa; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #eee; }
         .stat-label { font-size: 11px; color: #888; margin-bottom: 3px; }
         .stat-val { font-size: 15px; font-weight: 700; color: #2c3e50; }
         
-        /* Revenue Table */
-        .rev-table td { padding: 6px 4px; font-size: 12px; border: 1px solid #eee; text-align: center; }
-        .rev-table .rev-h { font-size: 10px; color: #888; margin-bottom: 2px; }
-        .rev-table .rev-v { font-weight: 600; color: #333; }
-
-        /* Report Links */
         .rep-stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 10px; }
         .rep-stock-btn { border: 1px solid #eee; padding: 8px; text-align: center; border-radius: 6px; font-size: 13px; cursor: pointer; background: #fff; }
-        .rep-stock-btn:hover { background: #e3f2fd; border-color: #2980b9; color: #2980b9; }
 
-        /* Smart Links */
         .tag-link { color: var(--link); cursor: pointer; font-weight: 600; margin: 0 2px; }
-        .tag-link:hover { text-decoration: underline; background: #eaf6ff; border-radius: 4px; }
         .stock-link { color: #c0392b; font-weight: 700; cursor: pointer; border-bottom: 1px dashed #c0392b; }
-        .clickable-area { cursor: pointer; transition: opacity 0.2s; }
-        .clickable-area:hover { opacity: 0.7; }
+        .clickable-area { cursor: pointer; }
         
-        /* Nav Tabs Grid */
+        /* Nav Grid */
         .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
-        .nav-btn { padding: 8px 5px; border-radius: 8px; border: none; background: #f5f5f5; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
+        .nav-btn { padding: 10px 5px; border-radius: 8px; border: none; background: #f5f5f5; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
         .nav-btn.active.b-basic { background: #e3f2fd; color: #1565c0; } 
         .nav-btn.active.b-fin { background: #fff8e1; color: #f57f17; } 
         .nav-btn.active.b-prod { background: #efebe9; color: #5d4037; } 
         .nav-btn.active.b-rep { background: #f3e5f5; color: #7b1fa2; } 
         .nav-btn.active.b-time { background: #ffebee; color: #c62828; } 
         .nav-btn.active.b-rate { background: #e0f2f1; color: #00695c; } 
-        .tab-pane { display: none; animation: fadeIn 0.3s; }
-        .tab-pane.active { display: block; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; animation: fadeIn 0.3s; }
 
-        /* Highlight Search */
         .highlight { background-color: #fff3cd; color: #856404; font-weight: bold; padding: 0 2px; border-radius: 2px; }
+        .fin-badge { display: inline-block; font-size:10px; padding:2px 6px; border-radius:4px; color:#fff; margin-bottom:4px; }
+        .bg-red { background: var(--up); }
+        .bg-green { background: var(--down); }
     </style>
 </head>
 <body>
@@ -135,7 +142,7 @@
 <div class="loading-overlay" id="loader">
     <div class="splash-icon">📊</div>
     <div style="font-weight:700;font-size:18px;margin-bottom:5px" id="loadTitle">系統啟動中...</div>
-    <div style="font-size:13px;color:#888" id="loadSub">正在連結 Rex大叔資料庫</div>
+    <div style="font-size:13px;color:#888" id="loadSub">正在解析財務大數據</div>
     <div class="splash-bar"><div class="splash-progress" id="loadBar"></div></div>
 </div>
 
@@ -188,7 +195,6 @@
 </div>
 
 <script>
-// --- Data & Config ---
 const FILES = {
     NEWS: '01_news.xlsx', MEMO: '02_memo.xlsx', REPORTS: '03_reports.xlsx',
     MASTER: '04_master.xlsx', STRAT: '05_Strategy.xlsx', CB: '00_CB.xlsx', REV: '06_revenue.xlsx'
@@ -196,12 +202,11 @@ const FILES = {
 const DB = { news:[], memo:[], reports:[], strategy:[], stocks:{}, cb:[] };
 const META = { 
     memoDetail:{}, tracking:{}, finance:{}, products:{}, timeline:[], ratings:{},
-    revenue:{}, cbMap:{}, relatedNews:{}, relatedMemo:{}, 
-    reportPicks:{}, stockInReports:{}, concepts: {}
+    cbMap:{}, relatedNews:{}, relatedMemo:{}, reportPicks:{}, stockInReports:{}, concepts: {},
+    revData: { month: {}, quarter: {}, year: {}, highlights: {} } // New Revenue Storage
 };
 let CURR_DB = 'news';
 
-// Utils
 const $ = id => document.getElementById(id);
 const safe = v => (v==null||v==undefined?'':String(v).trim());
 const fmtDate = v => {
@@ -209,19 +214,20 @@ const fmtDate = v => {
     if(typeof v === 'number' && v > 20000) { const d=new Date((v-25569)*86400000); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
     const s = String(v); if(s.match(/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/)) return s.split(' ')[0]; return v;
 };
-
-// --- Ultimate Text Formatter: Links Tags AND Stock Codes (Restored from v3.0) ---
 const fmtTxt = (t) => {
     if(!t) return '';
     let html = safe(t).replace(/\n/g, '<br>').replace(/•/g, '<br>• ');
-    // Link Hashtags
     html = html.replace(/#(\S+)/g, '<span class="tag-link" onclick="setSearch(\'#$1\'); event.stopPropagation();">#$1</span>');
-    // Link Stock Codes
-    html = html.replace(/(\d{4})/g, (match) => {
-        if(DB.stocks[match]) return `<span class="stock-link" onclick="openStock('${match}'); event.stopPropagation();">${match}</span>`;
-        return match;
-    });
+    html = html.replace(/(\d{4})/g, (match) => DB.stocks[match] ? `<span class="stock-link" onclick="openStock('${match}'); event.stopPropagation();">${match}</span>` : match);
     return html;
+};
+const getDateVal = (v) => { if(!v) return 0; if(typeof v === 'number') return (v - 25569) * 86400000; return new Date(v).getTime(); };
+const colorVal = (v) => {
+    if(!v || v==='-') return '';
+    const num = parseFloat(String(v).replace('%',''));
+    if(num > 0) return 't-up';
+    if(num < 0) return 't-down';
+    return '';
 };
 
 // View Management
@@ -232,12 +238,12 @@ function switchPage(pageId) {
 }
 function goBack() { switchPage('view-home'); }
 
-// Search Logic
+// Search
 function handleInput(el) { $('clearBtn').style.display = el.value.length > 0 ? 'block' : 'none'; renderList(); }
 function clearSearch() { $('search').value=''; $('search').focus(); $('clearBtn').style.display='none'; renderList(); }
 window.setSearch = (term) => { $('search').value = term; handleInput($('search')); goBack(); }
 
-// --- Loaders (Complete Data Set) ---
+// --- Loaders ---
 const loadStep = (t,s,p) => { $('loadTitle').innerText=t; $('loadSub').innerText=s; $('loadBar').style.width=p+'%'; };
 async function fetchXlsx(url) {
     try {
@@ -257,57 +263,123 @@ async function init() {
             if(code && concept) { if(!META.concepts[code]) META.concepts[code]=[]; if(!META.concepts[code].includes(concept)) META.concepts[code].push(concept); }
         });
     }
-    loadStep('讀取外電...', FILES.NEWS, 30);
+    
+    // Revenue Data Processing (The Core Fix)
+    loadStep('解析財務大數據...', FILES.REV, 30);
+    wb = await fetchXlsx(FILES.REV);
+    if(wb) {
+        // 1. Monthly Revenue
+        const sheetM = wb.Sheets['000_月營收'] || wb.Sheets[wb.SheetNames[0]];
+        const rowsM = XLSX.utils.sheet_to_json(sheetM);
+        const headersM = Object.keys(rowsM[0] || {});
+        // Find columns like "23M09單月營收(億)"
+        const mCols = headersM.filter(h => h.includes('單月營收(億)'));
+        mCols.sort(); // Ensure chronological order basically
+        
+        rowsM.forEach(r => {
+            const code = safe(r['代號']);
+            if(code) {
+                META.revData.month[code] = mCols.map(col => {
+                    const period = col.match(/(\d{2,3}M\d{2})/)?.[0] || col;
+                    return { p: period, v: r[col] };
+                }).filter(i => i.v).slice(-12).reverse(); // Keep last 12 months, reverse for display
+            }
+        });
+
+        // 2. Quarterly Revenue
+        const sheetQ = wb.Sheets['000_季營收'];
+        if(sheetQ) {
+            const rowsQ = XLSX.utils.sheet_to_json(sheetQ);
+            const headersQ = Object.keys(rowsQ[0] || {});
+            const qCols = headersQ.filter(h => h.includes('單季營收(億)'));
+            qCols.sort();
+            rowsQ.forEach(r => {
+                const code = safe(r['代號']);
+                if(code) {
+                    META.revData.quarter[code] = qCols.map(col => {
+                        const period = col.match(/(\d{2,3}Q\d)/)?.[0] || col;
+                        return { p: period, v: r[col] };
+                    }).filter(i => i.v).slice(-8).reverse();
+                }
+            });
+        }
+
+        // 3. Annual Revenue
+        const sheetY = wb.Sheets['000_年營收'];
+        if(sheetY) {
+            const rowsY = XLSX.utils.sheet_to_json(sheetY);
+            const headersY = Object.keys(rowsY[0] || {});
+            const yCols = headersY.filter(h => h.includes('年度營收(億)'));
+            yCols.sort();
+            rowsY.forEach(r => {
+                const code = safe(r['代號']);
+                if(code) {
+                    META.revData.year[code] = yCols.map(col => {
+                        const period = col.match(/(\d{4})/)?.[0] || col;
+                        return { p: period, v: r[col] };
+                    }).filter(i => i.v).slice(-5).reverse();
+                }
+            });
+        }
+
+        // 4. Highlights (Note 10)
+        const sheetN = wb.Sheets['10_財報備註'];
+        if(sheetN) {
+            XLSX.utils.sheet_to_json(sheetN).forEach(r => {
+                const code = safe(r['代號']);
+                if(code) META.revData.highlights[code] = r;
+            });
+        }
+    }
+
+    loadStep('讀取外電...', FILES.NEWS, 50);
     wb = await fetchXlsx(FILES.NEWS);
     if(wb) XLSX.utils.sheet_to_json(wb.Sheets['外電綜合報導']||[]).forEach(r => {
         if(safe(r['資料類型'])==='個股報導') { DB.news.push(r); const k=safe(r['股號']); if(k){ if(!META.relatedNews[k]) META.relatedNews[k]=[]; META.relatedNews[k].push(r); } }
     });
-    loadStep('讀取CB...', FILES.CB, 45);
+    DB.news.sort((a,b) => getDateVal(b['日期']) - getDateVal(a['日期']));
+
+    loadStep('讀取CB...', FILES.CB, 60);
     wb = await fetchXlsx(FILES.CB);
     if(wb) XLSX.utils.sheet_to_json(wb.Sheets['08_最新動態每週基本資料']||[]).forEach(r => {
         DB.cb.push(r); const k=safe(r['轉換標的代碼']); if(k){ if(!META.cbMap[k]) META.cbMap[k]=[]; META.cbMap[k].push(r); }
     });
-    loadStep('解析Memo...', FILES.MEMO, 60);
+    
+    loadStep('解析Memo...', FILES.MEMO, 70);
     wb = await fetchXlsx(FILES.MEMO);
     if(wb) {
         XLSX.utils.sheet_to_json(wb.Sheets['報告總表']||[]).forEach(r => {
             DB.memo.push(r); const k=safe(r['股號']); if(k){ if(!META.relatedMemo[k]) META.relatedMemo[k]=[]; META.relatedMemo[k].push(r); }
         });
+        DB.memo.sort((a,b) => getDateVal(b['日期']) - getDateVal(a['日期']));
         XLSX.utils.sheet_to_json(wb.Sheets['詳細內容庫']||[]).forEach(r => META.memoDetail[safe(r['編號'])] = r);
         XLSX.utils.sheet_to_json(wb.Sheets['公司追蹤表']||[]).forEach(r=>META.tracking[safe(r['公司'])]=r);
         XLSX.utils.sheet_to_json(wb.Sheets['財務數據彙總']||[]).forEach(r=>META.finance[safe(r['公司'])]=r);
         XLSX.utils.sheet_to_json(wb.Sheets['產品結構分析']||[]).forEach(r=>META.products[safe(r['公司'])]=r);
     }
-    loadStep('整合報告...', FILES.REPORTS, 75);
+    
+    loadStep('整合報告...', FILES.REPORTS, 85);
     wb = await fetchXlsx(FILES.REPORTS);
     if(wb) {
         XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r=>DB.reports.push(r));
+        DB.reports.sort((a,b) => getDateVal(b['報告日期']) - getDateVal(a['報告日期']));
         XLSX.utils.sheet_to_json(wb.Sheets['個股評價表']||[]).forEach(r=>{ let c=safe(r['股票代號']).split(' ')[0]; if(c) META.ratings[c]=r; });
         XLSX.utils.sheet_to_json(wb.Sheets['券商觀點結論']||[]).forEach(r => {
             const rid = safe(r['報告編號']);
             [1,2,3].forEach(n => { const s=safe(r[`首選個股${n}`]); if(s){ if(!META.reportPicks[rid]) META.reportPicks[rid]=[]; META.reportPicks[rid].push({name:s, reason:safe(r[`首選理由${n}`])}); } });
         });
     }
+    
     wb = await fetchXlsx(FILES.STRAT);
     if(wb) {
         XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r=>DB.strategy.push(r));
+        DB.strategy.sort((a,b) => getDateVal(b['報告日期']) - getDateVal(a['報告日期']));
         XLSX.utils.sheet_to_json(wb.Sheets['選股策略']||[]).forEach(r => {
             const rid=safe(r['報告編號']), c=safe(r['股票代號']);
             if(rid&&c) { if(!META.reportPicks[rid]) META.reportPicks[rid]=[]; META.reportPicks[rid].push({code:c, name:safe(r['公司名稱']), note:safe(r['備註'])}); if(!META.stockInReports[c]) META.stockInReports[c]=[]; META.stockInReports[c].push(rid); }
         });
     }
-    loadStep('計算營收...', FILES.REV, 90);
-    wb = await fetchXlsx(FILES.REV);
-    if(wb) {
-        const sheet = wb.Sheets['000_月營收']||wb.Sheets[wb.SheetNames[0]];
-        if(sheet) {
-            const rows = XLSX.utils.sheet_to_json(sheet);
-            if(rows.length>0) {
-                const h = Object.keys(rows[0]).filter(k=>k.includes('單月營收')).slice(-6);
-                rows.forEach(r => { META.revenue[safe(r['代號'])] = h.map(k=>({p:k.match(/\d+M\d+/)?.[0]||'月', v:r[k]})); });
-            }
-        }
-    }
+    
     loadStep('完成', 'Ready', 100);
     updateCounts();
     renderList();
@@ -317,23 +389,13 @@ async function init() {
 function setDB(db) { CURR_DB=db; document.querySelectorAll('.db-tab').forEach(t=>t.classList.remove('active')); event.currentTarget.classList.add('active'); renderList(); }
 function updateCounts() { $('c-news').innerText=DB.news.length; $('c-memo').innerText=DB.memo.length; $('c-reports').innerText=DB.reports.length; $('c-strategy').innerText=DB.strategy.length; $('c-stocks').innerText=Object.keys(DB.stocks).length; $('c-cb').innerText=DB.cb.length; }
 
-// --- Render List with Highlight ---
 function renderList() {
     const q = $('search').value.toLowerCase().trim();
-    let list = [], html = '';
-    
-    if(CURR_DB==='news') list=DB.news; 
-    else if(CURR_DB==='memo') list=DB.memo; 
-    else if(CURR_DB==='reports') list=DB.reports; 
-    else if(CURR_DB==='strategy') list=DB.strategy; 
-    else if(CURR_DB==='stocks') list=Object.values(DB.stocks); 
-    else if(CURR_DB==='cb') list=DB.cb;
+    let list = [];
+    if(CURR_DB==='news') list=DB.news; else if(CURR_DB==='memo') list=DB.memo; else if(CURR_DB==='reports') list=DB.reports; else if(CURR_DB==='strategy') list=DB.strategy; else if(CURR_DB==='stocks') list=Object.values(DB.stocks); else if(CURR_DB==='cb') list=DB.cb;
 
     const filtered = list.filter(i => {
-        if(CURR_DB==='memo'&&i['編號']) { 
-            const d=META.memoDetail[i['編號']]; 
-            if(d&&JSON.stringify(d).toLowerCase().includes(q)) return true; 
-        }
+        if(CURR_DB==='memo'&&i['編號']) { const d=META.memoDetail[i['編號']]; if(d&&JSON.stringify(d).toLowerCase().includes(q)) return true; }
         return JSON.stringify(i).toLowerCase().includes(q);
     });
     $('resCount').innerText = filtered.length;
@@ -345,36 +407,20 @@ function renderList() {
         return text.replace(re, '<span class="highlight">$1</span>');
     };
 
+    let html = '';
     filtered.slice(0,100).forEach(i => {
         let title='', sub='', date='', code='', tagClass='brk', body='', click='';
-        
-        if(CURR_DB==='stocks') { 
-            title=i['公司名稱']; code=i['代號']; sub=i['產業分類']; body=i['業務摘要']; 
-            click=`openStock('${code}')`; 
-        }
-        else if(CURR_DB==='cb') { 
-            title=i['名稱']; code=i['轉換標的代碼']; sub=`轉價:${i['轉換價格(元)']}`; body=`餘額:${i['最新餘額(百萬)']}M | 到期:${fmtDate(i['到期日'])}`; 
-            click=`openStock('${code}')`; 
-        }
-        else if(CURR_DB==='news') { 
-            title=i['公司']; code=i['股號']; sub=i['報導重點分類']; date=i['日期']; tagClass='ind'; 
-            body=fmtTxt(i['完整報導內容']); 
-            click=`openStock('${code}')`; 
-        }
+        if(CURR_DB==='stocks') { title=i['公司名稱']; code=i['代號']; sub=i['產業分類']; body=i['業務摘要']; click=`openStock('${code}')`; }
+        else if(CURR_DB==='cb') { title=i['名稱']; code=i['轉換標的代碼']; sub=`轉價:${i['轉換價格(元)']}`; body=`餘額:${i['最新餘額(百萬)']}M | 到期:${fmtDate(i['到期日'])}`; click=`openStock('${code}')`; }
+        else if(CURR_DB==='news') { title=i['公司']; code=i['股號']; sub=i['報導重點分類']; date=i['日期']; tagClass='ind'; body=fmtTxt(i['完整報導內容']); click=`openStock('${code}')`; }
         else if(CURR_DB==='memo') { 
             title=i['公司']; code=i['股號']; sub=i['報告類型']; date=i['日期']; 
-            const d=META.memoDetail[i['編號']]; 
-            body=d?(d['營運重點']||d['Rex觀察']):'點擊查看詳情';
-            if(d&&d['標籤']) { 
-                const t=d['標籤'].split(' ').map(t=>t.startsWith('#')?t:'#'+t).map(t=>`<span class="tag-link" onclick="setSearch('${t}'); event.stopPropagation();" style="font-size:11px;color:#2980b9;">${t}</span>`).join(' '); 
-                body+=`<div style="margin-top:5px;border-top:1px dashed #eee;padding-top:4px">${t}</div>`; 
-            }
+            const d=META.memoDetail[i['編號']]; body=d?(d['營運重點']||d['Rex觀察']):'點擊查看詳情';
+            if(d&&d['標籤']) { const t=d['標籤'].split(' ').map(t=>t.startsWith('#')?t:'#'+t).map(t=>`<span class="tag-link" onclick="setSearch('${t}'); event.stopPropagation();" style="font-size:11px;color:#2980b9;">${t}</span>`).join(' '); body+=`<div style="margin-top:5px;border-top:1px dashed #eee;padding-top:4px">${t}</div>`; }
             click=`openStock('${code}')`; 
         }
         else if(CURR_DB==='reports'||CURR_DB==='strategy') {
-            title=i['報告標題']; sub=i['券商名稱']; date=i['報告日期']; 
-            body=i['副標題']||i['大盤觀點']||'查看詳情'; 
-            click=`openReport('${i['報告編號']}', '${CURR_DB}')`;
+            title=i['報告標題']; sub=i['券商名稱']; date=i['報告日期']; body=i['副標題']||i['大盤觀點']||'查看詳情'; click=`openReport('${i['報告編號']}', '${CURR_DB}')`;
         }
 
         html += `<div class="card" onclick="${click}">
@@ -386,23 +432,22 @@ function renderList() {
     $('list').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無相符資料</div>';
 }
 
-// ===== FLAT DETAIL PAGES (Full Data) =====
-
-// 1. Stock Detail
 window.openStock = (code) => {
     if(!code || code==='-') return;
     const s = DB.stocks[code] || { '公司名稱': code, '代號': code, '產業分類':'未知', '業務摘要':'' };
     const name = s['公司名稱'];
     
-    // Aggregation
-    const cbs = META.cbMap[code], rev = META.revenue[code], memos = META.relatedMemo[code]||[], news = META.relatedNews[code]||[], fin = META.finance[name]||{}, prod = META.products[name]||{}, track = META.tracking[name]||{}, rate = META.ratings[code]||{}, concepts = META.concepts[code]||[];
-    
-    // Concepts Tag
+    const cbs = META.cbMap[code], memos = META.relatedMemo[code]||[], news = META.relatedNews[code]||[], fin = META.finance[name]||{}, prod = META.products[name]||{}, track = META.tracking[name]||{}, rate = META.ratings[code]||{}, concepts = META.concepts[code]||[];
+    const revM = META.revData.month[code] || [];
+    const revQ = META.revData.quarter[code] || [];
+    const revY = META.revData.year[code] || [];
+    const revH = META.revData.highlights[code] || {};
+
     const conceptHtml = concepts.map(c => `<span class="tag concept clickable-area" onclick="setSearch('${c}')">#${c}</span>`).join(' ');
 
     $('m-info').innerHTML = `
-        <div style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 5px rgba(0,0,0,0.03);margin-bottom:15px;">
-            <div style="font-size:22px;font-weight:800;margin-bottom:5px;color:#2c3e50;">${name} (${code})</div>
+        <div class="info-card">
+            <div style="font-size:20px;font-weight:800;margin-bottom:5px;color:#2c3e50;">${name} (${code})</div>
             <div class="card-meta"><span class="tag ind clickable-area" onclick="setSearch('${s['產業分類']}')">${s['產業分類']}</span>${conceptHtml}</div>
             <div style="font-size:14px;color:#666;margin-top:10px;line-height:1.5">${s['業務摘要']}</div>
         </div>`;
@@ -419,13 +464,50 @@ window.openStock = (code) => {
     }
     if(cbs) tBasic += `<div class="section-head">🎫 可轉債 (CB)</div>` + cbs.map(c=>`<div class="hl-block hl-orange"><b>${c['名稱']}</b><br>轉價:${c['轉換價格(元)']} | 餘額:${c['最新餘額(百萬)']}M</div>`).join('');
 
-    // 2. Finance
+    // 2. Finance (Unlocked)
     let tFin = `<div class="grid-stats">
         <div class="stat-box"><div class="stat-label">3Q25營收</div><div class="stat-val">${fin['3Q25營收']||'-'}</div></div>
         <div class="stat-box"><div class="stat-label">毛利率</div><div class="stat-val">${fin['毛利率']||'-'}</div></div>
         <div class="stat-box"><div class="stat-label">EPS</div><div class="stat-val">${fin['EPS']||'-'}</div></div>
     </div>`;
-    if(rev) tFin += `<div class="section-head">近期月營收</div><table class="rev-table" style="width:100%"><tr>${rev.map(r=>`<td><div class="rev-h">${r.p}</div><div class="rev-v">${r.v}</div></td>`).join('')}</tr></table>`;
+    
+    // Revenue Highlights
+    if(revH['單月營收創紀錄月數'] || revH['單月營收連增減月數']) {
+        tFin += `<div class="section-head">營收亮點</div><div style="display:flex;gap:5px;flex-wrap:wrap;">
+            ${revH['單月營收創紀錄月數'] ? `<div class="fin-badge bg-red">🔥 歷史新高 (${revH['單月營收創紀錄月數']}次)</div>` : ''}
+            ${revH['單月營收連增減月數'] ? `<div class="fin-badge bg-green">📈 連續成長 ${revH['單月營收連增減月數']} 個月</div>` : ''}
+        </div>`;
+    }
+
+    // Monthly Table (With MoM Calculation)
+    if(revM.length > 0) {
+        tFin += `<div class="section-head">近期月營收 (單位:億)</div><div class="table-wrap"><table class="fin-table"><thead><tr><th>月份</th><th>營收</th><th>月增%</th><th>備註</th></tr></thead><tbody>`;
+        for(let i=0; i<revM.length; i++) {
+            let mom = '-';
+            if(i < revM.length - 1 && revM[i+1].v) {
+                const curr = parseFloat(revM[i].v);
+                const prev = parseFloat(revM[i+1].v);
+                if(prev !== 0) mom = ((curr - prev) / prev * 100).toFixed(1) + '%';
+            }
+            tFin += `<tr><td>${revM[i].p}</td><td>${revM[i].v}</td><td class="${colorVal(mom)}">${mom}</td><td>${i===0?'最新':''}</td></tr>`;
+        }
+        tFin += `</tbody></table></div>`;
+    }
+
+    // Quarterly Table
+    if(revQ.length > 0) {
+        tFin += `<div class="section-head">季度營收趨勢</div><div class="table-wrap"><table class="fin-table"><thead><tr><th>季度</th><th>營收(億)</th></tr></thead><tbody>`;
+        revQ.forEach(r => tFin += `<tr><td>${r.p}</td><td>${r.v}</td></tr>`);
+        tFin += `</tbody></table></div>`;
+    }
+
+    // Annual Table
+    if(revY.length > 0) {
+        tFin += `<div class="section-head">年度營收</div><div class="table-wrap"><table class="fin-table"><thead><tr><th>年度</th><th>營收(億)</th></tr></thead><tbody>`;
+        revY.forEach(r => tFin += `<tr><td>${r.p}</td><td>${r.v}</td></tr>`);
+        tFin += `</tbody></table></div>`;
+    }
+
     if(fin['4Q25指引']) tFin += `<div class="hl-block hl-blue" style="margin-top:15px"><b>🔮 未來指引</b><br>${fmtTxt(fin['4Q25指引'])}</div>`;
 
     // 3. Product
@@ -433,7 +515,7 @@ window.openStock = (code) => {
     if(prod['主要產品1']) tProd += `<div class="section-head">產品組合</div>` + [1,2,3].map(n=>prod[`主要產品${n}`]?`<div class="list-item"><div class="list-title">${prod[`主要產品${n}`]}</div><div class="list-sub">${prod[`佔比/表現${n}`]||''}</div></div>`:'').join('');
     if(prod['關鍵成長動能']) tProd += `<div class="hl-block hl-green"><b>🚀 成長動能</b><br>${fmtTxt(prod['關鍵成長動能'])}</div>`;
 
-    // 4. Reports (Full Details from Memo)
+    // 4. Reports
     let tRep = '', timelineEvents = [];
     if(memos.length) tRep += `<div class="section-head">券商訪談報告 (${memos.length})</div>` + memos.map(m=> {
         const d = META.memoDetail[safe(m['編號'])];
@@ -441,13 +523,8 @@ window.openStock = (code) => {
         return `<div class="list-item">
             <div class="list-title">${m['券商']} - ${m['報告類型']}</div>
             <div class="list-sub">${fmtDate(m['日期'])} | 重要性:${m['重要性']}</div>
-            ${d ? `<div class="memo-content">
-                ${d['營運重點']?`<div><span class="memo-tag">營運重點</span>${fmtTxt(d['營運重點'])}</div>`:''}
-                ${d['Rex觀察']?`<div style="margin-top:8px"><span class="memo-tag" style="background:#e3f2fd;color:#1565c0">Rex觀察</span>${fmtTxt(d['Rex觀察'])}</div>`:''}
-            </div>`:''}
-        </div>`;
+            ${d ? `<div class="memo-content">${d['營運重點']?`<div><span class="memo-tag">營運重點</span>${fmtTxt(d['營運重點'])}</div>`:''}${d['Rex觀察']?`<div style="margin-top:8px"><span class="memo-tag" style="background:#e3f2fd;color:#1565c0">Rex觀察</span>${fmtTxt(d['Rex觀察'])}</div>`:''}</div>`:''}</div>`;
     }).join('');
-    
     if(news.length) tRep += `<div class="section-head">外電報導 (${news.length})</div>` + news.map(n=>`<div class="list-item"><div class="list-title">${n['報導重點分類']}</div><div class="list-sub">${fmtDate(n['日期'])}</div><div class="memo-content">${fmtTxt(n['完整報導內容'])}</div></div>`).join('');
 
     // 5. Timeline
@@ -473,7 +550,6 @@ window.openStock = (code) => {
     switchPage('view-detail');
 };
 
-// 2. Report Detail
 window.openReport = (rid, type) => {
     let report = (type === 'strategy' ? DB.strategy : DB.reports).find(r => r['報告編號'] === rid);
     if (!report) return;
@@ -481,7 +557,7 @@ window.openReport = (rid, type) => {
 
     $('stock-nav').style.display='none'; 
     $('m-info').innerHTML = `
-        <div style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 5px rgba(0,0,0,0.03);margin-bottom:15px;">
+        <div class="info-card">
             <div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:5px">${report['報告標題']}</div>
             <div style="font-size:13px;color:#666;">${report['券商名稱']} | ${fmtDate(report['報告日期'])}</div>
         </div>`;
@@ -502,7 +578,6 @@ window.openReport = (rid, type) => {
     switchPage('view-detail');
 };
 
-// Tab Switching
 window.swTab = (id, el) => {
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
     el.classList.add('active');
