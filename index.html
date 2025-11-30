@@ -1481,7 +1481,7 @@ function renderStocks() {
         return `<div class="card-base stock-card" onclick="openStockModal('${s.code}')">
             <span class="stock-badge">${s.market}</span>
             <div class="card-header"><div class="card-left"><span class="company-name">${s.name}</span><span class="stock-code">${s.code}</span></div><div style="text-align:right;"><div style="font-size:16px;font-weight:700;">${s.price}</div><div style="font-size:13px;color:${String(s.changePercent).includes('-') ? '#d64545' : '#2e7d46'};">${s.change} (${s.changePercent})</div></div></div>
-            <div class="card-meta"><span class="meta-tag industry">${s.industry}</span><span class="meta-tag date">市值 ${s.marketCap}億</span>${cbTag}</div>
+            <div class="card-meta"><span class="meta-tag industry">${s.industry}</span><span class="meta-tag date">市值 ${parseFloat(s.marketCap).toFixed(2)}億</span>${cbTag}</div>
             <div class="card-content">${(s.business || '').substring(0, 80)}...</div>
             ${concepts.length > 0 ? `<div class="card-tags" style="margin-top:8px;">${concepts.map(c => `<span class="mini-tag">${c.concept}</span>`).join('')}</div>` : ''}
         </div>`;
@@ -1672,8 +1672,8 @@ function openMemoModal(id) {
             ${tracking.targetPrice ? `<div class="info-item"><div class="info-label">目標價</div><div class="info-value large" style="color:#2e7d46;">${tracking.targetPrice}</div></div>` : ''}
             ${tracking.trackStatus ? `<div class="info-item"><div class="info-label">追蹤狀態</div><div class="info-value">${tracking.trackStatus}</div></div>` : ''}
         </div>
-        ${detail.rexView ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">👁️ Rex觀察</h3><div class="content-block">${formatContent(detail.rexView)}</div></div>` : ''}
-        ${detail.followUp ? `<div class="modal-section"><h3 class="section-title">🔔 後續追蹤</h3><div class="content-block">${formatContent(detail.followUp)}</div></div>` : ''}
+        ${detail.rexView ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">👁️ Rex觀察</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${formatContent(detail.rexView)}</div></div>` : ''}
+        ${detail.followUp ? `<div class="modal-section"><h3 class="section-title">🔔 後續追蹤</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${formatContent(detail.followUp)}</div></div>` : ''}
         ${tags.length > 0 ? `<div class="modal-section"><h3 class="section-title">🏷️ 標籤</h3><div class="tags-block">${tags.map(t => `<span class="modal-tag" onclick="searchByTag('${t}');closeModal();">#${t}</span>`).join('')}</div></div>` : ''}
     </div>`;
     
@@ -1691,14 +1691,14 @@ function openMemoModal(id) {
             ${finance.grossMargin ? `<div class="info-item"><div class="info-label">毛利率</div><div class="info-value">${finance.grossMargin}</div></div>` : ''}
             ${finance.eps ? `<div class="info-item"><div class="info-label">EPS</div><div class="info-value large">${finance.eps}</div></div>` : ''}
         </div>
-        ${finance.guidance4Q ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">📈 4Q25展望指引</h3><div class="content-block">${finance.guidance4Q}</div></div>` : ''}
+        ${finance.guidance4Q ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">📈 4Q25展望指引</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${finance.guidance4Q}</div></div>` : ''}
     ` : '<p style="color:#8b8b8b;">暫無財務數據</p>'}</div>`;
     
     // 產品結構
     html += `<div class="tab-content" id="tab-products">${products.products && products.products.length > 0 ? `
         ${products.products.map(p => `<div class="product-item"><div class="product-name">${p.name}</div><div class="product-ratio">${p.ratio}</div></div>`).join('')}
-        ${products.driver ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🔥 關鍵成長動能</h3><div class="content-block">${products.driver}</div></div>` : ''}
-        ${products.outlook2026 ? `<div class="modal-section"><h3 class="section-title">🔮 2026展望</h3><div class="content-block">${products.outlook2026}</div></div>` : ''}
+        ${products.driver ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🔥 關鍵成長動能</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${products.driver}</div></div>` : ''}
+        ${products.outlook2026 ? `<div class="modal-section"><h3 class="section-title">🔮 2026展望</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${products.outlook2026}</div></div>` : ''}
     ` : '<p style="color:#8b8b8b;">暫無產品結構資料</p>'}</div>`;
     
     // QA摘要
@@ -1729,7 +1729,7 @@ function openReportModal(id) {
     
     let html = '';
     if (report.highlights.length > 0) html += `<div class="modal-section"><h3 class="section-title">📌 核心重點</h3><div class="content-block">${report.highlights.map(h => '• ' + h).join('\n')}</div></div>`;
-    if (details.length > 0) html += `<div class="modal-section"><h3 class="section-title">📊 焦點分析</h3>${details.map(d => `<div style="margin-bottom:16px;padding:12px;background:#fafaf8;border-radius:10px;border-left:3px solid #c96442;"><div style="font-weight:600;color:#c96442;margin-bottom:8px;font-size:16px;">${d.sectionNo ? d.sectionNo + '. ' : ''}${d.sectionTitle}</div><div style="font-size:15px;line-height:1.8;color:#444;margin-bottom:8px;">${formatContent(d.content)}</div>${d.marketSize || d.growthRate ? `<div style="font-size:14px;color:#6b8cce;margin-bottom:6px;">${d.marketSize ? '📊 市場規模: ' + d.marketSize : ''}${d.growthRate ? ' | 📈 成長率: ' + d.growthRate : ''}</div>` : ''}${d.source ? `<div style="font-size:13px;color:#888;">📎 資料來源: ${d.source}</div>` : ''}${d.note ? `<div style="font-size:13px;color:#e67e22;margin-top:4px;">💡 備註: ${d.note}</div>` : ''}</div>`).join('')}</div>`;
+    if (details.length > 0) html += `<div class="modal-section"><h3 class="section-title">📊 焦點分析</h3>${details.map(d => `<div style="margin-bottom:16px;padding:12px;background:#fff8e1;border-radius:8px;border-left:3px solid #ffc107;"><div style="font-weight:600;color:#c96442;margin-bottom:8px;font-size:16px;">${d.sectionNo ? d.sectionNo + '. ' : ''}${d.sectionTitle}</div><div style="font-size:15px;line-height:1.8;color:#444;margin-bottom:8px;">${formatContent(d.content)}</div>${d.marketSize || d.growthRate ? `<div style="font-size:14px;color:#6b8cce;margin-bottom:6px;">${d.marketSize ? '📊 市場規模: ' + d.marketSize : ''}${d.growthRate ? ' | 📈 成長率: ' + d.growthRate : ''}</div>` : ''}${d.source ? `<div style="font-size:13px;color:#888;">📎 資料來源: ${d.source}</div>` : ''}${d.note ? `<div style="font-size:13px;color:#e67e22;margin-top:4px;">💡 備註: ${d.note}</div>` : ''}</div>`).join('')}</div>`;
     if (stocks.length > 0) html += `<div class="modal-section"><h3 class="section-title">📈 首選個股評價</h3><div style="overflow-x:auto;"><table class="stock-pick-table"><thead><tr><th>公司</th><th>代號</th><th>評等</th><th>目標價</th><th>EPS 25F</th><th>亮點</th></tr></thead><tbody>${stocks.map(s => `<tr onclick="openStockModal('${s.code}')" style="cursor:pointer;"><td><strong>${s.name}</strong></td><td>${s.code}</td><td><span class="meta-tag rating">${s.rating}</span></td><td style="color:#2e7d46;font-weight:600;">${s.target || '-'}</td><td>${s.eps25 || '-'}</td><td>${s.highlight || '-'}</td></tr>`).join('')}</tbody></table></div></div>`;
     
     document.getElementById('modalBody').innerHTML = html;
@@ -1762,7 +1762,7 @@ function openStrategyModal(id) {
             ${report.indexLow ? `<div class="info-item"><div class="info-label">指數預測低點</div><div class="info-value large">${report.indexLow}</div></div>` : ''}
             ${report.indexHigh ? `<div class="info-item"><div class="info-label">指數預測高點</div><div class="info-value large" style="color:#2e7d46;">${report.indexHigh}</div></div>` : ''}
         </div>
-        ${report.marketView ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">📈 大盤觀點</h3><div class="content-block">${report.marketView}</div></div>` : ''}
+        ${report.marketView ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">📈 大盤觀點</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${report.marketView}</div></div>` : ''}
         ${report.macroSummary ? `<div class="modal-section"><h3 class="section-title">🌍 總經摘要</h3><div class="content-block">${report.macroSummary}</div></div>` : ''}
         ${report.fundamentalView ? `<div class="modal-section"><h3 class="section-title">📊 基本面觀點</h3><div class="content-block">${report.fundamentalView}</div></div>` : ''}
         ${report.themeView ? `<div class="modal-section"><h3 class="section-title">🔥 題材面觀點</h3><div class="content-block">${report.themeView}</div></div>` : ''}
@@ -1831,7 +1831,7 @@ function openIndustryModal(idx) {
         <div class="modal-section"><h3 class="section-title">🔥 關鍵驅動因素</h3><div class="content-block">${formatContent(item.driver)}</div></div>
         <div class="modal-section"><h3 class="section-title">⚠️ 風險因素</h3><div class="content-block">${formatContent(item.risk)}</div></div>
         <div class="modal-section"><h3 class="section-title">🔮 2026展望</h3><div class="content-block">${formatContent(item.outlook)}</div></div>
-        ${item.suggestion ? `<div class="modal-section"><h3 class="section-title">💡 投資建議</h3><div style="padding:12px;background:linear-gradient(135deg,#f8f4ff,#efe8ff);border-radius:10px;font-size:16px;color:#9b59b6;font-weight:600;">${item.suggestion}</div></div>` : ''}
+        ${item.suggestion ? `<div class="modal-section"><h3 class="section-title">💡 投資建議</h3><div style="padding:12px;background:#fff8e1;border-radius:8px;border-left:3px solid #ffc107;font-size:16px;color:#333;font-weight:600;">${item.suggestion}</div></div>` : ''}
     `;
     openModal();
 }
@@ -1846,7 +1846,7 @@ function openTimelineModal(idx) {
     `;
     
     document.getElementById('modalBody').innerHTML = `
-        <div class="modal-section"><h3 class="section-title">📌 事件內容</h3><div class="content-block" style="font-size:15px;">${item.event}</div></div>
+        <div class="modal-section"><h3 class="section-title">📌 事件內容</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${item.event}</div></div>
         <div class="modal-section"><h3 class="section-title">💡 預期影響</h3><div class="content-block">${formatContent(item.impact)}</div></div>
         ${item.note ? `<div class="modal-section"><h3 class="section-title">📝 備註</h3><div class="content-block">${item.note}</div></div>` : ''}
     `;
@@ -1893,8 +1893,8 @@ function openStockModal(codeOrName) {
             ${tracking.targetPrice ? `<div class="info-item"><div class="info-label">目標價</div><div class="info-value large" style="color:#2e7d46;">${tracking.targetPrice}</div></div>` : ''}
             ${tracking.trackStatus ? `<div class="info-item"><div class="info-label">追蹤狀態</div><div class="info-value">${tracking.trackStatus}</div></div>` : ''}
         </div>
-        ${stock.position ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🏆 產業地位</h3><div class="content-block">${stock.position}</div></div>` : ''}
-        ${stock.business ? `<div class="modal-section"><h3 class="section-title">💼 業務摘要</h3><div class="content-block">${stock.business}</div></div>` : ''}
+        ${stock.position ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🏆 產業地位</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${stock.position}</div></div>` : ''}
+        ${stock.business ? `<div class="modal-section"><h3 class="section-title">💼 業務摘要</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${stock.business}</div></div>` : ''}
         ${concepts.length > 0 ? `<div class="modal-section"><h3 class="section-title">💡 概念股族群</h3>${concepts.map(c => `<div class="product-item"><div class="product-name">${c.concept}</div><div class="product-ratio">${c.subRole} - ${c.description}</div></div>`).join('')}</div>` : ''}
         ${(() => {
             const stockCode = String(stock.code).trim().replace(/\s/g, '');
@@ -2025,8 +2025,8 @@ function openStockModal(codeOrName) {
     // 產品結構
     html += `<div class="tab-content" id="stock-products">${products.products && products.products.length > 0 ? `
         ${products.products.map(p => `<div class="product-item"><div class="product-name">${p.name}</div><div class="product-ratio">${p.ratio}</div></div>`).join('')}
-        ${products.driver ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🔥 關鍵成長動能</h3><div class="content-block">${products.driver}</div></div>` : ''}
-        ${products.outlook2026 ? `<div class="modal-section"><h3 class="section-title">🔮 2026展望</h3><div class="content-block">${products.outlook2026}</div></div>` : ''}
+        ${products.driver ? `<div class="modal-section" style="margin-top:15px;"><h3 class="section-title">🔥 關鍵成長動能</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${products.driver}</div></div>` : ''}
+        ${products.outlook2026 ? `<div class="modal-section"><h3 class="section-title">🔮 2026展望</h3><div class="content-block" style="background:#fff8e1;padding:15px;border-radius:8px;border-left:3px solid #ffc107;line-height:1.8;">${products.outlook2026}</div></div>` : ''}
     ` : '<p style="color:#8b8b8b;padding:20px;">暫無產品結構資料</p>'}</div>`;
     
     // 相關報導
