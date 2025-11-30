@@ -3,595 +3,458 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rex大叔投資研究室</title>
-    
+    <title>Rex大叔投資研究室 (Pro)</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script>
-        if (typeof XLSX === 'undefined') {
-            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
-        }
-    </script>
-
+    <script>if(typeof XLSX==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');}</script>
     <style>
-        /* ===== 全域設定 ===== */
-        :root {
-            --primary: #c96442;
-            --bg: #f5f4ef;
-            --card-bg: #ffffff;
-            --text-main: #2d2d2d;
-            --text-sub: #6b6b6b;
-            --border: #e5e3dc;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text-main); padding-bottom: 50px; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 12px; }
+        :root { --primary: #c96442; --bg: #f5f4ef; --text: #2d2d2d; --gray: #6b6b6b; --border: #e5e3dc; --green: #27ae60; --red: #e74c3c; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 12px; }
         
-        /* Loading Screen */
-        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s; }
+        /* Loading */
+        .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
         .loading-overlay.hidden { opacity: 0; pointer-events: none; }
-        .splash-icon { font-size: 48px; margin-bottom: 20px; animation: bounce 2s infinite; }
-        .splash-title { font-size: 18px; font-weight: 700; margin-bottom: 5px; }
-        .splash-subtitle { font-size: 13px; color: var(--text-sub); margin-bottom: 20px; }
-        .splash-progress-track { width: 200px; height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; }
-        .splash-progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .splash-icon { font-size: 48px; animation: bounce 2s infinite; margin-bottom: 15px; }
+        .splash-bar { width: 200px; height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; margin-top: 15px; }
+        .splash-progress { width: 0%; height: 100%; background: var(--primary); transition: width 0.3s; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 
-        /* Header */
-        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
-        .header h1 { font-size: 22px; color: var(--primary); }
-        .header .subtitle { font-size: 12px; color: var(--text-sub); }
-
-        /* Tabs */
-        .db-switcher { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
-        .db-tab { padding: 6px 14px; border: 1px solid var(--border); background: #fff; border-radius: 20px; font-size: 13px; color: var(--text-sub); cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        /* Components */
+        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid var(--border); }
+        .header h1 { color: var(--primary); font-size: 22px; margin-bottom: 5px; }
+        
+        .db-switcher { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; -webkit-overflow-scrolling: touch; }
+        .db-tab { padding: 6px 14px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--gray); white-space: nowrap; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
         .db-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-        .db-tab .count { font-size: 10px; background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; }
+        .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
 
-        /* Search */
-        .search-section { background: #fff; border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
-        .main-search input { width: 100%; padding: 12px 12px 12px 40px; border: 2px solid var(--border); border-radius: 25px; background: #fafaf8; font-size: 15px; }
-        .main-search { position: relative; margin-bottom: 10px; }
-        .main-search::before { content: "🔍"; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
-        
-        /* Filters */
-        .hot-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-        .hot-tag { padding: 4px 10px; background: #fff3e6; color: #c96442; border-radius: 8px; font-size: 12px; border: none; cursor: pointer; }
-        .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
-        .filter-select select { padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: #fff; font-size: 12px; }
-        .clear-btn { color: #d64545; background: none; border: 1px solid #d64545; padding: 8px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+        .search-box { position: relative; margin: 15px 0; }
+        .search-input { width: 100%; padding: 12px 12px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
 
-        /* Card List */
-        .card-base { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; transition: transform 0.2s; }
-        .card-base:active { transform: scale(0.98); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .company-name { font-size: 16px; font-weight: 700; color: #333; }
-        .stock-code { font-size: 12px; color: #888; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; margin-left: 5px; }
-        .rating-stars { color: #f39c12; font-size: 12px; letter-spacing: 1px; }
-        
-        .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-        .tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; color: #fff; font-weight: 500; }
-        .tag.broker { background: #c96442; }
-        .tag.ind { background: #5a9e6f; }
-        .tag.date { background: #e0e0e0; color: #555; }
-        .tag.rating { background: #9b59b6; }
-        .tag.trend { background: #e67e22; }
+        .card-list { display: flex; flex-direction: column; gap: 12px; }
+        .card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; }
+        .card:active { transform: scale(0.98); transition: transform 0.1s; }
+        .card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .card-title { font-weight: 700; font-size: 16px; color: #333; line-height: 1.4; }
+        .card-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 500; }
+        .tag.brk { background: var(--primary); }
+        .tag.ind { background: #2980b9; }
+        .tag.dt { background: #e0e0e0; color: #666; }
+        .tag.rt { background: #9b59b6; }
+        .tag.tr { background: #f39c12; }
+        .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        .card-content { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        
-        /* Modal Style (還原截圖風格) */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; align-items: flex-end; }
-        .modal-overlay.active { display: flex; }
-        .modal-content { background: #fff; width: 100%; max-width: 600px; height: 90vh; margin: 0 auto; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        
-        .modal-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-start; }
-        .modal-close { background: #f0f0f0; border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 20px; color: #666; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        
-        .modal-body { flex: 1; overflow-y: auto; padding: 15px; background: #fafaf8; }
-        
-        /* Modal Tabs */
-        .modal-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 15px; }
-        .m-tab { padding: 6px 12px; background: #fff; border: 1px solid #eee; border-radius: 8px; font-size: 13px; font-weight: 600; color: #666; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .m-tab.active { background: #fff3e6; color: #c96442; border-color: #c96442; }
-        .m-tab-icon { font-size: 14px; }
+        /* 6-Grid Stats */
+        .grid-6 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .stat-box { background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
+        .stat-label { font-size: 11px; color: #888; }
+        .stat-val { font-size: 14px; font-weight: 700; margin-top: 2px; }
+        .stat-val.up { color: var(--red); }
+        .stat-val.down { color: var(--green); }
 
-        /* 6格資訊方塊 (截圖2) */
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-box { background: #fff; padding: 12px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
-        .stat-value { font-size: 14px; font-weight: 700; color: #333; }
-        .stat-value.large { font-size: 18px; }
-        .stat-value.green { color: #27ae60; }
-        .stat-value.red { color: #e74c3c; }
+        /* Left-Border Highlights */
+        .hl-box { background: #fff; padding: 12px; border-radius: 8px; border-left: 4px solid #ddd; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .hl-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #333; }
+        .hl-content { font-size: 13px; color: #555; line-height: 1.6; white-space: pre-wrap; }
+        .hl-blue { border-left-color: #3498db; }
+        .hl-orange { border-left-color: #e67e22; }
+        .hl-green { border-left-color: var(--green); }
 
-        /* 彩色區塊重點 (截圖1) */
-        .highlight-block { background: #fff; border-radius: 10px; padding: 15px; margin-bottom: 10px; border-left: 4px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .hb-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; color: #333; }
-        .hb-content { font-size: 13px; color: #555; line-height: 1.6; }
-        .hb-orange { border-left-color: #e67e22; }
-        .hb-green { border-left-color: #27ae60; }
-        .hb-blue { border-left-color: #3498db; }
+        /* Modal */
+        .modal { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: flex-end; }
+        .modal.show { display: flex; }
+        .modal-inner { background: #fff; width: 100%; max-width: 600px; height: 92vh; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s; }
+        .m-head { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .m-close { width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; font-size: 20px; color: #666; }
+        .m-tabs { display: flex; gap: 10px; padding: 10px 15px; border-bottom: 1px solid #eee; overflow-x: auto; }
+        .m-tab { padding: 6px 12px; background: #f5f5f5; border-radius: 20px; font-size: 13px; color: #666; white-space: nowrap; cursor: pointer; }
+        .m-tab.active { background: var(--primary); color: #fff; }
+        .m-body { flex: 1; overflow-y: auto; padding: 15px; background: #fafaf8; }
+        .m-section { margin-bottom: 20px; }
+        .m-stitle { font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
         
-        /* 列表項目 (截圖3) */
-        .list-row { background: #fff; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .lr-main { font-weight: 600; font-size: 14px; }
-        .lr-sub { font-size: 11px; color: #888; margin-top: 2px; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; }
+        th, td { padding: 8px; border: 1px solid #eee; text-align: left; }
+        th { background: #f9f9f9; font-weight: 600; white-space: nowrap; }
         
-        .section-header { font-size: 14px; font-weight: 700; margin: 20px 0 10px; color: #c96442; display: flex; align-items: center; gap: 5px; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        @media (min-width: 768px) {
-            .modal-overlay.active { align-items: center; justify-content: center; }
-            .modal-content { height: 80vh; border-radius: 20px; }
-        }
+        @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     </style>
 </head>
 <body>
 
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="splash-content">
-            <div class="splash-icon">📊</div>
-            <h2 class="splash-title" id="loadingMain">系統啟動中...</h2>
-            <p class="splash-subtitle" id="loadingSub">正在同步 Rex大叔資料庫</p>
-            <div class="splash-progress-track"><div class="splash-progress-bar" id="loadingProgressBar"></div></div>
-        </div>
+<div class="loading-overlay" id="loader">
+    <div class="splash-icon">📊</div>
+    <div style="font-weight:700;font-size:18px;margin-bottom:5px" id="loadTitle">系統啟動中...</div>
+    <div style="font-size:13px;color:#888" id="loadSub">正在同步 Rex大叔資料庫</div>
+    <div class="splash-bar"><div class="splash-progress" id="loadBar"></div></div>
+</div>
+
+<div class="container">
+    <div class="header">
+        <h1>📊 Rex大叔投資研究室</h1>
+        <p style="font-size:12px;color:#666">全方位台股投資決策系統 (Pro)</p>
     </div>
 
-    <div class="container">
-        <div class="header">
-            <h1>📊 Rex大叔投資研究室</h1>
-            <p class="subtitle">券商研究報告 × 外電快報 × Call Memo × 投資策略</p>
-        </div>
-
-        <div class="db-switcher">
-            <button class="db-tab active" onclick="switchDB('news')">⚡ 外電報導 <span class="count" id="cnt-news">0</span></button>
-            <button class="db-tab" onclick="switchDB('memo')">📋 報告Memo <span class="count" id="cnt-memo">0</span></button>
-            <button class="db-tab" onclick="switchDB('reports')">📑 產業報告 <span class="count" id="cnt-rep">0</span></button>
-            <button class="db-tab" onclick="switchDB('strategy')">🎯 投資展望 <span class="count" id="cnt-strat">0</span></button>
-            <button class="db-tab" onclick="switchDB('trends')">📈 產業趨勢 <span class="count" id="cnt-trend">0</span></button>
-            <button class="db-tab" onclick="switchDB('industry')">🏭 產業動態 <span class="count" id="cnt-ind">0</span></button>
-            <button class="db-tab" onclick="switchDB('stocks')">🏢 個股查詢 <span class="count" id="cnt-stk">0</span></button>
-            <button class="db-tab" onclick="switchDB('cb')">🎫 CB統計 <span class="count" id="cnt-cb">0</span></button>
-        </div>
-
-        <div class="search-section">
-            <div class="main-search">
-                <input type="text" id="searchInput" placeholder="搜尋公司名稱、股號、標籤...">
-                <div class="search-suggestions" id="suggestions"></div>
-            </div>
-            <div class="hot-tags" id="hotTags"></div>
-            <div class="filter-row">
-                <div class="filter-select"><select id="f-broker"><option value="">所有券商</option></select></div>
-                <div class="filter-select"><select id="f-cat"><option value="">所有分類</option></select></div>
-                <button class="clear-btn" onclick="resetFilters()">清除篩選</button>
-            </div>
-        </div>
-
-        <div class="stats-bar">
-            <span>找到 <strong id="res-count">0</strong> 筆結果</span>
-        </div>
-
-        <div class="reports-list" id="mainList"></div>
+    <div class="db-switcher">
+        <div class="db-tab active" onclick="setDB('news')">⚡ 外電 <span class="count" id="c-news">0</span></div>
+        <div class="db-tab" onclick="setDB('memo')">📋 Memo <span class="count" id="c-memo">0</span></div>
+        <div class="db-tab" onclick="setDB('reports')">📑 報告 <span class="count" id="c-reports">0</span></div>
+        <div class="db-tab" onclick="setDB('strategy')">🎯 策略 <span class="count" id="c-strategy">0</span></div>
+        <div class="db-tab" onclick="setDB('trends')">📈 趨勢 <span class="count" id="c-trends">0</span></div>
+        <div class="db-tab" onclick="setDB('industry')">🏭 產業 <span class="count" id="c-industry">0</span></div>
+        <div class="db-tab" onclick="setDB('stocks')">🏢 個股 <span class="count" id="c-stocks">0</span></div>
+        <div class="db-tab" onclick="setDB('cb')">🎫 CB <span class="count" id="c-cb">0</span></div>
     </div>
 
-    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <div id="m-header-info"></div>
-                <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div class="modal-body" id="m-body"></div>
-        </div>
+    <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="search" placeholder="搜尋公司、代號、關鍵字...">
     </div>
 
-    <script>
-    // Config
-    const FILES = {
-        NEWS: '01_news.xlsx', MEMO: '02_memo.xlsx', REPORTS: '03_reports.xlsx',
-        MASTER: '04_master.xlsx', STRATEGY: '05_Strategy.xlsx', CB: '00_CB.xlsx', REV: '06_revenue.xlsx'
-    };
+    <div style="font-size:12px;color:#666;margin-bottom:10px;display:flex;justify-content:space-between;">
+        <span>找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</span>
+        <span id="updateTime"></span>
+    </div>
 
-    // Data Stores
-    let dataStore = { news: [], memo: [], reports: [], strategy: [], trends: [], industry: [], stocks: {}, cb: [] };
-    let details = { memo: {}, reports: {}, strategy: {} };
-    let meta = { tracking: {}, finance: {}, products: {}, timeline: [], revenue: {}, cbs: {} };
-    let currentDB = 'news';
-    let filters = { search: '', broker: '', cat: '' };
+    <div class="card-list" id="list"></div>
+</div>
 
-    // --- Helpers ---
-    const $ = id => document.getElementById(id);
-    const safe = v => (v === undefined || v === null) ? '' : String(v).trim();
-    const dateFmt = v => {
-        if(!v) return '';
-        if(typeof v === 'number') {
-            const d = new Date((v-25569)*86400000);
-            return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
-        }
-        return v;
-    };
-    const updateLoad = (t, s, p) => {
-        $('loadingMain').innerText = t; $('loadingSub').innerText = s; $('loadingProgressBar').style.width = p+'%';
-    };
+<div class="modal" id="modal" onclick="closeModal(event)">
+    <div class="modal-inner" onclick="event.stopPropagation()">
+        <div class="m-head">
+            <div id="m-info"></div>
+            <button class="m-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="m-tabs" id="m-tabs"></div>
+        <div class="m-body" id="m-body"></div>
+    </div>
+</div>
 
-    // --- Loaders ---
-    async function loadAll() {
-        try {
-            updateLoad('讀取外電快報...', '同步國際金融資訊', 10);
-            await loadNews();
-            
-            updateLoad('解析研究報告...', '彙整券商 Memo', 30);
-            await loadMemo();
-            await loadReports();
-            
-            updateLoad('載入市場資料...', '建立個股索引', 60);
-            await loadMaster();
-            await loadStrategy();
-            await loadCB();
-            await loadRevenue();
+<script>
+// --- Files & Data ---
+const FILES = {
+    NEWS: '01_news.xlsx', MEMO: '02_memo.xlsx', REPORTS: '03_reports.xlsx',
+    MASTER: '04_master.xlsx', STRAT: '05_Strategy.xlsx', CB: '00_CB.xlsx', REV: '06_revenue.xlsx'
+};
 
-            updateLoad('完成', '啟動中...', 100);
-            initUI();
-            
-            setTimeout(() => {
-                $('loadingOverlay').classList.add('hidden');
-                renderList();
-            }, 500);
-        } catch(e) {
-            console.error(e);
-            $('loadingMain').innerText = '載入失敗';
-            $('loadingSub').innerText = e.message;
-            $('loadingProgressBar').style.background = '#e74c3c';
-        }
+const DB = { news:[], memo:[], reports:[], strategy:[], trends:[], industry:[], stocks:{}, cb:[] };
+const META = { 
+    memoDetail:{}, tracking:{}, finance:{}, products:{}, timeline:[], 
+    reportDetail:{}, reportStocks:[], reportConc:{},
+    stratThemes:[], stratQuarters:[], stratPicks:[], stratViews:{},
+    revenue:{}, cbMap:{}
+};
+let CURR_DB = 'news';
+
+// --- Utils ---
+const $ = id => document.getElementById(id);
+const safe = v => (v==null?'':String(v).trim());
+const fmtDate = v => {
+    if(!v) return '';
+    if(typeof v === 'number') {
+        const d = new Date((v-25569)*86400000);
+        return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
     }
+    return v;
+};
+const loadStep = (t,s,p) => {
+    $('loadTitle').innerText=t; $('loadSub').innerText=s; $('loadBar').style.width=p+'%';
+};
 
-    async function fetchXlsx(url) {
+// --- Loaders (Deep Parsing) ---
+async function fetchXlsx(url) {
+    try {
         const res = await fetch(url);
-        if(!res.ok) throw new Error(url + ' not found');
+        if(!res.ok) throw new Error();
         return XLSX.read(await res.arrayBuffer(), {type:'array'});
-    }
+    } catch(e) { console.error('Load fail:', url); return null; }
+}
 
-    async function loadNews() {
-        const wb = await fetchXlsx(FILES.NEWS);
+async function init() {
+    loadStep('讀取外電與CB...', '正在同步市場快訊', 10);
+    
+    // 1. News
+    let wb = await fetchXlsx(FILES.NEWS);
+    if(wb) {
         XLSX.utils.sheet_to_json(wb.Sheets['外電綜合報導']||[]).forEach(r => {
-            if(safe(r['資料類型']) === '個股報導') {
-                dataStore.news.push({ id:safe(r['編號']), date:safe(r['日期']), company:safe(r['公司']), code:safe(r['股號']), broker:safe(r['券商來源']), cat:safe(r['報導重點分類']), imp:safe(r['重要性']), tags:safe(r['標籤']), content:safe(r['完整報導內容']) });
-            } else if(safe(r['資料類型']) === '產業趨勢') {
-                dataStore.trends.push({ id:safe(r['編號']), date:safe(r['日期']), topic:safe(r['公司']), broker:safe(r['券商來源']), content:safe(r['完整報導內容']), rel:safe(r['股號']) });
-            }
+            if(safe(r['資料類型'])==='個股報導') DB.news.push(r);
+            if(safe(r['資料類型'])==='產業趨勢') DB.trends.push(r);
         });
     }
 
-    async function loadMemo() {
-        const wb = await fetchXlsx(FILES.MEMO);
-        XLSX.utils.sheet_to_json(wb.Sheets['報告總表']||[]).forEach(r => {
-            dataStore.memo.push({ id:safe(r['編號']), date:safe(r['日期']), company:safe(r['公司']), code:safe(r['股號']), broker:safe(r['券商']), type:safe(r['報告類型']), imp:safe(r['重要性']), ind:safe(r['產業']), revY:safe(r['營收YoY']), gm:safe(r['毛利率']), eps:safe(r['EPS']) });
-        });
-        XLSX.utils.sheet_to_json(wb.Sheets['詳細內容庫']||[]).forEach(r => details.memo[safe(r['編號'])] = r);
-        XLSX.utils.sheet_to_json(wb.Sheets['公司追蹤表']||[]).forEach(r => meta.tracking[safe(r['公司'])] = r);
-        XLSX.utils.sheet_to_json(wb.Sheets['財務數據彙總']||[]).forEach(r => meta.finance[safe(r['公司'])] = r);
-        XLSX.utils.sheet_to_json(wb.Sheets['產品結構分析']||[]).forEach(r => meta.products[safe(r['公司'])] = r);
-        XLSX.utils.sheet_to_json(wb.Sheets['關鍵時程追蹤']||[]).forEach(r => meta.timeline.push(r));
-        XLSX.utils.sheet_to_json(wb.Sheets['產業趨勢總覽']||[]).forEach(r => dataStore.industry.push(r));
-    }
-
-    async function loadReports() {
-        const wb = await fetchXlsx(FILES.REPORTS);
-        XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r => {
-            dataStore.reports.push({ id:safe(r['報告編號']), broker:safe(r['券商名稱']), date:dateFmt(r['報告日期']), title:safe(r['報告標題']), ind:safe(r['產業名稱']), highlights:[r['核心重點1'],r['核心重點2']] });
-        });
-        XLSX.utils.sheet_to_json(wb.Sheets['焦點分析內容']||[]).forEach(r => {
-            const id = safe(r['報告編號']);
-            if(!details.reports[id]) details.reports[id] = [];
-            details.reports[id].push(r);
-        });
-    }
-
-    async function loadMaster() {
-        const wb = await fetchXlsx(FILES.MASTER);
-        XLSX.utils.sheet_to_json(wb.Sheets['主資料庫']||[]).forEach(r => {
-            if(r['代號']) {
-                const c = safe(r['代號']);
-                dataStore.stocks[c] = { code:c, name:safe(r['公司名稱']), price:safe(r['成交']), chg:safe(r['漲跌幅']), ind:safe(r['產業分類']), sub:safe(r['產業細分']), mkt:safe(r['市場分類']), cap:safe(r['市值(億)']), biz:safe(r['業務摘要']) };
-                // Also index by name
-                dataStore.stocks[safe(r['公司名稱'])] = dataStore.stocks[c];
-            }
-        });
-    }
-
-    async function loadStrategy() {
-        const wb = await fetchXlsx(FILES.STRATEGY);
-        XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r => dataStore.strategy.push(r));
-        XLSX.utils.sheet_to_json(wb.Sheets['題材與趨勢']||[]).forEach(r => {
-            const id = safe(r['報告編號']);
-            if(!details.strategy[id]) details.strategy[id] = [];
-            details.strategy[id].push(r);
-        });
-    }
-
-    async function loadCB() {
-        const wb = await fetchXlsx(FILES.CB);
+    // 2. CB
+    wb = await fetchXlsx(FILES.CB);
+    if(wb) {
         XLSX.utils.sheet_to_json(wb.Sheets['08_最新動態每週基本資料']||[]).forEach(r => {
             const sc = safe(r['轉換標的代碼']);
-            const item = { code:safe(r['代號']), name:safe(r['名稱']), sc:sc, sn:safe(r['轉換標的名稱']), price:r['轉換價格(元)'], remain:r['最新餘額(百萬)'], date:dateFmt(r['到期日']) };
-            dataStore.cb.push(item);
-            if(!meta.cbs[sc]) meta.cbs[sc] = [];
-            meta.cbs[sc].push(item);
+            DB.cb.push(r);
+            if(!META.cbMap[sc]) META.cbMap[sc]=[]; META.cbMap[sc].push(r);
         });
     }
 
-    async function loadRevenue() {
-        const wb = await fetchXlsx(FILES.REV);
+    loadStep('解析研究報告...', '彙整 Call Memo 與深度報告', 40);
+
+    // 3. Memo
+    wb = await fetchXlsx(FILES.MEMO);
+    if(wb) {
+        XLSX.utils.sheet_to_json(wb.Sheets['報告總表']||[]).forEach(r=>DB.memo.push(r));
+        XLSX.utils.sheet_to_json(wb.Sheets['詳細內容庫']||[]).forEach(r=>META.memoDetail[safe(r['編號'])]=r);
+        XLSX.utils.sheet_to_json(wb.Sheets['公司追蹤表']||[]).forEach(r=>META.tracking[safe(r['公司'])]=r);
+        XLSX.utils.sheet_to_json(wb.Sheets['財務數據彙總']||[]).forEach(r=>META.finance[safe(r['公司'])]=r);
+        XLSX.utils.sheet_to_json(wb.Sheets['產品結構分析']||[]).forEach(r=>META.products[safe(r['公司'])]=r);
+        XLSX.utils.sheet_to_json(wb.Sheets['關鍵時程追蹤']||[]).forEach(r=>META.timeline.push(r));
+        XLSX.utils.sheet_to_json(wb.Sheets['產業趨勢總覽']||[]).forEach(r=>DB.industry.push(r));
+    }
+
+    // 4. Reports
+    wb = await fetchXlsx(FILES.REPORTS);
+    if(wb) {
+        XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r=>DB.reports.push(r));
+        XLSX.utils.sheet_to_json(wb.Sheets['焦點分析內容']||[]).forEach(r=>{
+            const id=safe(r['報告編號']); if(!META.reportDetail[id]) META.reportDetail[id]=[]; META.reportDetail[id].push(r);
+        });
+        XLSX.utils.sheet_to_json(wb.Sheets['個股評價表']||[]).forEach(r=>META.reportStocks.push(r));
+        XLSX.utils.sheet_to_json(wb.Sheets['券商觀點結論']||[]).forEach(r=>META.reportConc[safe(r['報告編號'])]=r);
+    }
+
+    loadStep('載入策略與營收...', '建立台股主資料庫', 70);
+
+    // 5. Strategy
+    wb = await fetchXlsx(FILES.STRAT);
+    if(wb) {
+        XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r=>DB.strategy.push(r));
+        XLSX.utils.sheet_to_json(wb.Sheets['題材與趨勢']||[]).forEach(r=>META.stratThemes.push(r));
+        XLSX.utils.sheet_to_json(wb.Sheets['季度行情規劃']||[]).forEach(r=>META.stratQuarters.push(r));
+        XLSX.utils.sheet_to_json(wb.Sheets['選股策略']||[]).forEach(r=>META.stratPicks.push(r));
+        ['總經分析','基本面分析','籌碼分析','技術分析'].forEach(s => {
+            XLSX.utils.sheet_to_json(wb.Sheets[s]||[]).forEach(r=> {
+                const id=safe(r['報告編號']); if(!META.stratViews[id]) META.stratViews[id]=[]; META.stratViews[id].push(r);
+            });
+        });
+    }
+
+    // 6. Master & Revenue
+    wb = await fetchXlsx(FILES.MASTER);
+    if(wb) XLSX.utils.sheet_to_json(wb.Sheets['主資料庫']||[]).forEach(r=>{ if(r['代號']) DB.stocks[safe(r['代號'])]=r; });
+
+    wb = await fetchXlsx(FILES.REV);
+    if(wb) {
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['000_月營收']||[]);
         const headers = Object.keys(rows[0]||{}).filter(k=>k.includes('單月營收'));
         rows.forEach(r => {
             const c = safe(r['代號']);
-            meta.revenue[c] = headers.slice(-12).map(h => ({ period:h.replace('單月營收(億)',''), val:r[h] }));
+            META.revenue[c] = headers.slice(-12).map(h => ({ p:h.replace('單月營收(億)',''), v:r[h] }));
         });
     }
 
-    // --- UI Logic ---
-    function initUI() {
-        // Build filters and counts
-        const updateCount = (id, arr) => $(id).innerText = arr.length || Object.keys(arr).length;
-        updateCount('cnt-news', dataStore.news);
-        updateCount('cnt-memo', dataStore.memo);
-        updateCount('cnt-rep', dataStore.reports);
-        updateCount('cnt-strat', dataStore.strategy);
-        updateCount('cnt-trend', dataStore.trends);
-        updateCount('cnt-ind', dataStore.industry);
-        updateCount('cnt-stk', Object.keys(dataStore.stocks));
-        updateCount('cnt-cb', dataStore.cb);
-
-        // Simple Broker Filter
-        const brokers = [...new Set([...dataStore.news.map(x=>x.broker), ...dataStore.memo.map(x=>x.broker)])].sort();
-        $('f-broker').innerHTML = '<option value="">所有券商</option>' + brokers.map(b=>`<option value="${b}">${b}</option>`).join('');
-        
-        $('searchInput').addEventListener('input', (e) => { filters.search = e.target.value.toLowerCase(); renderList(); });
-    }
-
-    function switchDB(db) {
-        currentDB = db;
-        document.querySelectorAll('.db-tab').forEach(t => t.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        renderList();
-    }
-
-    function renderList() {
-        const list = $('mainList');
-        list.innerHTML = '';
-        let items = [];
-        
-        // Data Selection
-        if(currentDB === 'news') items = dataStore.news;
-        else if(currentDB === 'memo') items = dataStore.memo;
-        else if(currentDB === 'reports') items = dataStore.reports;
-        else if(currentDB === 'stocks') items = Object.values(dataStore.stocks);
-        // ... (add other DBs logic as needed)
-
-        // Filtering
-        let filtered = items.filter(i => {
-            const str = JSON.stringify(i).toLowerCase();
-            return !filters.search || str.includes(filters.search);
-        });
-
-        $('res-count').innerText = filtered.length;
-
-        // Rendering Cards
-        list.innerHTML = filtered.slice(0, 50).map(item => {
-            if(currentDB === 'news') {
-                return createCard(item.id, item.company, item.broker, item.date, item.cat, item.imp, item.content, 'news');
-            } else if(currentDB === 'memo') {
-                const tr = meta.tracking[item.company] || {};
-                return createCard(item.id, `${item.company} (${item.code})`, item.broker, item.date, item.type, item.imp, 
-                    `${tr.rating || ''} ${tr.targetPrice ? '目標:'+tr.targetPrice : ''} | 營收YoY: ${item.revY||'-'}`, 'memo');
-            } else if(currentDB === 'stocks') {
-                return `<div class="card-base" onclick="openStockModal('${item.code}')">
-                    <div class="card-header"><span class="company-name">${item.name} <span class="stock-code">${item.code}</span></span><span style="font-weight:bold">${item.price}</span></div>
-                    <div class="card-tags"><span class="tag ind">${item.ind}</span><span class="tag date">${item.mkt}</span></div>
-                    <div class="card-content">${item.biz || ''}</div>
-                </div>`;
-            }
-            return '';
-        }).join('');
-    }
-
-    function createCard(id, title, broker, date, tag1, stars, content, type) {
-        return `<div class="card-base" onclick="open${type==='news'?'News':'Memo'}Modal('${id}')">
-            <div class="card-header">
-                <span class="company-name">${title}</span>
-                <span class="rating-stars">${stars||''}</span>
-            </div>
-            <div class="card-tags">
-                <span class="tag broker">${broker}</span>
-                <span class="tag date">${date}</span>
-                ${tag1 ? `<span class="tag ind">${tag1}</span>` : ''}
-            </div>
-            <div class="card-content">${content}</div>
-        </div>`;
-    }
-
-    // ===== MODAL LOGIC (The Visual Upgrade) =====
+    loadStep('完成', '啟動 Rex大叔投資研究室', 100);
+    updateCounts();
+    renderList();
+    $('search').addEventListener('input', renderList);
     
-    // Helper for highlighted blocks (Image 1 Style)
-    function parseHighlights(text) {
-        if(!text) return '<p style="color:#999">暫無資料</p>';
-        const lines = text.split(/[;；]/);
-        let html = '';
-        lines.forEach(line => {
-            const parts = line.split(/[:：]/);
-            if(parts.length > 1 && parts[0].length < 20) {
-                // Determine color based on keyword
-                let colorClass = 'hb-blue';
-                if(parts[0].includes('成長') || parts[0].includes('營收')) colorClass = 'hb-green';
-                if(parts[0].includes('風險') || parts[0].includes('展望')) colorClass = 'hb-orange';
-                
-                html += `<div class="highlight-block ${colorClass}">
-                    <div class="hb-title">${parts[0].trim()}</div>
-                    <div class="hb-content">${parts[1].trim()}</div>
-                </div>`;
-            } else {
-                if(line.trim()) html += `<div style="margin-bottom:8px;padding:8px;background:#fff;border-radius:8px;">${line.trim()}</div>`;
-            }
-        });
-        return html;
-    }
+    setTimeout(()=>$('loader').classList.add('hidden'), 500);
+}
 
-    // 1. Call Memo Modal (Refined to match Image 2)
-    window.openMemoModal = (id) => {
-        const item = dataStore.memo.find(x => x.id === id);
-        if(!item) return;
-        const det = details.memo[id] || {};
-        const tr = meta.tracking[item.company] || {};
-        const fin = meta.finance[item.company] || {};
-        
-        const title = `${item.company} <span style="font-size:14px;color:#666">(${item.code})</span>`;
-        const tagsHtml = `<span class="tag broker">${item.broker}</span> <span class="tag ind">${item.ind}</span> <span class="tag date">${item.date}</span> <span class="tag rating">${tr.rating||'未評等'}</span>`;
-        
-        $('m-header-info').innerHTML = `<div style="font-size:20px;font-weight:700;margin-bottom:5px;">${title}</div><div>${tagsHtml}</div>`;
-        
-        let html = `
-        <div class="modal-tabs">
-            <div class="m-tab active" onclick="setTab(this, 't-total')">📊 總覽</div>
-            <div class="m-tab" onclick="setTab(this, 't-op')">🎯 營運重點</div>
-            <div class="m-tab" onclick="setTab(this, 't-fin')">💰 財務數據</div>
-        </div>
+// --- Rendering ---
+function setDB(db) {
+    CURR_DB = db;
+    document.querySelectorAll('.db-tab').forEach(t=>t.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    renderList();
+}
 
-        <div id="t-total" class="tab-content active">
-            <div class="stats-grid">
-                <div class="stat-box"><div class="stat-label">營收YoY</div><div class="stat-value ${item.revY.includes('+')?'green':''}">${item.revY||'-'}</div></div>
-                <div class="stat-box"><div class="stat-label">毛利率</div><div class="stat-value">${item.gm||'-'}</div></div>
-                <div class="stat-box"><div class="stat-label">EPS</div><div class="stat-value">${item.eps||'-'}</div></div>
-                <div class="stat-box"><div class="stat-label">投資評等</div><div class="stat-value">${tr.rating||'-'}</div></div>
-                <div class="stat-box"><div class="stat-label">目標價</div><div class="stat-value large green">${tr.targetPrice||'-'}</div></div>
-                <div class="stat-box"><div class="stat-label">追蹤狀態</div><div class="stat-value">${tr.trackStatus||'-'}</div></div>
-            </div>
-            
-            ${det.tags ? `<div class="section-header">🏷️ 標籤</div><div class="hot-tags">${det.tags.split('#').filter(t=>t).map(t=>`<span class="hot-tag">#${t.trim()}</span>`).join('')}</div>` : ''}
-            
-            ${det.followUp ? `<div class="section-header">🔔 後續追蹤</div><div style="background:#fff8e1;padding:15px;border-radius:10px;border-left:4px solid #ffc107;">${det.followUp.replace(/\n/g,'<br>')}</div>` : ''}
-        </div>
+function updateCounts() {
+    $('c-news').innerText = DB.news.length; $('c-memo').innerText = DB.memo.length;
+    $('c-reports').innerText = DB.reports.length; $('c-strategy').innerText = DB.strategy.length;
+    $('c-trends').innerText = DB.trends.length; $('c-industry').innerText = DB.industry.length;
+    $('c-stocks').innerText = Object.keys(DB.stocks).length; $('c-cb').innerText = DB.cb.length;
+}
 
-        <div id="t-op" class="tab-content">
-            ${parseHighlights(det.operation)}
-            ${det.strategy ? `<div class="section-header">🚀 策略方向</div>${parseHighlights(det.strategy)}` : ''}
-        </div>
-
-        <div id="t-fin" class="tab-content">
-            <div class="stats-grid">
-                <div class="stat-box"><div class="stat-label">3Q25營收</div><div class="stat-value">${fin['3Q25營收']||'-'}</div></div>
-                <div class="stat-box"><div class="stat-label">稅後淨利</div><div class="stat-value">${fin['稅後淨利']||'-'}</div></div>
-            </div>
-            ${fin['4Q25指引'] ? `<div class="section-header">📈 4Q25指引</div><div class="highlight-block hb-blue"><div class="hb-content">${fin['4Q25指引']}</div></div>` : ''}
-        </div>
-        `;
-        
-        $('m-body').innerHTML = html;
-        $('modalOverlay').classList.add('active');
-    };
-
-    // 2. Stock Modal (Refined to match Image 3)
-    window.openStockModal = (code) => {
-        const stock = dataStore.stocks[code] || dataStore.stocks[Object.keys(dataStore.stocks).find(k => dataStore.stocks[k].name === code)];
-        if(!stock) return alert('無此個股資料');
-        
-        // Find related reports
-        const relatedMemo = dataStore.memo.filter(m => m.code === stock.code || m.company === stock.name);
-        const relatedNews = dataStore.news.filter(n => n.code === stock.code || n.company === stock.name);
-        
-        $('m-header-info').innerHTML = `
-            <div style="font-size:20px;font-weight:700;margin-bottom:5px;">${stock.name} (${stock.code})</div>
-            <div class="card-tags"><span class="tag ind">${stock.ind}</span><span class="tag date">${stock.mkt}</span></div>
-            <div style="font-size:13px;color:#666;margin-top:5px;">${stock.biz.substring(0,60)}...</div>
-        `;
-
-        let html = `
-        <div class="modal-tabs">
-            <div class="m-tab active" onclick="setTab(this, 's-base')">📊 基本資料</div>
-            <div class="m-tab" onclick="setTab(this, 's-rev')">💰 財務數據</div>
-            <div class="m-tab" onclick="setTab(this, 's-rep')">📑 相關報告 (${relatedMemo.length + relatedNews.length})</div>
-        </div>
-
-        <div id="s-base" class="tab-content active">
-            <div class="stats-grid">
-                <div class="stat-box"><div class="stat-label">股價</div><div class="stat-value large">${stock.price}</div></div>
-                <div class="stat-box"><div class="stat-label">漲跌幅</div><div class="stat-value ${stock.chg.includes('-')?'green':'red'}">${stock.chg}</div></div>
-                <div class="stat-box"><div class="stat-label">市值</div><div class="stat-value">${stock.cap}億</div></div>
-            </div>
-            
-            ${meta.cbs[stock.code] ? `
-                <div class="section-header">🎫 可轉債</div>
-                ${meta.cbs[stock.code].map(cb => `
-                    <div class="list-row" style="border-left:3px solid #e74c3c;">
-                        <div>
-                            <div class="lr-main">${cb.name} (${cb.code})</div>
-                            <div class="lr-sub">到期日: ${cb.date}</div>
-                        </div>
-                        <div style="text-align:right">
-                            <div class="lr-main">轉${cb.price}</div>
-                            <div class="lr-sub">餘${cb.remain}</div>
-                        </div>
-                    </div>
-                `).join('')}
-            ` : ''}
-        </div>
-
-        <div id="s-rev" class="tab-content">
-            ${meta.revenue[stock.code] ? `
-                <table style="width:100%;font-size:13px;border-collapse:collapse;margin-top:10px;">
-                    <tr style="background:#f8f8f8;text-align:left;"><th style="padding:8px;">月份</th><th style="padding:8px;text-align:right;">營收(億)</th></tr>
-                    ${meta.revenue[stock.code].map(r => `<tr><td style="padding:8px;border-bottom:1px solid #eee;">${r.period}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;">${r.val}</td></tr>`).join('')}
-                </table>
-            ` : '<div style="text-align:center;padding:20px;color:#999;">暫無營收資料</div>'}
-        </div>
-
-        <div id="s-rep" class="tab-content">
-            <div class="section-header">Call Memo</div>
-            ${relatedMemo.map(m => `
-                <div class="list-row" onclick="openMemoModal('${m.id}')">
-                    <div><div class="lr-main">${m.type}</div><div class="lr-sub">${m.date} | ${m.broker}</div></div>
-                    <div style="font-size:20px;color:#ddd;">›</div>
-                </div>
-            `).join('')}
-            
-            <div class="section-header" style="margin-top:20px;">外電報導</div>
-            ${relatedNews.map(n => `
-                <div class="list-row" onclick="openNewsModal('${n.id}')">
-                    <div><div class="lr-main">${n.cat}</div><div class="lr-sub">${n.date} | ${n.broker}</div></div>
-                    <div style="font-size:20px;color:#ddd;">›</div>
-                </div>
-            `).join('')}
-        </div>
-        `;
-        
-        $('m-body').innerHTML = html;
-        $('modalOverlay').classList.add('active');
-    };
-
-    window.openNewsModal = (id) => {
-        const item = dataStore.news.find(x => x.id === id);
-        $('m-header-info').innerHTML = `<div style="font-size:18px;font-weight:700;">${item.company}</div><div style="font-size:12px;color:#666;">${item.date} | ${item.broker}</div>`;
-        $('m-body').innerHTML = `<div class="content-block" style="line-height:1.8">${item.content}</div>`;
-        $('modalOverlay').classList.add('active');
-    };
-
-    // UI Utilities
-    window.setTab = (el, targetId) => {
-        el.parentElement.querySelectorAll('.m-tab').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
-        el.parentElement.parentElement.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        $(targetId).classList.add('active');
-    };
+function renderList() {
+    const q = $('search').value.toLowerCase();
+    let list = [], html = '';
     
-    window.closeModal = (e) => {
-        if(!e || e.target.id === 'modalOverlay' || e.target.classList.contains('modal-close')) {
-            $('modalOverlay').classList.remove('active');
-        }
-    };
+    if(CURR_DB==='news') list = DB.news;
+    else if(CURR_DB==='memo') list = DB.memo;
+    else if(CURR_DB==='reports') list = DB.reports;
+    else if(CURR_DB==='strategy') list = DB.strategy;
+    else if(CURR_DB==='trends') list = DB.trends;
+    else if(CURR_DB==='industry') list = DB.industry;
+    else if(CURR_DB==='stocks') list = Object.values(DB.stocks);
+    else if(CURR_DB==='cb') list = DB.cb;
 
-    // Start
-    window.onload = loadAll;
+    const filtered = list.filter(i => JSON.stringify(i).toLowerCase().includes(q));
+    $('resCount').innerText = filtered.length;
 
-    </script>
+    filtered.slice(0,50).forEach(i => {
+        if(CURR_DB==='news') html += makeCard(i.id, i['公司'], i['券商來源'], i['日期'], i['報導重點分類'], 'news', i['完整報導內容']);
+        else if(CURR_DB==='memo') html += makeCard(i['編號'], `${i['公司']} (${i['股號']})`, i['券商'], i['日期'], i['報告類型'], 'memo', META.memoDetail[i['編號']]?.['營運重點']);
+        else if(CURR_DB==='reports') html += makeCard(i['報告編號'], i['報告標題'], i['券商名稱'], i['報告日期'], i['產業名稱'], 'report', i['核心重點1']);
+        else if(CURR_DB==='strategy') html += makeCard(i['報告編號'], i['報告標題'], i['券商名稱'], i['報告日期'], i['報告類型'], 'strat', i['總經觀點摘要']);
+        else if(CURR_DB==='stocks') html += `<div class="card" onclick="openStock('${i['代號']}')"><div class="card-head"><div class="card-title">${i['公司名稱']} ${i['代號']}</div><div style="font-weight:700">${i['成交']||'-'}</div></div><div class="card-meta"><span class="tag ind">${i['產業分類']}</span></div></div>`;
+        else if(CURR_DB==='industry') html += `<div class="card" onclick="openInd(${DB.industry.indexOf(i)})"><div class="card-head"><div class="card-title">${i['產業']}</div><span class="tag rt">${i['趨勢判斷']}</span></div><div class="card-body">驅動: ${i['關鍵驅動因素']}</div></div>`;
+        else if(CURR_DB==='cb') html += `<div class="card" onclick="openStock('${i['轉換標的代碼']}')"><div class="card-head"><div class="card-title">${i['名稱']} (${i['代號']})</div></div><div class="card-body">標的: ${i['轉換標的名稱']} | 轉價: ${i['轉換價格(元)']} | 餘額: ${i['最新餘額(百萬)']}</div></div>`;
+        else if(CURR_DB==='trends') html += `<div class="card" onclick="openTrend('${i['編號']}')"><div class="card-head"><div class="card-title">${i['產業主題']}</div></div><div class="card-body">${i['完整內容']}</div></div>`;
+    });
+    $('list').innerHTML = html;
+}
+
+function makeCard(id, title, broker, date, tag, type, content) {
+    return `<div class="card" onclick="open${type.charAt(0).toUpperCase()+type.slice(1)}('${id}')">
+        <div class="card-head"><div class="card-title">${title}</div></div>
+        <div class="card-meta"><span class="tag brk">${broker}</span><span class="tag dt">${fmtDate(date)}</span>${tag?`<span class="tag ind">${tag}</span>`:''}</div>
+        <div class="card-body">${safe(content)}</div>
+    </div>`;
+}
+
+// ===== Modals (The Magic) =====
+function showModal(title, tabs, body) {
+    $('m-info').innerHTML = `<div style="font-size:18px;font-weight:700">${title}</div>`;
+    $('m-tabs').innerHTML = tabs.map((t,i)=>`<div class="m-tab ${i==0?'active':''}" onclick="swTab(${i})">${t}</div>`).join('');
+    $('m-body').innerHTML = body.map((b,i)=>`<div class="m-content ${i==0?'':'hidden'}" id="mc-${i}">${b}</div>`).join('');
+    $('modal').classList.add('show');
+}
+
+window.swTab = (i) => {
+    document.querySelectorAll('.m-tab').forEach(t=>t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.querySelectorAll('.m-content').forEach(c=>c.classList.add('hidden'));
+    $('mc-'+i).classList.remove('hidden');
+};
+
+window.closeModal = (e) => { if(!e || e.target.id==='modal') $('modal').classList.remove('show'); };
+
+// 1. Memo Modal
+window.openMemo = (id) => {
+    const m = DB.memo.find(x=>x['編號']==id);
+    const d = META.memoDetail[id]||{};
+    const t = META.tracking[m['公司']]||{};
+    const f = META.finance[m['公司']]||{};
+    
+    // Tab 1: 總覽 (6格 + 營運)
+    const t1 = `
+    <div class="grid-6">
+        <div class="stat-box"><div class="stat-label">營收YoY</div><div class="stat-val ${safe(m['營收YoY']).includes('+')?'up':''}">${m['營收YoY']||'-'}</div></div>
+        <div class="stat-box"><div class="stat-label">毛利率</div><div class="stat-val">${m['毛利率']||'-'}</div></div>
+        <div class="stat-box"><div class="stat-label">EPS</div><div class="stat-val">${m['EPS']||'-'}</div></div>
+        <div class="stat-box"><div class="stat-label">評等</div><div class="stat-val">${t['投資評等']||'-'}</div></div>
+        <div class="stat-box"><div class="stat-label">目標價</div><div class="stat-val up">${t['目標價']||'-'}</div></div>
+        <div class="stat-box"><div class="stat-label">追蹤</div><div class="stat-val">${t['追蹤狀態']||'-'}</div></div>
+    </div>
+    <div class="m-section"><div class="m-stitle">🎯 營運重點</div><div class="hl-content">${fmtTxt(d['營運重點'])}</div></div>
+    ${d['後續追蹤']?`<div class="hl-box hl-orange"><div class="hl-title">🔔 後續追蹤</div><div class="hl-content">${fmtTxt(d['後續追蹤'])}</div></div>`:''}
+    `;
+
+    // Tab 2: 策略
+    const t2 = `<div class="m-section"><div class="hl-content">${fmtTxt(d['策略方向']||'無資料')}</div></div>`;
+
+    // Tab 3: 財務
+    const t3 = `
+    <div class="grid-6">
+        <div class="stat-box"><div class="stat-label">3Q25營收</div><div class="stat-val">${f['3Q25營收']||'-'}</div></div>
+        <div class="stat-box"><div class="stat-label">稅後淨利</div><div class="stat-val">${f['稅後淨利']||'-'}</div></div>
+    </div>
+    ${f['4Q25指引']?`<div class="hl-box hl-blue"><div class="hl-title">📈 4Q25指引</div><div class="hl-content">${fmtTxt(f['4Q25指引'])}</div></div>`:''}
+    `;
+
+    showModal(`${m['公司']} (${m['股號']})`, ['📊 總覽','🚀 策略','💰 財務'], [t1,t2,t3]);
+};
+
+// 2. Stock Modal (The Hub)
+window.openStock = (code) => {
+    const s = DB.stocks[code];
+    if(!s) return alert('無此個股資料');
+    const name = s['公司名稱'];
+    
+    // Find related
+    const relMemo = DB.memo.filter(x=>x['股號']==code || x['公司']==name);
+    const relNews = DB.news.filter(x=>x['股號']==code || x['公司']==name);
+    const rev = META.revenue[code];
+    const cbs = META.cbMap[code];
+
+    // Tab 1: 基本
+    const t1 = `
+    <div class="grid-6">
+        <div class="stat-box"><div class="stat-label">股價</div><div class="stat-val" style="font-size:20px">${s['成交']}</div></div>
+        <div class="stat-box"><div class="stat-label">漲跌幅</div><div class="stat-val ${safe(s['漲跌幅']).includes('-')?'down':'up'}">${s['漲跌幅']}</div></div>
+        <div class="stat-box"><div class="stat-label">市值</div><div class="stat-val">${s['市值(億)']}億</div></div>
+        <div class="stat-box"><div class="stat-label">產業</div><div class="stat-val">${s['產業分類']}</div></div>
+    </div>
+    <div class="m-section"><div class="m-stitle">💼 業務</div><div class="hl-content">${s['業務摘要']}</div></div>
+    ${cbs?`<div class="m-section"><div class="m-stitle">🎫 可轉債</div>${cbs.map(c=>`<div class="hl-box hl-orange"><div class="hl-title">${c['名稱']}</div>轉換價:${c['轉換價格(元)']} | 餘額:${c['最新餘額(百萬)']} | 到期:${fmtDate(c['到期日'])}</div>`).join('')}</div>`:''}
+    `;
+
+    // Tab 2: 營收
+    const t2 = rev ? `<table><thead><tr><th>月份</th><th>營收(億)</th></tr></thead><tbody>${rev.map(r=>`<tr><td>${r.p}</td><td>${r.v}</td></tr>`).join('')}</tbody></table>` : '無營收資料';
+
+    // Tab 3: 報告
+    const t3 = `
+    <div class="m-stitle">Call Memo (${relMemo.length})</div>
+    ${relMemo.map(m=>`<div class="hl-box hl-blue" onclick="openMemo('${m['編號']}')"><div class="hl-title">${m['券商']} - ${m['報告類型']}</div><div style="font-size:12px;color:#666">${fmtDate(m['日期'])}</div></div>`).join('')}
+    <div class="m-stitle" style="margin-top:20px">外電報導 (${relNews.length})</div>
+    ${relNews.map(n=>`<div class="hl-box hl-green" onclick="openNews('${n['編號']}')"><div class="hl-title">${n['報導重點分類']}</div><div style="font-size:12px;color:#666">${fmtDate(n['日期'])}</div></div>`).join('')}
+    `;
+
+    showModal(`${name} (${code})`, ['📊 基本','💰 營收','📑 報告'], [t1,t2,t3]);
+};
+
+// 3. News Modal
+window.openNews = (id) => {
+    const n = DB.news.find(x=>x['編號']==id);
+    showModal(n['公司'], ['報導內容'], [`<div class="hl-content" style="font-size:15px;line-height:1.8">${fmtTxt(n['完整報導內容'])}</div>`]);
+};
+
+// 4. Report Modal
+window.openReport = (id) => {
+    const r = DB.reports.find(x=>x['報告編號']==id);
+    const d = META.reportDetail[id]||[];
+    const s = META.reportStocks.filter(x=>x['報告編號']==id);
+    
+    const t1 = `<div class="m-section"><div class="m-stitle">核心重點</div><div class="hl-content">${r['核心重點1']}<br><br>${r['核心重點2']}</div></div>`;
+    const t2 = d.map(x=>`<div class="hl-box hl-blue"><div class="hl-title">${x['段落標題']}</div><div class="hl-content">${fmtTxt(x['段落內容'])}</div></div>`).join('');
+    const t3 = `<table><thead><tr><th>股號</th><th>公司</th><th>評等</th><th>目標價</th></tr></thead><tbody>${s.map(x=>`<tr onclick="openStock('${x['股票代號']}')"><td>${x['股票代號']}</td><td>${x['公司名稱']}</td><td>${x['評等']}</td><td>${x['目標價']}</td></tr>`).join('')}</tbody></table>`;
+    
+    showModal(r['報告標題'], ['重點','分析','個股'], [t1,t2,t3]);
+};
+
+// 5. Strategy Modal
+window.openStrat = (id) => {
+    const s = DB.strategy.find(x=>x['報告編號']==id);
+    const th = META.stratThemes.filter(x=>x['報告編號']==id);
+    const pi = META.stratPicks.filter(x=>x['報告編號']==id);
+    
+    const t1 = `<div class="m-section"><div class="m-stitle">觀點摘要</div><div class="hl-content">${fmtTxt(s['總經觀點摘要'])}</div></div>
+    <div class="grid-6"><div class="stat-box"><div class="stat-label">指數低點</div><div class="stat-val">${s['指數預測區間_低']}</div></div><div class="stat-box"><div class="stat-label">指數高點</div><div class="stat-val up">${s['指數預測區間_高']}</div></div></div>`;
+    
+    const t2 = th.map(t=>`<div class="hl-box hl-orange"><div class="hl-title">${t['題材主題']}</div><div class="hl-content">${fmtTxt(t['題材內容'])}</div></div>`).join('');
+    const t3 = `<table><thead><tr><th>代號</th><th>公司</th><th>題材</th></tr></thead><tbody>${pi.map(p=>`<tr onclick="openStock('${p['股票代號']}')"><td>${p['股票代號']}</td><td>${p['公司名稱']}</td><td>${p['投資題材']}</td></tr>`).join('')}</tbody></table>`;
+    
+    showModal(s['報告標題'], ['觀點','題材','選股'], [t1,t2,t3]);
+};
+
+window.openTrend = (id) => {
+    const t = DB.trends.find(x=>x['編號']==id);
+    showModal(t['產業主題'], ['內容'], [`<div class="hl-content">${fmtTxt(t['完整內容'])}</div>`]);
+};
+
+window.openInd = (idx) => {
+    const i = DB.industry[idx];
+    showModal(i['產業'], ['動態'], [`
+        <div class="grid-6"><div class="stat-box"><div class="stat-label">趨勢</div><div class="stat-val">${i['趨勢判斷']}</div></div><div class="stat-box"><div class="stat-label">位置</div><div class="stat-val">${i['景氣位置']}</div></div></div>
+        <div class="m-section"><div class="m-stitle">關鍵驅動</div><div class="hl-content">${fmtTxt(i['關鍵驅動因素'])}</div></div>
+        <div class="m-section"><div class="m-stitle">投資建議</div><div class="hl-content">${fmtTxt(i['投資建議'])}</div></div>
+    `]);
+};
+
+function fmtTxt(t) { return safe(t).replace(/\n/g, '<br>').replace(/•/g, '<br>• '); }
+
+// Start
+window.onload = init;
+</script>
 </body>
 </html>
