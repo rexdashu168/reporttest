@@ -46,8 +46,9 @@
         .cb-ind-tag .num { background: var(--primary); color: #fff; padding: 1px 6px; border-radius: 10px; font-size: 10px; margin-left: 4px; }
 
         .card-list { display: flex; flex-direction: column; gap: 12px; }
-        @media(min-width: 1024px) { .card-list { display: grid; grid-template-columns: repeat(2, 1fr); } }
-        @media(min-width: 1400px) { .card-list { grid-template-columns: repeat(3, 1fr); } }
+        @media(min-width: 1024px) { .card-list:not(.cb-mode) { display: grid; grid-template-columns: repeat(2, 1fr); } }
+        @media(min-width: 1400px) { .card-list:not(.cb-mode) { grid-template-columns: repeat(3, 1fr); } }
+        .card-list.cb-mode { display: block; }
         .card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; transition: all 0.2s; }
         .card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .card-head { display: flex; justify-content: space-between; margin-bottom: 8px; }
@@ -840,9 +841,12 @@ function renderList() {
     
     $('list').innerHTML = html || '<div style="text-align:center;padding:30px;color:#999">無相符資料</div>';
     
-    // CB 表格排序初始化
+    // CB 模式時加上 class 讓表格滿版
     if(CURR_DB === 'cb') {
+        $('list').classList.add('cb-mode');
         setTimeout(initCbSort, 50);
+    } else {
+        $('list').classList.remove('cb-mode');
     }
 }
 
