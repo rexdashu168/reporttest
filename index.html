@@ -29,6 +29,8 @@
         .search-section { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 15px rgba(0,0,0,0.04); position: relative; }
         .main-search { position: relative; margin-bottom: 12px; }
         .main-search::before { content: "🔍"; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #999; }
+        
+        /* 修正 ID 對應以修復樣式 */
         #mainSearchInput { width: 100%; padding: 14px 14px 14px 48px; border: 2px solid #eee; border-radius: 30px; background: #fafaf8; font-size: 15px; transition: all 0.3s; }
         #mainSearchInput:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(201,100,66,0.1); }
         
@@ -106,10 +108,10 @@
         .val-pos { color: var(--success); font-weight: 600; }
         .val-neg { color: var(--danger); font-weight: 600; }
         
-        /* Loading */
-        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #f5f4ef; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; }
-        .loading-bar-container { width: 200px; height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; margin-top: 15px; }
-        .loading-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.3s; }
+        /* Loading 樣式 (關鍵：載入過程視覺化) */
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #f5f4ef; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; transition: opacity 0.5s; }
+        .loading-bar-container { width: 220px; height: 6px; background: #ddd; border-radius: 3px; overflow: hidden; margin-top: 15px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        .loading-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease-out; } /* 增加動畫過渡時間，讓跑動更滑順 */
         .error-msg { padding: 20px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; color: #c53030; text-align: center; margin: 20px; }
         
         @media (max-width: 600px) { .header h1 { font-size: 18px; } .db-tab { padding: 6px 10px; font-size: 11px; } .info-grid { grid-template-columns: 1fr 1fr; } }
@@ -120,7 +122,7 @@
 <div class="loading-overlay" id="loadingOverlay">
     <div style="font-size:40px;margin-bottom:10px;">📊</div>
     <h3 id="loadingText">系統啟動中...</h3>
-    <div style="font-size:12px;color:#888;margin-top:5px;" id="loadingDetail">正在整合財務與CB資料庫</div>
+    <div style="font-size:12px;color:#888;margin-top:5px;" id="loadingDetail">正在初始化資料庫引擎</div>
     <div class="loading-bar-container"><div class="loading-bar" id="loadingBar"></div></div>
 </div>
 
@@ -140,7 +142,7 @@
 
     <div class="search-section">
         <div class="main-search">
-            <input type="text" id="searchInput" placeholder="輸入代號、公司名、CB簡稱 (例如: 2330, 世紀鋼八, 機器人)...">
+            <input type="text" id="mainSearchInput" placeholder="輸入代號、公司名、CB簡稱 (例如: 2330, 世紀鋼八, 機器人)...">
             <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
         <div style="font-size:12px;color:#888;text-align:right;">* 支援代號、名稱、CB代碼、概念股關鍵字搜尋</div>
@@ -173,13 +175,22 @@ const $ = id => document.getElementById(id);
 const formatNum = (n) => n ? parseFloat(n).toLocaleString() : '-';
 const safeStr = (s) => (s || '').toString().trim();
 
-// === 資料載入核心 (優化版) ===
+// === 資料載入核心 (優化版：強化視覺回饋) ===
 async function loadData() {
-    const updateProgress = (txt, pct) => { $('loadingText').innerText = txt; $('loadingBar').style.width = pct + '%'; };
+    const updateProgress = (txt, detail, pct) => { 
+        $('loadingText').innerText = txt; 
+        $('loadingDetail').innerText = detail;
+        $('loadingBar').style.width = pct + '%'; 
+    };
+    
+    // 讓 UI 有時間渲染的輔助函數 (不簡化程式，但增加使用者體驗)
+    const yieldToUI = () => new Promise(resolve => setTimeout(resolve, 80));
 
     try {
         // 1. 載入主檔
-        updateProgress('讀取股票主檔...', 10);
+        updateProgress('系統啟動中...', '正在讀取股票主檔 (04_master.xlsx)...', 10);
+        await yieldToUI(); // 確保進度條跑動
+        
         let buf = await fetch(FILES.master).then(r => r.arrayBuffer());
         let wb = XLSX.read(buf, {type:'array'});
         XLSX.utils.sheet_to_json(wb.Sheets['主資料庫']).forEach(r => {
@@ -187,8 +198,10 @@ async function loadData() {
             if(code) DB.stocks[code] = { code, name: safeStr(r['公司名稱']), industry: safeStr(r['產業分類']), market: safeStr(r['市場分類']), price: r['成交'], cap: r['市值(億)'], business: safeStr(r['業務摘要']), hasCB: false };
         });
 
-        // 2. 載入營收 (智慧欄位偵測)
-        updateProgress('解析財務營收...', 30);
+        // 2. 載入營收
+        updateProgress('財務分析引擎...', '解析歷史營收數據 (06_revenue.xlsx)...', 35);
+        await yieldToUI();
+        
         buf = await fetch(FILES.revenue).then(r => r.arrayBuffer());
         wb = XLSX.read(buf, {type:'array'});
         
@@ -197,7 +210,6 @@ async function loadData() {
             if(!sheet) return;
             let data = XLSX.utils.sheet_to_json(sheet);
             if(data.length > 0) {
-                // 智慧抓取欄位: 包含類型關鍵字(如"單月") 但排除"排名"、"成長"等非數值欄位
                 let keys = Object.keys(data[0]);
                 let targetCols = keys.filter(k => k.includes(type) && !k.includes('排名') && !k.includes('成長') && !k.includes('備註')).sort();
                 
@@ -205,7 +217,6 @@ async function loadData() {
                     let code = safeStr(r['代號']);
                     if(!DB.revenue[code]) DB.revenue[code] = {};
                     if(!DB.revenue[code][type]) DB.revenue[code][type] = [];
-                    // 取最近 12 期
                     targetCols.slice(-12).forEach(col => {
                         let period = col.replace(type, '').replace('(億)', '').replace('單季營收', '').replace('年度營收', '');
                         DB.revenue[code][type].push({ period, value: r[col] });
@@ -217,7 +228,6 @@ async function loadData() {
         processRevenueSheet('000_季營收', '單季營收');
         processRevenueSheet('000_年營收', '年度營收');
         
-        // 營收亮點
         let wsNote = wb.Sheets['10_財報備註'];
         if(wsNote) XLSX.utils.sheet_to_json(wsNote).forEach(r => {
             let code = safeStr(r['代號']);
@@ -227,18 +237,19 @@ async function loadData() {
             }
         });
 
-        // 3. 載入 CB 資料 (深度整合 01-15 Sheets)
-        updateProgress('整合可轉債戰情...', 50);
+        // 3. 載入 CB 資料
+        updateProgress('戰情整合中...', '正在關聯可轉債數據 (00_CB.xlsx)...', 60);
+        await yieldToUI();
+        
         buf = await fetch(FILES.cb).then(r => r.arrayBuffer());
         wb = XLSX.read(buf, {type:'array'});
         
-        // 建立 CB 詳細資料索引函數
         const getCB = (code) => {
             if (!DB.cbDetails[code]) DB.cbDetails[code] = { code, adjustments: [] };
             return DB.cbDetails[code];
         };
 
-        // 08_基本資料 (核心)
+        // 08_基本資料
         let wsCB = wb.Sheets['08_最新動態每週基本資料'];
         if(wsCB) XLSX.utils.sheet_to_json(wsCB).forEach(r => {
             let cbCode = safeStr(r['代號']);
@@ -251,14 +262,13 @@ async function loadData() {
                 issueAmount: parseFloat(r['實際發行總額(百萬)']),
                 remainPct: (parseFloat(r['最新餘額(百萬)']) / parseFloat(r['實際發行總額(百萬)'])) * 100
             });
-            // 歸戶
             DB.cbList.push(obj);
             if(!DB.cb[stockCode]) DB.cb[stockCode] = [];
             DB.cb[stockCode].push(obj);
             if(DB.stocks[stockCode]) DB.stocks[stockCode].hasCB = true;
         });
 
-        // 01_基本資料 (補充擔保)
+        // 01_基本資料
         let wsBasic = wb.Sheets['01_ALLCB基本資料'];
         if(wsBasic) XLSX.utils.sheet_to_json(wsBasic).forEach(r => {
             let obj = getCB(safeStr(r['CB代號']));
@@ -267,7 +277,7 @@ async function loadData() {
             obj.underwriter = safeStr(r['發行券商']);
         });
 
-        // 03_賣回條件 (策略關鍵)
+        // 03_賣回條件
         let wsPut = wb.Sheets['03_ALLCB賣回條件'];
         if(wsPut) XLSX.utils.sheet_to_json(wsPut).forEach(r => {
             let obj = getCB(safeStr(r['CB代號']));
@@ -275,7 +285,7 @@ async function loadData() {
             obj.putPrice = safeStr(r['賣回條件']);
         });
 
-        // 09_日行情 (最新價格)
+        // 09_日行情
         let wsQuote = wb.Sheets['09_最新動態每週日行情'];
         if(wsQuote) XLSX.utils.sheet_to_json(wsQuote).forEach(r => {
             let obj = getCB(safeStr(r['代碼']));
@@ -283,7 +293,7 @@ async function loadData() {
             obj.premium = parseFloat(r['溢(折)價%']);
         });
 
-        // 11_CBAS報價 (高階數據)
+        // 11_CBAS報價
         let wsCBAS = wb.Sheets['11_最新動態CBAS報價表'];
         if(wsCBAS) XLSX.utils.sheet_to_json(wsCBAS).forEach(r => {
             let obj = getCB(safeStr(r['可轉債代碼']));
@@ -292,11 +302,10 @@ async function loadData() {
             obj.volatility = r['股價波動率120天%'];
         });
 
-        // 14_轉換價格調整 (歷史紀錄)
+        // 14_轉換價格調整
         let wsAdj = wb.Sheets['14_轉換價格調整'];
         if(wsAdj) XLSX.utils.sheet_to_json(wsAdj).forEach(r => {
             let stockCode = safeStr(r['公司代號']);
-            // 將調整紀錄綁定到該公司旗下的所有 CB (簡單對應)
             if(DB.cb[stockCode]) {
                 DB.cb[stockCode].forEach(cb => {
                     cb.adjustments.push({ desc: safeStr(r['主旨']) });
@@ -305,18 +314,33 @@ async function loadData() {
         });
 
         // 4. 載入外電
-        updateProgress('載入外電快報...', 80);
+        updateProgress('資料庫同步...', '下載外電快報與產業新聞 (01_news.xlsx)...', 85);
+        await yieldToUI();
+        
         buf = await fetch(FILES.news).then(r => r.arrayBuffer());
         wb = XLSX.read(buf, {type:'array'});
         XLSX.utils.sheet_to_json(wb.Sheets['外電綜合報導']).forEach(r => {
             DB.news.push({ date: safeStr(r['日期']), title: safeStr(r['公司']), content: safeStr(r['完整報導內容']), broker: safeStr(r['券商來源']), stockCode: safeStr(r['股號']) });
         });
 
-        updateProgress('戰情室就緒', 100);
-        setTimeout(() => { $('loadingOverlay').style.display = 'none'; renderMainList(); setupSearch(); }, 500);
+        updateProgress('準備完成', '戰情室載入完畢，歡迎使用', 100);
+        await yieldToUI();
+        
+        setTimeout(() => { 
+            $('loadingOverlay').style.opacity = '0'; 
+            setTimeout(() => {
+                $('loadingOverlay').style.display = 'none'; 
+                renderMainList(); 
+                setupSearch(); 
+            }, 500);
+        }, 500);
 
     } catch (e) {
-        alert('資料載入失敗: ' + e.message); console.error(e);
+        alert('資料載入失敗: ' + e.message + '\n\n請確保您使用伺服器環境 (Live Server) 執行此網頁，而非直接開啟檔案。'); 
+        console.error(e);
+        $('loadingText').innerText = '系統錯誤';
+        $('loadingDetail').innerText = '無法讀取資料庫檔案';
+        $('loadingBar').style.backgroundColor = '#e74c3c';
     }
 }
 
@@ -357,10 +381,9 @@ function renderCBCard(cb) {
     let div = document.createElement('div');
     div.className = 'card-base';
     div.style.borderLeft = '4px solid var(--cb-color)';
-    div.onclick = () => openStockModal(cb.stockCode); // 點擊 CB 卡片進入個股戰情
+    div.onclick = () => openStockModal(cb.stockCode);
     
-    // 簡易計算
-    let stock = DB.stocks[cb.stockCode] || {price: 0};
+    let stock = DB.stocks[cb.stockCode] || {price: 0, name: '未知'};
     let convVal = cb.convPrice > 0 ? (stock.price / cb.convPrice) * 100 : 0;
     let premium = cb.price > 0 ? ((cb.price - convVal) / convVal) * 100 : 0;
     
@@ -387,7 +410,6 @@ function openStockModal(code) {
     let stock = DB.stocks[code];
     if(!stock) return;
     
-    // 智慧歷史導航：如果前一個瀏覽的不是這檔，就推入歷史
     if(state.history.length > 0 && state.history[state.history.length-1] !== code) {
         $('modalBackBtn').style.display = 'flex';
         let prevName = DB.stocks[state.history[state.history.length-1]].name;
@@ -396,19 +418,15 @@ function openStockModal(code) {
         if(state.history.length === 0) state.history.push(code); 
         $('modalBackBtn').style.display = 'none';
     }
-    // 確保當前 code 在堆疊頂端
     if(state.history[state.history.length-1] !== code) state.history.push(code);
 
     $('modalOverlay').classList.add('active');
     $('modalTitleArea').innerHTML = `<h2 style="font-size:20px; font-weight:700;">${stock.name} (${stock.code})</h2><div style="font-size:13px;color:#666;">${stock.industry} | ${stock.market}</div>`;
     
-    // 建立 Modal Tabs
     let tabsHtml = `<button class="modal-tab active" onclick="switchModalTab('basic')">📊 基本資料</button><button class="modal-tab" onclick="switchModalTab('financial')">💰 財務營收</button><button class="modal-tab" onclick="switchModalTab('news')">📰 相關報導</button>`;
-    // 只有當有 CB 時才顯示戰情分頁
     if(stock.hasCB) tabsHtml += `<button class="modal-tab" onclick="switchModalTab('cb')" style="color:#c2185b;">🎫 可轉債/CBAS</button>`;
     $('modalTabs').innerHTML = tabsHtml;
     
-    // 準備資料
     let rev = DB.revenue[code] || {};
     let cbs = DB.cb[code] || [];
     let newsList = DB.news.filter(n => n.stockCode == code).slice(0, 10);
@@ -420,7 +438,7 @@ function openStockModal(code) {
         <div class="info-card"><div class="info-label">產業地位</div><div class="info-value" style="font-size:13px;font-weight:400;">${stock.industry}</div></div>
     </div><div class="section-title">🏢 業務內容</div><div style="line-height:1.8;color:#444;">${stock.business}</div></div></div>`;
     
-    // 2. 財務營收 Tab (動態渲染)
+    // 2. 財務營收 Tab
     let revHtml = `<div class="tab-pane" id="tab-financial">`;
     if(rev.monthly) {
         if(rev.highlights) revHtml += `<div class="info-grid"><div class="info-card" style="background:#f0f9ff;"><div class="info-label">單月紀錄</div><div class="info-value">${rev.highlights.monthRecord||'-'}</div></div><div class="info-card" style="background:#f0f9ff;"><div class="info-label">連增/減月</div><div class="info-value">${rev.highlights.monthStreak||'-'}</div></div></div>`;
@@ -430,7 +448,7 @@ function openStockModal(code) {
     } else revHtml += `<div class="error-msg">⚠️ 暫無詳細營收資料</div>`;
     revHtml += `</div>`;
     
-    // 3. CB 戰情室 (全新設計：含 Sub-tabs)
+    // 3. CB 戰情室
     let cbHtml = `<div class="tab-pane" id="tab-cb">`;
     if(cbs.length > 0) {
         cbs.forEach((cb, idx) => {
@@ -487,7 +505,6 @@ function openStockModal(code) {
     }
     cbHtml += `</div>`;
     
-    // 4. 新聞 Tab
     let newsHtml = `<div class="tab-pane" id="tab-news"><div class="section-box">`;
     newsList.forEach(n => newsHtml += `<div style="padding:10px 0;border-bottom:1px solid #eee;"><div style="font-size:12px;color:#888;">${n.date} | ${n.broker}</div><div style="font-weight:600;">${n.content}</div></div>`);
     newsHtml += `</div></div>`;
@@ -504,28 +521,38 @@ function switchModalTab(tabName) {
 }
 
 function switchSubTab(groupId, tabName) {
-    let parent = document.getElementById(groupId + '-' + tabName).parentElement;
-    let tabs = parent.previousElementSibling; // cb-sub-tabs div
-    tabs.querySelectorAll('.cb-sub-tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    parent.querySelectorAll('.cb-sub-pane').forEach(p => p.classList.remove('active'));
-    document.getElementById(groupId + '-' + tabName).classList.add('active');
+    let targetPane = document.getElementById(groupId + '-' + tabName);
+    if (!targetPane) return;
+
+    let parentSection = targetPane.parentElement;
+    parentSection.querySelectorAll('.cb-sub-pane').forEach(p => p.classList.remove('active'));
+    targetPane.classList.add('active');
+
+    let tabContainer = parentSection.querySelector('.cb-sub-tabs');
+    if (tabContainer) {
+        tabContainer.querySelectorAll('.cb-sub-tab').forEach(t => t.classList.remove('active'));
+        if (event.target.classList.contains('cb-sub-tab')) {
+            event.target.classList.add('active');
+        }
+    }
 }
 
 function closeModal() { $('modalOverlay').classList.remove('active'); state.history = []; }
 
 function modalGoBack() {
-    state.history.pop(); // 移除當前
-    let prevCode = state.history.pop(); // 取得上一個
-    if(prevCode) openStockModal(prevCode); // 重新開啟上一個
+    state.history.pop(); 
+    let prevCode = state.history.pop();
+    if(prevCode) openStockModal(prevCode); 
     else closeModal();
 }
 
 function switchDB(db) { state.currentDB = db; document.querySelectorAll('.db-tab').forEach(t => t.classList.toggle('active', t.dataset.db === db)); renderMainList(); }
 
 function setupSearch() {
-    let inp = $('searchInput');
+    // 修正搜尋 ID
+    let inp = $('mainSearchInput');
+    if (!inp) return; 
+
     inp.addEventListener('input', (e) => {
         state.search = e.target.value.trim();
         if(state.search.length > 0) {
@@ -533,7 +560,6 @@ function setupSearch() {
             let hits = Object.values(DB.stocks).filter(s => s.code.includes(state.search) || s.name.includes(state.search)).slice(0, 5);
             let html = hits.map(s => `<div class="suggestion-item" onclick="openStockModal('${s.code}')"><div class="suggestion-icon">🏢</div><div>${s.name} (${s.code})</div></div>`).join('');
             
-            // 搜尋 CB
             let cbHits = DB.cbList.filter(c => c.name.includes(state.search) || c.code.includes(state.search)).slice(0, 3);
             if(cbHits.length > 0) html += `<div class="suggestion-group-title">可轉債</div>` + cbHits.map(c => `<div class="suggestion-item" onclick="openStockModal('${c.stockCode}')"><div class="suggestion-icon">🎫</div><div>${c.name}</div></div>`).join('');
             
