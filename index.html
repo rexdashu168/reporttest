@@ -7,24 +7,23 @@
     
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
-        // 雙重保險：如果上面的來源沒載入成功，嘗試載入備用來源
         if (typeof XLSX === 'undefined') {
             document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
         }
     </script>
 
     <style>
-        /* ===== 基礎設定 ===== */
+        /* ===== 樣式表 (維持原設計) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; background: #f5f4ef; min-height: 100vh; color: #2d2d2d; }
         .container { max-width: 1200px; margin: 0 auto; padding: 12px; overflow: hidden; }
         
-        /* ===== Header ===== */
+        /* Header */
         .header { text-align: center; padding: 20px 0 15px; border-bottom: 1px solid #e5e3dc; margin-bottom: 15px; }
         .header h1 { font-size: 22px; color: #c96442; margin-bottom: 4px; }
         .header .subtitle { color: #6b6b6b; font-size: 13px; }
         
-        /* ===== 資料庫切換 Tab ===== */
+        /* Tabs */
         .db-switcher { display: flex; justify-content: center; gap: 6px; margin: 15px 0; flex-wrap: wrap; padding: 0; overflow: visible;}
         .db-tab { padding: 8px 14px; border: 2px solid #e5e3dc; background: #fff; border-radius: 20px; font-size: 12px; font-weight: 600; color: #6b6b6b; cursor: pointer; transition: all 0.2s; }
         .db-tab:hover { border-color: #c96442; color: #c96442; }
@@ -32,7 +31,7 @@
         .db-tab .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 8px; font-size: 10px; margin-left: 3px; }
         .db-tab.active .count { background: rgba(255,255,255,0.3); }
         
-        /* ===== Loading 動畫 ===== */
+        /* Loading */
         .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #f5f4ef; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loading-overlay.hidden { display: none; }
         .loading-spinner { width: 40px; height: 40px; border: 3px solid #e5e3dc; border-top-color: #c96442; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -42,14 +41,13 @@
         .loading-progress { width: 200px; height: 4px; background: #e5e3dc; border-radius: 2px; margin-top: 15px; overflow: hidden; }
         .loading-progress-bar { height: 100%; background: #c96442; width: 0%; transition: width 0.3s; }
         
-        /* ===== 搜尋與篩選 ===== */
+        /* Search & Filter */
         .search-section { background: #fff; border: 1px solid #e5e3dc; border-radius: 16px; padding: 14px; margin-bottom: 15px; }
         .main-search { position: relative; margin-bottom: 10px; }
         .main-search::before { content: "🔍"; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 15px; }
         #mainSearchInput { width: 100%; padding: 12px 12px 12px 44px; border: 2px solid #e5e3dc; border-radius: 25px; background: #fafaf8; font-size: 15px; }
         #mainSearchInput:focus { outline: none; border-color: #c96442; background: #fff; }
         
-        /* 搜尋建議 */
         .search-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #e5e3dc; border-radius: 12px; margin-top: 4px; max-height: 400px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .search-suggestions.active { display: block; }
         .suggestion-group { padding: 6px 0; border-bottom: 1px solid #f0eeea; }
@@ -65,14 +63,12 @@
         .suggestion-sub { font-size: 11px; color: #8b8b8b; margin-top: 2px; }
         .suggestion-count { font-size: 11px; color: #8b8b8b; background: #f0eeea; padding: 2px 8px; border-radius: 10px; }
 
-        /* 熱門標籤 */
         .hot-tags { margin-bottom: 10px; }
         .hot-tags-title { font-size: 11px; color: #8b8b8b; margin-bottom: 6px; }
         .hot-tags-list { display: flex; flex-wrap: wrap; gap: 5px; }
         .hot-tag { padding: 5px 10px; background: linear-gradient(135deg, #fff3e6, #ffe6cc); border: none; border-radius: 12px; font-size: 12px; color: #c96442; cursor: pointer; transition: all 0.2s; }
         .hot-tag:hover { background: #c96442; color: #fff; }
 
-        /* 篩選器 */
         .filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
         .filter-select { flex: 1; min-width: 100px; }
         .filter-select select { width: 100%; padding: 9px 10px; border: 1px solid #e5e3dc; border-radius: 18px; background: #fafaf8; font-size: 12px; cursor: pointer; }
@@ -82,7 +78,7 @@
         .active-filter { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: #c96442; color: #fff; border-radius: 12px; font-size: 11px; }
         .active-filter .remove { cursor: pointer; opacity: 0.8; }
 
-        /* 列表與卡片 */
+        /* Cards & Lists */
         .stats-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; margin-bottom: 10px; font-size: 12px; color: #6b6b6b; }
         .stats-bar strong { color: #c96442; }
         .sort-options { display: flex; gap: 6px; }
@@ -114,7 +110,7 @@
         .card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
         .mini-tag { font-size: 10px; padding: 2px 6px; background: #fff3e6; color: #c96442; border-radius: 6px; cursor: pointer; }
         
-        /* 特殊卡片樣式 */
+        /* Card Variants */
         .card-data { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid #f0eeea; margin-top: 8px; }
         .data-item { font-size: 11px; }
         .data-label { color: #8b8b8b; }
@@ -130,7 +126,7 @@
         .strategy-card { background: linear-gradient(135deg, #fff, #fff8f0); border: 2px solid #e67e22; }
         .strategy-badge { font-size: 10px; padding: 2px 8px; background: #e67e22; color: #fff; border-radius: 8px; margin-bottom: 6px; display: inline-block; }
 
-        /* ===== Modal 彈窗 ===== */
+        /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; overflow-y: auto; padding: 15px 10px; }
         .modal-overlay.active { display: block; }
         .modal-content { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 18px; overflow: hidden; animation: modalIn 0.2s ease; }
@@ -156,7 +152,6 @@
         .info-value { font-size: 13px; font-weight: 600; }
         .info-value.large { font-size: 16px; }
 
-        /* Modal 分頁 Tab */
         .tab-buttons { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; border-bottom: 1px solid #eceae3; padding-bottom: 8px; }
         .tab-btn { padding: 8px 14px; background: #eceae3; border: none; border-radius: 8px 8px 0 0; font-size: 12px; cursor: pointer; font-weight: 500; }
         .tab-btn:hover { background: #ddd; }
@@ -164,7 +159,6 @@
         .tab-content { display: none; padding: 15px 5px; line-height: 1.8; }
         .tab-content.active { display: block; }
         
-        /* 其他 Modal 內元件 */
         .product-item { background: #fafaf8; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #c96442; }
         .product-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
         .product-ratio { font-size: 14px; color: #5a9e6f; line-height: 1.5; }
@@ -177,13 +171,11 @@
         .related-meta { font-size: 11px; color: #8b8b8b; }
         .empty-state { text-align: center; padding: 50px 20px; color: #8b8b8b; }
         
-        /* 錯誤訊息框 */
         .error-box { background: #fff3f3; border: 1px solid #d64545; border-radius: 12px; padding: 20px; margin: 20px; text-align: center; }
         .error-box h3 { color: #d64545; margin-bottom: 10px; }
         .error-box p { color: #666; font-size: 13px; margin-bottom: 8px; }
         .error-box code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
 
-        /* 財務數據網格 (修復的部分) */
         .finance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
         .finance-card { background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; }
         .finance-card h4 { margin: 0 0 15px 0; color: #1e293b; font-size: 1rem; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
@@ -192,13 +184,11 @@
         .finance-item span:first-child { color: #64748b; }
         .finance-item span:last-child { font-weight: 600; color: #1e293b; }
         
-        /* 產品列表 (修復的部分) */
         .products-list { display: grid; gap: 12px; margin-bottom: 20px; }
         .product-item { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 15px 20px; border-radius: 10px; border-left: 4px solid #3b82f6; }
         .product-name { font-weight: 600; color: #1e293b; }
         .product-ratio { color: #64748b; }
         
-        /* 內容區塊 (修復的部分) */
         .section-block { background: #f8fafc; border-radius: 12px; padding: 20px; margin-top: 20px; }
         .section-block h4 { margin: 0 0 12px 0; color: #1e293b; font-size: 1rem; }
         .content-text { color: #374151; line-height: 1.8; white-space: pre-wrap; }
@@ -207,7 +197,6 @@
         .rex-view { background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%); border-left: 4px solid #f59e0b; }
         .no-data { color: #94a3b8; text-align: center; padding: 40px; font-style: italic; }
         
-        /* 標籤容器 (修復的部分) */
         .tags-container { display: flex; flex-wrap: wrap; gap: 8px; }
         .tag-chip { background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
         .meta-tag.tp { background: #dcfce7; color: #166534; }
@@ -276,16 +265,14 @@
     </div>
 
     <script>
-    // ===== 檔案路徑定義 =====
     const NEWS_FILE = '01_news.xlsx';
     const MEMO_FILE = '02_memo.xlsx';
     const REPORTS_FILE = '03_reports.xlsx';
     const MASTER_FILE = '04_master.xlsx';
-    const STRATEGY_FILE = '05_Strategy.xlsx'; // 確保大小寫與檔案一致
+    const STRATEGY_FILE = '05_Strategy.xlsx';
     const CB_FILE = '00_CB.xlsx';
     const REVENUE_FILE = '06_revenue.xlsx';
 
-    // ===== 全域資料變數 =====
     let newsData = [], newsContent = {}, trendsData = [];
     let cbData = {}; 
     let cbIndustry = {}; 
@@ -300,19 +287,12 @@
     let activeFilters = { search: '', broker: '', category: '', importance: '', industry: '', tag: '', market: '' };
     let searchIndex = { companies: {}, tags: {}, brokers: {}, stocks: {}, industries: {} };
 
-    // ===== 工具函數 =====
     async function fetchFile(url) {
         try {
             const response = await fetch(url);
-            if (!response.ok) {
-                // 更詳細的錯誤報告
-                throw new Error(`檔案 ${url} 載入失敗 (Status: ${response.status})`);
-            }
+            if (!response.ok) throw new Error(`檔案 ${url} 載入失敗 (Status: ${response.status})`);
             return await response.arrayBuffer();
-        } catch (e) {
-            console.error(e);
-            throw e; // 繼續拋出讓主程式捕獲
-        }
+        } catch (e) { console.error(e); throw e; }
     }
 
     function updateLoadingStatus(msg, detail = '', progress = 0) {
@@ -335,13 +315,9 @@
 
     function formatContent(text, forceSimple = false) {
         if (!text) return '';
-        if (forceSimple) {
-            return text.replace(/;/g, '；').replace(/•/g, '<br>• ');
-        }
+        if (forceSimple) return text.replace(/;/g, '；').replace(/•/g, '<br>• ');
         const segments = text.split(';').filter(s => s.trim());
-        if (segments.length <= 1) {
-            return text.replace(/•/g, '<br>• ');
-        }
+        if (segments.length <= 1) return text.replace(/•/g, '<br>• ');
         let html = '';
         segments.forEach(seg => {
             seg = seg.trim();
@@ -358,13 +334,9 @@
                 else if (title.includes('AI') || title.includes('伺服器')) { icon = '🤖'; color = '#8e44ad'; }
                 else if (title.includes('EV') || title.includes('電動車')) { icon = '🚗'; color = '#16a085'; }
                 else if (title.includes('半導體') || title.includes('晶片') || title.includes('SiC')) { icon = '💎'; color = '#2980b9'; }
-                
-                html += '<div style="margin-bottom:12px;padding:12px 14px;background:linear-gradient(135deg,#fff,#fafaf8);border-radius:10px;border-left:4px solid ' + color + ';box-shadow:0 1px 3px rgba(0,0,0,0.05);">';
-                html += '<div style="font-weight:600;color:' + color + ';margin-bottom:8px;font-size:16px;">' + icon + ' ' + title + '</div>';
-                html += '<div style="font-size:15px;line-height:1.8;color:#444;">' + body + '</div>';
-                html += '</div>';
+                html += `<div style="margin-bottom:12px;padding:12px 14px;background:linear-gradient(135deg,#fff,#fafaf8);border-radius:10px;border-left:4px solid ${color};box-shadow:0 1px 3px rgba(0,0,0,0.05);"><div style="font-weight:600;color:${color};margin-bottom:8px;font-size:16px;">${icon} ${title}</div><div style="font-size:15px;line-height:1.8;color:#444;">${body}</div></div>`;
             } else {
-                html += '<div style="margin-bottom:10px;padding:10px 12px;background:#fafaf8;border-radius:8px;font-size:15px;line-height:1.8;color:#444;">' + seg + '</div>';
+                html += `<div style="margin-bottom:10px;padding:10px 12px;background:#fafaf8;border-radius:8px;font-size:15px;line-height:1.8;color:#444;">${seg}</div>`;
             }
         });
         return html;
@@ -387,9 +359,7 @@
         }
         const str = String(val);
         const match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
-        if (match) {
-            return `${match[1]}/${match[2]}/${match[3]}`;
-        }
+        if (match) return `${match[1]}/${match[2]}/${match[3]}`;
         return str;
     }
 
@@ -509,8 +479,11 @@
             const s3 = wb.Sheets['公司追蹤表'];
             if(s3) XLSX.utils.sheet_to_json(s3).forEach(r => { if(r['編號']) memoTracking[safeStr(r['編號'])] = { rating: safeStr(r['投資評等']), targetPrice: safeStr(r['目標價']), trackStatus: safeStr(r['追蹤狀態']) }; });
             
+            const s4 = wb.Sheets['財務數據彙總'];
+            if(s4) XLSX.utils.sheet_to_json(s4).forEach(r => { if(r['編號']) memoFinance[safeStr(r['編號'])] = { revenueYoY: safeStr(r['營收YoY']), grossMargin: safeStr(r['毛利率']), eps: safeStr(r['EPS']), revenue3Q: safeStr(r['3Q25營收']), netIncome: safeStr(r['稅後淨利']) }; });
+
             const s6 = wb.Sheets['產業趨勢總覽'];
-            if(s6) XLSX.utils.sheet_to_json(s6).forEach(r => { if(r['產業']) memoIndustryTrends.push({ industry: safeStr(r['產業']), trend: safeStr(r['趨勢判斷']), companies: safeStr(r['代表公司']), driver: safeStr(r['關鍵驅動因素']) }); });
+            if(s6) XLSX.utils.sheet_to_json(s6).forEach(r => { if(r['產業']) memoIndustryTrends.push({ industry: safeStr(r['產業']), trend: safeStr(r['趨勢判斷']), companies: safeStr(r['代表公司']), driver: safeStr(r['關鍵驅動因素']), risks: safeStr(r['風險因素']), outlook2026: safeStr(r['2026展望']) }); });
         } catch (e) { console.warn('Memo載入失敗:', e); throw e; }
     }
 
@@ -519,7 +492,14 @@
             const ab = await fetchFile(REPORTS_FILE);
             const wb = XLSX.read(ab, { type: 'array' });
             const s1 = wb.Sheets['報告總覽'];
-            if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { if(r['報告編號']) reportsData.push({ id: safeStr(r['報告編號']), broker: safeStr(r['券商名稱']), date: formatDate(r['報告日期']), industry: safeStr(r['產業名稱']), title: safeStr(r['報告標題']), highlights: [safeStr(r['核心重點1']), safeStr(r['核心重點2'])] }); });
+            if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { if(r['報告編號']) reportsData.push({ id: safeStr(r['報告編號']), broker: safeStr(r['券商名稱']), date: formatDate(r['報告日期']), industry: safeStr(r['產業名稱']), title: safeStr(r['報告標題']), subtitle: safeStr(r['副標題']), highlights: [safeStr(r['核心重點1']), safeStr(r['核心重點2'])] }); });
+            
+            const s2 = wb.Sheets['焦點分析內容'];
+            if(s2) XLSX.utils.sheet_to_json(s2).forEach(r => { if(r['報告編號']) { 
+                const id = safeStr(r['報告編號']); 
+                if(!reportDetails[id]) reportDetails[id]=[]; 
+                reportDetails[id].push({ sectionTitle: safeStr(r['段落標題']), content: safeStr(r['段落內容']), marketSize: safeStr(r['市場規模數據']) }); 
+            }});
         } catch (e) { console.warn('Reports載入失敗:', e); throw e; }
     }
 
@@ -530,7 +510,7 @@
             const s1 = wb.Sheets['主資料庫'];
             if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { 
                 if(r['代號']) {
-                    const d = { code: safeStr(r['代號']), name: safeStr(r['公司名稱']), market: safeStr(r['市場分類']), industry: safeStr(r['產業分類']), price: safeStr(r['成交']), change: safeStr(r['漲跌價']), changePercent: safeStr(r['漲跌幅']), marketCap: safeStr(r['市值(億)']) };
+                    const d = { code: safeStr(r['代號']), name: safeStr(r['公司名稱']), market: safeStr(r['市場分類']), industry: safeStr(r['產業分類']), price: safeStr(r['成交']), change: safeStr(r['漲跌價']), changePercent: safeStr(r['漲跌幅']), marketCap: safeStr(r['市值(億)']), business: safeStr(r['業務摘要']) };
                     masterStocks[d.code] = d; masterStocks[d.name] = d;
                 }
             });
@@ -552,11 +532,9 @@
         } catch (e) { console.warn('Strategy載入失敗:', e); throw e; }
     }
 
-    // ===== 主程式入口 =====
     window.onload = async function() {
         const overlay = document.getElementById('loadingOverlay');
         try {
-            // 依序載入檔案
             updateLoadingStatus('正在載入外電資料...', NEWS_FILE, 10);
             await loadNewsData();
             
@@ -590,7 +568,6 @@
                 overlay.classList.add('hidden');
             }, 300);
 
-            // 事件監聽
             const si = document.getElementById('mainSearchInput');
             si.addEventListener('input', onSearchInput);
             si.addEventListener('focus', () => showSuggestions());
@@ -606,15 +583,9 @@
                     <div style="text-align:left;margin-top:15px;background:#fff;padding:15px;border-radius:8px;">
                         <p><strong>請檢查 GitHub 儲存庫是否有以下檔案 (區分大小寫)：</strong></p>
                         <ul style="padding-left:20px;color:#666;font-size:13px;line-height:1.6;">
-                            <li><code>${NEWS_FILE}</code></li>
-                            <li><code>${MEMO_FILE}</code></li>
-                            <li><code>${REPORTS_FILE}</code></li>
-                            <li><code>${MASTER_FILE}</code></li>
-                            <li><code>${STRATEGY_FILE}</code></li>
-                            <li><code>${CB_FILE}</code></li>
-                            <li><code>${REVENUE_FILE}</code></li>
+                            <li><code>${NEWS_FILE}</code></li><li><code>${MEMO_FILE}</code></li><li><code>${REPORTS_FILE}</code></li>
+                            <li><code>${MASTER_FILE}</code></li><li><code>${STRATEGY_FILE}</code></li><li><code>${CB_FILE}</code></li><li><code>${REVENUE_FILE}</code></li>
                         </ul>
-                        <p style="margin-top:10px;font-size:12px;color:#d64545;">注意：若在 GitHub Pages 執行，檔名必須完全一致</p>
                     </div>
                     <button onclick="location.reload()" style="margin-top:20px;padding:12px 30px;background:#c96442;border:none;border-radius:25px;color:#fff;cursor:pointer;">重新載入</button>
                 </div>
@@ -622,7 +593,6 @@
         }
     };
 
-    // ===== 索引與篩選 =====
     function buildSearchIndex() {
         searchIndex = { companies: {}, tags: {}, brokers: {}, stocks: {}, industries: {} };
         Object.values(masterStocks).forEach(s => {
@@ -638,10 +608,8 @@
     function buildFilters() {
         const brokers = [...new Set([...newsData.map(n => n.broker), ...memoReports.map(m => m.broker)])].filter(Boolean).sort();
         document.getElementById('brokerFilter').innerHTML = '<option value="">所有券商</option>' + brokers.map(b => '<option value="' + b + '">' + b + '</option>').join('');
-        
         const categories = [...new Set(newsData.map(n => n.category))].filter(Boolean).sort();
         document.getElementById('categoryFilter').innerHTML = '<option value="">所有分類</option>' + categories.map(c => '<option value="' + c + '">' + c + '</option>').join('');
-        
         const industries = [...new Set([...reportsData.map(r => r.industry), ...memoReports.map(m => m.industry)])].filter(Boolean).sort();
         document.getElementById('industryFilter').innerHTML = '<option value="">所有產業</option>' + industries.map(i => '<option value="' + i + '">' + i + '</option>').join('');
     }
@@ -662,7 +630,6 @@
         document.getElementById('stocksCount').textContent = new Set(Object.values(masterStocks).map(s => s.code)).size;
     }
 
-    // ===== 搜尋功能 =====
     function onSearchInput(e) {
         const q = e.target.value.trim().toLowerCase();
         if (q.length > 0) showSuggestions(q); else hideSuggestions();
@@ -680,7 +647,6 @@
     function hideSuggestions() { document.getElementById('searchSuggestions').classList.remove('active'); }
     function searchByTag(tag) { document.getElementById('mainSearchInput').value = '#' + tag; activeFilters.search = ''; activeFilters.tag = tag; renderCurrentDB(); }
 
-    // ===== 切換與篩選 =====
     function switchDB(db) {
         currentDB = db;
         document.querySelectorAll('.db-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.db === db));
@@ -696,38 +662,232 @@
         if (renderers[currentDB]) renderers[currentDB]();
     }
 
-    // ===== 渲染列表 =====
+    // ===== 顯示邏輯 (真實資料) =====
     function renderNews() {
         let filtered = newsData.filter(item => {
-            if (activeFilters.search && ![item.company, item.stockCode, item.category].join(' ').toLowerCase().includes(activeFilters.search)) return false;
+            if (activeFilters.search && ![item.company, item.stockCode, item.category, item.tags].join(' ').toLowerCase().includes(activeFilters.search)) return false;
             return true;
         });
+        filtered.sort((a, b) => String(b.date).localeCompare(String(a.date)));
         document.getElementById('reportsList').innerHTML = filtered.map(item => `
             <div class="card-base" onclick="openNewsModal('${item.id}')">
                 <div class="card-header"><span class="company-name">${item.company}</span><span class="importance">${item.importance}</span></div>
-                <div class="card-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag date">${item.date}</span></div>
-                <div class="card-content">${(newsContent[item.id]||'').substring(0, 60)}...</div>
+                <div class="card-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag date">${item.date}</span><span class="meta-tag category">${item.category}</span></div>
+                <div class="card-content">${(newsContent[item.id]||'').replace(/•/g, '').substring(0, 80)}...</div>
             </div>`).join('');
         document.getElementById('filteredCount').textContent = filtered.length;
     }
     
-    function renderMemo() { document.getElementById('reportsList').innerHTML = memoReports.map(m => `<div class="card-base" onclick="openMemoModal('${m.id}')"><div class="company-name">${m.company}</div><div class="card-content">Memo 功能正常載入</div></div>`).join(''); }
-    function renderReports() { document.getElementById('reportsList').innerHTML = reportsData.map(r => `<div class="card-base" onclick="openReportModal('${r.id}')"><div class="company-name">${r.title}</div></div>`).join(''); }
-    function renderStrategy() { document.getElementById('reportsList').innerHTML = strategyReports.map(r => `<div class="card-base strategy-card" onclick="openStrategyModal('${r.id}')"><div class="company-name">${r.title}</div></div>`).join(''); }
-    function renderTrends() { document.getElementById('reportsList').innerHTML = trendsData.map(t => `<div class="card-base trend-card" onclick="openTrendModal('${t.id}')"><div class="company-name">${t.topic}</div></div>`).join(''); }
-    function renderIndustry() { document.getElementById('reportsList').innerHTML = memoIndustryTrends.map((i,idx) => `<div class="card-base industry-card" onclick="openIndustryModal(${idx})"><div class="company-name">${i.industry}</div></div>`).join(''); }
-    function renderStocks() { document.getElementById('reportsList').innerHTML = Object.values(masterStocks).slice(0,20).map(s => `<div class="card-base stock-card" onclick="openStockModal('${s.code}')"><div class="company-name">${s.name} (${s.code})</div></div>`).join(''); }
-    function renderCB() { document.getElementById('reportsList').innerHTML = cbList.slice(0,20).map(c => `<div class="card-base" onclick="openStockModal('${c.stockCode}')"><div class="company-name">${c.cbName}</div></div>`).join(''); }
+    function renderMemo() {
+        let filtered = memoReports.filter(item => {
+            if (activeFilters.search && ![item.company, item.stockCode, item.broker].join(' ').toLowerCase().includes(activeFilters.search)) return false;
+            return true;
+        });
+        filtered.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+        document.getElementById('reportsList').innerHTML = filtered.map(item => {
+            const detail = memoDetails[item.id] || {};
+            const tracking = memoTracking[item.id] || {};
+            return `<div class="card-base" onclick="openMemoModal('${item.id}')">
+            <div class="card-header"><div class="card-left"><span class="company-name">${item.company}</span><span class="stock-code">${item.stockCode}</span></div><span class="importance">${item.importance}</span></div>
+            <div class="card-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag industry">${item.industry}</span><span class="meta-tag date">${item.date}</span>${tracking.rating ? `<span class="meta-tag rating">${tracking.rating}</span>` : ''}</div>
+            <div class="card-content">${(detail.operation || '').substring(0, 80)}...</div>
+            <div class="card-data"><div class="data-item"><span class="data-label">營收YoY </span><span class="data-value">${item.revenueYoY}</span></div><div class="data-item"><span class="data-label">EPS </span><span class="data-value">${item.eps}</span></div></div>
+        </div>`;
+        }).join('');
+        document.getElementById('filteredCount').textContent = filtered.length;
+    }
 
-    // ===== Modal 功能 (簡化範例，需自行補上完整邏輯) =====
-    function closeModal(e) { if (!e || e.target === document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('active'); }
-    function openStockModal(code) { alert('成功開啟個股: ' + code + ' (請自行補上完整 Modal HTML)'); }
-    function openNewsModal(id) { alert('成功開啟新聞: ' + id); }
-    function openMemoModal(id) { alert('成功開啟 Memo: ' + id); }
-    function openReportModal(id) { alert('成功開啟報告: ' + id); }
-    function openStrategyModal(id) { alert('成功開啟策略: ' + id); }
-    function openTrendModal(id) { alert('成功開啟趨勢: ' + id); }
-    function openIndustryModal(idx) { alert('成功開啟產業: ' + idx); }
+    function renderReports() { 
+        let filtered = reportsData.filter(r => {
+             if (activeFilters.search && ![r.title, r.industry].join(' ').toLowerCase().includes(activeFilters.search)) return false;
+             return true;
+        });
+        document.getElementById('reportsList').innerHTML = filtered.map(r => `
+            <div class="card-base" onclick="openReportModal('${r.id}')">
+                <div class="card-meta"><span class="meta-tag broker">${r.broker}</span><span class="meta-tag industry">${r.industry}</span></div>
+                <div class="company-name" style="margin:8px 0;">${r.title}</div>
+                <div class="card-content">${r.highlights.join(' / ').substring(0,100)}</div>
+            </div>`).join('');
+        document.getElementById('filteredCount').textContent = filtered.length;
+    }
+
+    function renderStrategy() { 
+        document.getElementById('reportsList').innerHTML = strategyReports.map(r => `
+            <div class="card-base strategy-card" onclick="openStrategyModal('${r.id}')">
+                <span class="strategy-badge">🎯 ${r.type}</span>
+                <div class="card-meta"><span class="meta-tag broker">${r.broker}</span><span class="meta-tag date">${r.date}</span></div>
+                <div class="company-name" style="margin:8px 0;">${r.title}</div>
+                <div class="card-content">${r.macroSummary.substring(0,100)}...</div>
+            </div>`).join('');
+        document.getElementById('filteredCount').textContent = strategyReports.length;
+    }
+
+    function renderTrends() { 
+        document.getElementById('reportsList').innerHTML = trendsData.map(t => `
+            <div class="card-base trend-card" onclick="openTrendModal('${t.id}')">
+                <span class="trend-badge">📈 產業趨勢</span>
+                <div class="card-meta"><span class="meta-tag broker">${t.broker}</span><span class="meta-tag date">${t.date}</span></div>
+                <div class="company-name" style="margin:8px 0;">${t.topic}</div>
+                <div class="card-content">${t.content.substring(0,80)}...</div>
+            </div>`).join('');
+        document.getElementById('filteredCount').textContent = trendsData.length;
+    }
+
+    function renderIndustry() { 
+        document.getElementById('reportsList').innerHTML = memoIndustryTrends.map((i,idx) => `
+            <div class="card-base industry-card" onclick="openIndustryModal(${idx})">
+                <span class="industry-badge">${i.trend}</span>
+                <div class="card-header"><span class="company-name">${i.industry}</span></div>
+                <div class="card-content">驅動：${i.driver}</div>
+            </div>`).join('');
+        document.getElementById('filteredCount').textContent = memoIndustryTrends.length;
+    }
+
+    function renderStocks() { 
+        const list = Object.values(masterStocks);
+        let filtered = list.filter(s => {
+             if (activeFilters.search && ![s.code, s.name].join(' ').toLowerCase().includes(activeFilters.search)) return false;
+             return true;
+        });
+        document.getElementById('reportsList').innerHTML = filtered.slice(0,50).map(s => `
+            <div class="card-base stock-card" onclick="openStockModal('${s.code}')">
+                <span class="stock-badge">${s.market}</span>
+                <div class="card-header"><div class="card-left"><span class="company-name">${s.name}</span><span class="stock-code">${s.code}</span></div><div style="text-align:right;"><div style="font-weight:700;">${s.price}</div><div style="font-size:12px;color:${String(s.changePercent).includes('-')?'#d64545':'#2e7d46'}">${s.changePercent}</div></div></div>
+                <div class="card-meta"><span class="meta-tag industry">${s.industry}</span></div>
+            </div>`).join('');
+        document.getElementById('filteredCount').textContent = filtered.length;
+    }
+
+    function renderCB() { 
+        document.getElementById('reportsList').innerHTML = cbList.slice(0,50).map(c => `
+            <div class="card-base" onclick="openStockModal('${c.stockCode}')">
+                <div class="card-header"><span class="company-name" style="color:#c96442;">${c.cbName}</span><span class="stock-code">${c.cbCode}</span></div>
+                <div class="card-meta">標的：${c.stockName} | 轉換價：${c.conversionPrice}</div>
+                <div class="card-data"><div class="data-item">餘額 ${c.remainAmount} (${c.remainPct}%)</div><div class="data-item">到期 ${c.maturityDate}</div></div>
+            </div>`).join('');
+        document.getElementById('filteredCount').textContent = cbList.length;
+    }
+
+    // ===== Modal 彈窗 (真實顯示) =====
+    function openModal() { document.getElementById('modalOverlay').classList.add('active'); document.body.style.overflow = 'hidden'; }
+    function closeModal(e) { if (!e || e.target === document.getElementById('modalOverlay') || e.target.classList.contains('modal-close')) { document.getElementById('modalOverlay').classList.remove('active'); document.body.style.overflow = ''; } }
+
+    function openNewsModal(id) {
+        const item = newsData.find(n => n.id == id);
+        if (!item) return;
+        document.getElementById('modalHeaderInfo').innerHTML = `<div class="modal-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag date">${item.date}</span></div><h2 class="modal-title">${item.company}</h2>`;
+        document.getElementById('modalBody').innerHTML = `<div class="modal-section"><h3 class="section-title">完整報導</h3><div class="content-block">${formatContent(newsContent[id]||'')}</div></div>`;
+        openModal();
+    }
+
+    function openMemoModal(id) {
+        const item = memoReports.find(m => m.id == id);
+        if (!item) return;
+        const detail = memoDetails[id] || {};
+        const finance = memoFinance[id] || {};
+        const tracking = memoTracking[id] || {};
+        
+        document.getElementById('modalHeaderInfo').innerHTML = `<div class="modal-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag date">${item.date}</span></div><h2 class="modal-title">${item.company} (${item.stockCode})</h2><p class="modal-subtitle">${item.type}</p>`;
+        
+        let html = `<div class="tab-buttons"><button class="tab-btn active" onclick="switchTab('overview')">總覽</button><button class="tab-btn" onclick="switchTab('finance')">財務</button></div>`;
+        html += `<div class="tab-content active" id="tab-overview">
+            <div class="info-grid">
+                <div class="info-item"><div class="info-label">評等</div><div class="info-value">${tracking.rating||'-'}</div></div>
+                <div class="info-item"><div class="info-label">目標價</div><div class="info-value large" style="color:#2e7d46">${tracking.targetPrice||'-'}</div></div>
+                <div class="info-item"><div class="info-label">EPS</div><div class="info-value">${item.eps||'-'}</div></div>
+            </div>
+            <div class="section-block"><h4>營運重點</h4><div class="content-text full-content">${(detail.operation||'').replace(/\n/g, '<br>')}</div></div>
+            ${detail.strategy ? `<div class="section-block"><h4>策略方向</h4><div class="content-text">${detail.strategy}</div></div>` : ''}
+        </div>`;
+        
+        html += `<div class="tab-content" id="tab-finance">
+            <div class="finance-grid">
+                <div class="finance-card"><h4>營收獲利</h4>
+                <div class="finance-item"><span>營收YoY</span><span>${finance.revenueYoY||'-'}</span></div>
+                <div class="finance-item"><span>毛利率</span><span>${finance.grossMargin||'-'}</span></div>
+                <div class="finance-item"><span>稅後淨利</span><span>${finance.netIncome||'-'}</span></div>
+                </div>
+            </div>
+        </div>`;
+        
+        document.getElementById('modalBody').innerHTML = html;
+        openModal();
+    }
+    
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    function openReportModal(id) {
+        const r = reportsData.find(x => x.id == id);
+        if(!r) return;
+        const details = reportDetails[id] || [];
+        document.getElementById('modalHeaderInfo').innerHTML = `<div class="modal-meta"><span class="meta-tag broker">${r.broker}</span><span class="meta-tag industry">${r.industry}</span></div><h2 class="modal-title">${r.title}</h2>`;
+        let html = `<div class="modal-section"><h3 class="section-title">核心重點</h3><div class="content-block">${r.highlights.join('<br><br>')}</div></div>`;
+        if(details.length > 0) {
+            html += `<div class="modal-section"><h3 class="section-title">焦點分析</h3>${details.map(d => `<div style="margin-bottom:15px;background:#fafaf8;padding:15px;border-left:4px solid #3b82f6;"><div style="font-weight:700;color:#1e40af;margin-bottom:8px;">${d.sectionTitle}</div><div class="content-text">${d.content}</div></div>`).join('')}</div>`;
+        }
+        document.getElementById('modalBody').innerHTML = html;
+        openModal();
+    }
+
+    function openStrategyModal(id) {
+        const r = strategyReports.find(x => x.id == id);
+        if(!r) return;
+        document.getElementById('modalHeaderInfo').innerHTML = `<div class="modal-meta"><span class="meta-tag broker">${r.broker}</span></div><h2 class="modal-title">${r.title}</h2>`;
+        document.getElementById('modalBody').innerHTML = `<div class="modal-section"><h3 class="section-title">觀點摘要</h3><div class="content-block">${r.macroSummary}</div></div>`;
+        openModal();
+    }
+
+    function openTrendModal(id) {
+        const t = trendsData.find(x => x.id == id);
+        if(!t) return;
+        document.getElementById('modalHeaderInfo').innerHTML = `<div class="modal-meta"><span class="meta-tag broker">${t.broker}</span></div><h2 class="modal-title">${t.topic}</h2>`;
+        document.getElementById('modalBody').innerHTML = `<div class="content-block">${formatContent(t.content)}</div>`;
+        openModal();
+    }
+
+    function openIndustryModal(idx) {
+        const item = memoIndustryTrends[idx];
+        document.getElementById('modalHeaderInfo').innerHTML = `<div class="modal-meta"><span class="meta-tag industry">${item.industry}</span></div><h2 class="modal-title">${item.industry} 動態</h2>`;
+        document.getElementById('modalBody').innerHTML = `
+            <div class="info-grid"><div class="info-item"><div class="info-label">趨勢</div><div class="info-value">${item.trend}</div></div></div>
+            <div class="modal-section" style="margin-top:15px;"><h3 class="section-title">關鍵驅動</h3><div class="content-block">${item.driver}</div></div>
+            ${item.outlook2026 ? `<div class="modal-section"><h3 class="section-title">2026展望</h3><div class="content-block">${item.outlook2026}</div></div>` : ''}
+        `;
+        openModal();
+    }
+
+    function openStockModal(code) {
+        const s = masterStocks[code];
+        if(!s) { alert('無此個股資料'); return; }
+        const r = revenueData[code] || {};
+        document.getElementById('modalHeaderInfo').innerHTML = `<div class="modal-meta"><span class="meta-tag industry">${s.industry}</span></div><h2 class="modal-title">${s.name} (${s.code})</h2>`;
+        let html = `<div class="tab-buttons"><button class="tab-btn active" onclick="switchTab('basic')">基本</button><button class="tab-btn" onclick="switchTab('rev')">營收</button></div>`;
+        
+        html += `<div class="tab-content active" id="tab-basic">
+            <div class="info-grid">
+                <div class="info-item"><div class="info-label">股價</div><div class="info-value large">${s.price}</div></div>
+                <div class="info-item"><div class="info-label">漲跌幅</div><div class="info-value">${s.changePercent}</div></div>
+                <div class="info-item"><div class="info-label">市值</div><div class="info-value">${s.marketCap}億</div></div>
+            </div>
+            ${s.business ? `<div class="section-block"><h4>業務摘要</h4><div class="content-block">${s.business}</div></div>` : ''}
+        </div>`;
+        
+        html += `<div class="tab-content" id="tab-rev">`;
+        if(r.monthly && r.monthly.length > 0) {
+            html += `<table style="width:100%;font-size:12px;border-collapse:collapse;"><tr>${r.monthly.map(m=>`<th style="border:1px solid #ddd;padding:5px;">${m.period}</th>`).join('')}</tr><tr>${r.monthly.map(m=>`<td style="border:1px solid #ddd;padding:5px;text-align:right;">${m.value}</td>`).join('')}</tr></table>`;
+        } else {
+            html += `<p class="no-data">無營收資料</p>`;
+        }
+        html += `</div>`;
+        
+        document.getElementById('modalBody').innerHTML = html;
+        openModal();
+    }
 
     </script>
 </body>
