@@ -725,23 +725,49 @@ async function loadMemoData() {
         const ab = await fetchFile(MEMO_FILE);
         const wb = XLSX.read(ab, { type: 'array' });
         
-        // 用於整合的臨時 Map（key: 股號+日期+券商）
+        // 用於整合的 Map
         const integratedMap = new Map();
-        const detailById = {};
+        const detailByKey = {}; // 改用 公司+股號 作為 key
         
-        // 1. 先讀取詳細內容庫（用編號關聯）
+        // 1. 先讀取詳細內容庫（用 公司+股號 關聯）
         const s8 = wb.Sheets['詳細內容庫'];
         if (s8) {
             XLSX.utils.sheet_to_json(s8).forEach(r => {
-                if (!r['編號']) return;
-                detailById[safeStr(r['編號'])] = {
-                    operation: safeStr(r['營運重點']),
-                    strategy: safeStr(r['策略方向']),
-                    qa: safeStr(r['重要QA摘要']),
-                    rexView: safeStr(r['Rex觀察']),
-                    followUp: safeStr(r['後續追蹤']),
-                    tags: safeStr(r['標籤'])
-                };
+                if (!r['公司']) return;
+                const company = safeStr(r['公司']);
+                const stockCode = safeStr(r['股號']);
+                const key = `${company}_${stockCode}`;
+                
+                // 如果同一公司有多筆，合併內容
+                if (!detailByKey[key]) {
+                    detailByKey[key] = {
+                        operation: safeStr(r['營運重點']),
+                        strategy: safeStr(r['策略方向']),
+                        qa: safeStr(r['重要QA摘要']),
+                        rexView: safeStr(r['Rex觀察']),
+                        followUp: safeStr(r['後續追蹤']),
+                        tags: safeStr(r['標籤'])
+                    };
+                } else {
+                    // 合併內容
+                    const exist = detailByKey[key];
+                    if (r['營運重點'] && !exist.operation.includes(safeStr(r['營運重點']))) {
+                        exist.operation += (exist.operation ? '; ' : '') + safeStr(r['營運重點']);
+                    }
+                    if (r['策略方向'] && !exist.strategy.includes(safeStr(r['策略方向']))) {
+                        exist.strategy += (exist.strategy ? '; ' : '') + safeStr(r['策略方向']);
+                    }
+                    if (r['重要QA摘要'] && !exist.qa.includes(safeStr(r['重要QA摘要']))) {
+                        exist.qa += (exist.qa ? '; ' : '') + safeStr(r['重要QA摘要']);
+                    }
+                    if (r['Rex觀察'] && !exist.rexView.includes(safeStr(r['Rex觀察']))) {
+                        exist.rexView += (exist.rexView ? '; ' : '') + safeStr(r['Rex觀察']);
+                    }
+                    if (r['後續追蹤'] && !exist.followUp.includes(safeStr(r['後續追蹤']))) {
+                        exist.followUp += (exist.followUp ? '; ' : '') + safeStr(r['後續追蹤']);
+                    }
+                    if (r['標籤']) exist.tags += (exist.tags ? ',' : '') + safeStr(r['標籤']);
+                }
             });
         }
         
@@ -756,6 +782,7 @@ async function loadMemoData() {
                 const date = safeStr(r['日期']);
                 const broker = safeStr(r['券商']);
                 const intKey = `${stockCode || company}_${date}_${broker}`;
+                const detailKey = `${company}_${stockCode}`;
                 
                 if (!integratedMap.has(intKey)) {
                     integratedMap.set(intKey, {
@@ -770,7 +797,7 @@ async function loadMemoData() {
                         eps: safeStr(r['EPS']),
                         rating: safeStr(r['投資評等']),
                         targetPrice: safeStr(r['目標價']),
-                        detailList: detailById[id] ? [detailById[id]] : []
+                        detailKey: detailKey
                     });
                 } else {
                     const exist = integratedMap.get(intKey);
@@ -782,7 +809,6 @@ async function loadMemoData() {
                     if (!exist.eps && r['EPS']) exist.eps = safeStr(r['EPS']);
                     if (!exist.rating && r['投資評等']) exist.rating = safeStr(r['投資評等']);
                     if (!exist.targetPrice && r['目標價']) exist.targetPrice = safeStr(r['目標價']);
-                    if (detailById[id]) exist.detailList.push(detailById[id]);
                 }
             });
         }
@@ -809,18 +835,9 @@ async function loadMemoData() {
                 targetPrice: data.targetPrice
             });
             
-            // 整合多筆詳細內容
-            if (data.detailList.length > 0) {
-                const merged = { operation:'', strategy:'', qa:'', rexView:'', followUp:'', tags:'' };
-                data.detailList.forEach(d => {
-                    if (d.operation && !merged.operation.includes(d.operation)) merged.operation += (merged.operation ? '; ' : '') + d.operation;
-                    if (d.strategy && !merged.strategy.includes(d.strategy)) merged.strategy += (merged.strategy ? '; ' : '') + d.strategy;
-                    if (d.qa && !merged.qa.includes(d.qa)) merged.qa += (merged.qa ? '; ' : '') + d.qa;
-                    if (d.rexView && !merged.rexView.includes(d.rexView)) merged.rexView += (merged.rexView ? '; ' : '') + d.rexView;
-                    if (d.followUp && !merged.followUp.includes(d.followUp)) merged.followUp += (merged.followUp ? '; ' : '') + d.followUp;
-                    if (d.tags) merged.tags += (merged.tags ? ',' : '') + d.tags;
-                });
-                memoDetails[mainId] = merged;
+            // 用 detailKey 關聯詳細內容
+            if (detailByKey[data.detailKey]) {
+                memoDetails[mainId] = detailByKey[data.detailKey];
             }
         });
         
