@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rex大叔投資研究室 (Finance Unlocked)</title>
+    <title>Rex大叔投資研究室 (Revenue Pro)</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>if(typeof XLSX==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');}</script>
     <style>
-        /* ===== 基礎設定 (手機優先) ===== */
+        /* ===== 1. 版面還原至 v7.0 (手機優先、置中、無彈窗) ===== */
         :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; --up: #e74c3c; --down: #27ae60; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
@@ -21,46 +21,37 @@
             width: 100%; max-width: 600px; margin: 0 auto; padding: 16px; position: relative;
         }
 
-        /* Loading */
+        /* Loading & Transitions */
         .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
         .loading-overlay.hidden { opacity: 0; pointer-events: none; }
-        .splash-icon { font-size: 48px; animation: bounce 2s infinite; margin-bottom: 15px; }
-        .splash-bar { width: 200px; height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; margin-top: 15px; }
-        .splash-progress { width: 0%; height: 100%; background: var(--primary); transition: width 0.3s; }
-        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-
-        /* 視圖切換 */
         .view-page { display: none; animation: fadeIn 0.25s ease-out; width: 100%; }
         .view-page.active { display: block; }
         @keyframes fadeIn { from{opacity:0; transform:translateY(5px);} to{opacity:1; transform:translateY(0);} }
 
-        /* Header */
+        /* Header & Tabs */
         .header { text-align: center; padding: 10px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
         .header h1 { color: var(--primary); font-size: 20px; margin-bottom: 4px; font-weight: 800; }
-        
-        /* Tabs */
-        .db-switcher { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-        .db-switcher::-webkit-scrollbar { display: none; }
+        .db-switcher { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px; scrollbar-width: none; }
         .db-tab { flex: 0 0 auto; padding: 6px 14px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--gray); cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .db-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 2px 5px rgba(201, 100, 66, 0.3); }
         .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
         
-        /* Search */
+        /* Search Box */
         .search-box { position: relative; margin-bottom: 15px; }
         .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; }
         .search-input:focus { border-color: var(--primary); }
         .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
         .clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; }
 
-        /* Card List */
+        /* Cards */
         .card-list { display: flex; flex-direction: column; gap: 12px; }
-        .card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; transition: transform 0.1s; position: relative; }
+        .card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; }
         .card:active { transform: scale(0.98); }
         .card-head { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: flex-start; }
         .card-title { font-weight: 700; font-size: 16px; color: #2c3e50; line-height: 1.3; }
         .stock-code { color: #999; font-weight: 400; font-size: 14px; margin-left: 5px; }
         .card-meta { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
-        .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 500; white-space: nowrap; }
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 500; }
         .tag.brk { background: var(--primary); }
         .tag.ind { background: #2980b9; }
         .tag.dt { background: #e0e0e0; color: #666; }
@@ -68,58 +59,36 @@
         .tag.concept { background: #8e44ad; }
         .card-body { font-size: 13px; color: #555; line-height: 1.6; word-break: break-word; }
 
-        /* Detail Navbar */
-        .detail-navbar { 
-            position: sticky; top: 0; background: var(--bg); 
-            padding: 10px 0; z-index: 100; margin-bottom: 10px;
-            box-shadow: 0 4px 6px -4px rgba(0,0,0,0.1); 
-            margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px;
-        }
-        .back-btn { 
-            background: #fff; border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; 
-            color: var(--primary); font-weight: 700; font-size: 14px; cursor: pointer; 
-            display: inline-flex; align-items: center; gap: 5px;
-        }
-
-        /* Info Blocks */
+        /* Detail Elements */
+        .detail-navbar { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; margin-bottom: 10px; margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; box-shadow: 0 4px 6px -4px rgba(0,0,0,0.1); }
+        .back-btn { background: #fff; border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; color: var(--primary); font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+        
+        /* Information Components */
         .info-card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
         .info-label { color: #888; }
         .info-val { font-weight: 600; color: #333; text-align: right; max-width: 65%; }
         
-        .hl-block { background: #fafaf8; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; line-height: 1.6; word-break: break-word; }
-        .hl-orange { border-color: #f39c12; background: #fef9e7; }
-        .hl-green { border-color: #27ae60; background: #eafaf1; }
-        .hl-blue { border-color: #2980b9; background: #ebf5fb; }
+        /* === 2. 營收一頁通專用樣式 === */
+        .fin-tab-group { display: flex; border: 1px solid var(--primary); border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+        .fin-tab-btn { flex: 1; padding: 8px; text-align: center; font-size: 13px; color: var(--primary); background: #fff; cursor: pointer; font-weight: 600; border-right: 1px solid var(--primary); }
+        .fin-tab-btn:last-child { border-right: none; }
+        .fin-tab-btn.active { background: var(--primary); color: #fff; }
         
-        .section-head { font-size: 14px; font-weight: 700; color: #555; margin: 20px 0 10px; padding-left: 8px; border-left: 4px solid #ccc; }
+        .data-table-wrap { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+        .data-table th { background: #f8f9fa; padding: 8px; color: #555; font-weight: 700; border-bottom: 2px solid #ddd; text-align: right; position: sticky; top: 0; }
+        .data-table td { padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: #333; }
+        .data-table th:first-child, .data-table td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 2; border-right: 2px solid #eee; }
+        .data-table tr:nth-child(even) td { background: #fcfcfc; }
+        .data-table tr:nth-child(even) td:first-child { background: #fcfcfc; }
         
-        /* Finance Table Styling */
-        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 10px; border-radius: 8px; border: 1px solid #eee; }
-        .fin-table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: 13px; }
-        .fin-table th { background: #fafafa; padding: 8px; border-bottom: 1px solid #eee; color: #666; font-weight: 600; text-align: right; }
-        .fin-table td { padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: #333; }
-        .fin-table th:first-child, .fin-table td:first-child { text-align: left; position: sticky; left: 0; background: inherit; border-right: 1px solid #eee; z-index: 1; }
-        .fin-table tr:nth-child(even) { background-color: #fcfcfc; }
-        .t-up { color: var(--up); }
-        .t-down { color: var(--down); }
-
-        .memo-content { font-size: 13px; color: #444; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0e0e0; line-height: 1.6; }
-        .memo-tag { display: inline-block; background: #eee; color: #666; font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-right: 5px; margin-bottom: 2px; cursor: pointer; }
-
-        .grid-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-        .stat-box { background: #f8f9fa; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #eee; }
-        .stat-label { font-size: 11px; color: #888; margin-bottom: 3px; }
-        .stat-val { font-size: 15px; font-weight: 700; color: #2c3e50; }
+        /* Colors */
+        .t-up { color: var(--up); font-weight: 700; }
+        .t-down { color: var(--down); font-weight: 700; }
+        .hl-block { background: #fafaf8; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; line-height: 1.6; }
         
-        .rep-stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 10px; }
-        .rep-stock-btn { border: 1px solid #eee; padding: 8px; text-align: center; border-radius: 6px; font-size: 13px; cursor: pointer; background: #fff; }
-
-        .tag-link { color: var(--link); cursor: pointer; font-weight: 600; margin: 0 2px; }
-        .stock-link { color: #c0392b; font-weight: 700; cursor: pointer; border-bottom: 1px dashed #c0392b; }
-        .clickable-area { cursor: pointer; }
-        
-        /* Nav Grid */
+        /* Navigation Buttons */
         .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
         .nav-btn { padding: 10px 5px; border-radius: 8px; border: none; background: #f5f5f5; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
         .nav-btn.active.b-basic { background: #e3f2fd; color: #1565c0; } 
@@ -128,26 +97,27 @@
         .nav-btn.active.b-rep { background: #f3e5f5; color: #7b1fa2; } 
         .nav-btn.active.b-time { background: #ffebee; color: #c62828; } 
         .nav-btn.active.b-rate { background: #e0f2f1; color: #00695c; } 
+        
         .tab-pane { display: none; }
         .tab-pane.active { display: block; animation: fadeIn 0.3s; }
+        .fin-sub-pane { display: none; }
+        .fin-sub-pane.active { display: block; animation: fadeIn 0.3s; }
 
+        /* Others */
         .highlight { background-color: #fff3cd; color: #856404; font-weight: bold; padding: 0 2px; border-radius: 2px; }
-        .fin-badge { display: inline-block; font-size:10px; padding:2px 6px; border-radius:4px; color:#fff; margin-bottom:4px; }
-        .bg-red { background: var(--up); }
-        .bg-green { background: var(--down); }
+        .tag-link, .stock-link { color: var(--link); cursor: pointer; font-weight: 600; }
     </style>
 </head>
 <body>
 
 <div class="loading-overlay" id="loader">
-    <div class="splash-icon">📊</div>
-    <div style="font-weight:700;font-size:18px;margin-bottom:5px" id="loadTitle">系統啟動中...</div>
-    <div style="font-size:13px;color:#888" id="loadSub">正在解析財務大數據</div>
-    <div class="splash-bar"><div class="splash-progress" id="loadBar"></div></div>
+    <div style="font-size:40px;margin-bottom:10px">📊</div>
+    <div style="font-weight:700;font-size:18px;margin-bottom:5px">Rex大叔投資研究室</div>
+    <div style="font-size:13px;color:#888" id="loadSub">正在建構營收一頁通...</div>
+    <div style="width:200px;height:4px;background:#ddd;margin-top:15px;border-radius:2px;overflow:hidden"><div style="width:0%;height:100%;background:#c96442;transition:width 0.3s" id="loadBar"></div></div>
 </div>
 
 <div class="container">
-    
     <div id="view-home" class="view-page active">
         <div class="header">
             <h1>📊 Rex大叔投資研究室</h1>
@@ -191,10 +161,10 @@
 
         <div id="m-body"></div>
     </div>
-
 </div>
 
 <script>
+// --- Data & Config ---
 const FILES = {
     NEWS: '01_news.xlsx', MEMO: '02_memo.xlsx', REPORTS: '03_reports.xlsx',
     MASTER: '04_master.xlsx', STRAT: '05_Strategy.xlsx', CB: '00_CB.xlsx', REV: '06_revenue.xlsx'
@@ -203,10 +173,11 @@ const DB = { news:[], memo:[], reports:[], strategy:[], stocks:{}, cb:[] };
 const META = { 
     memoDetail:{}, tracking:{}, finance:{}, products:{}, timeline:[], ratings:{},
     cbMap:{}, relatedNews:{}, relatedMemo:{}, reportPicks:{}, stockInReports:{}, concepts: {},
-    revData: { month: {}, quarter: {}, year: {}, highlights: {} } // New Revenue Storage
+    revData: { month: {}, quarter: {}, year: {}, highlights: {} }
 };
 let CURR_DB = 'news';
 
+// Utils
 const $ = id => document.getElementById(id);
 const safe = v => (v==null||v==undefined?'':String(v).trim());
 const fmtDate = v => {
@@ -222,12 +193,19 @@ const fmtTxt = (t) => {
     return html;
 };
 const getDateVal = (v) => { if(!v) return 0; if(typeof v === 'number') return (v - 25569) * 86400000; return new Date(v).getTime(); };
-const colorVal = (v) => {
-    if(!v || v==='-') return '';
-    const num = parseFloat(String(v).replace('%',''));
-    if(num > 0) return 't-up';
-    if(num < 0) return 't-down';
+const colorClass = (v) => {
+    if(!v || v==='-' || v===0) return '';
+    const n = parseFloat(String(v).replace(/[%$,]/g,''));
+    if(n > 0) return 't-up';
+    if(n < 0) return 't-down';
     return '';
+};
+const fmtNum = (v, isPct=false) => {
+    if(v===undefined || v===null || v==='') return '-';
+    let n = parseFloat(String(v));
+    if(isNaN(n)) return v;
+    if(isPct) return n.toFixed(2) + '%';
+    return n.toLocaleString();
 };
 
 // View Management
@@ -264,72 +242,97 @@ async function init() {
         });
     }
     
-    // Revenue Data Processing (The Core Fix)
+    // --- Revenue Parsing (Detailed) ---
     loadStep('解析財務大數據...', FILES.REV, 30);
     wb = await fetchXlsx(FILES.REV);
     if(wb) {
-        // 1. Monthly Revenue
+        // 1. Month Rev
         const sheetM = wb.Sheets['000_月營收'] || wb.Sheets[wb.SheetNames[0]];
         const rowsM = XLSX.utils.sheet_to_json(sheetM);
-        const headersM = Object.keys(rowsM[0] || {});
-        // Find columns like "23M09單月營收(億)"
-        const mCols = headersM.filter(h => h.includes('單月營收(億)'));
-        mCols.sort(); // Ensure chronological order basically
+        const headsM = Object.keys(rowsM[0]||{});
+        const mCols = headsM.filter(h => h.includes('單月營收(億)')).sort();
         
-        rowsM.forEach(r => {
-            const code = safe(r['代號']);
-            if(code) {
-                META.revData.month[code] = mCols.map(col => {
-                    const period = col.match(/(\d{2,3}M\d{2})/)?.[0] || col;
-                    return { p: period, v: r[col] };
-                }).filter(i => i.v).slice(-12).reverse(); // Keep last 12 months, reverse for display
-            }
+        // 2. Accumulated YoY (for full table)
+        const sheetAcc = wb.Sheets['000_月累營收年增'];
+        const rowsAcc = sheetAcc ? XLSX.utils.sheet_to_json(sheetAcc) : [];
+        // Map accumulated yoy by code -> date -> value
+        const accMap = {}; 
+        rowsAcc.forEach(r => {
+            const c = safe(r['代號']);
+            accMap[c] = {};
+            Object.keys(r).forEach(k => { if(k.includes('累月營收年增')) accMap[c][k.match(/(\d+M\d+)/)[0]] = r[k]; });
         });
 
-        // 2. Quarterly Revenue
+        // Build Month Data
+        rowsM.forEach(r => {
+            const c = safe(r['代號']);
+            if(!c) return;
+            const data = mCols.map(col => {
+                const dateCode = col.match(/(\d+M\d+)/)[0];
+                return { 
+                    d: dateCode, 
+                    rev: r[col], 
+                    accYoY: accMap[c]?.[dateCode] 
+                };
+            }).filter(i => i.rev); // Filter empty
+            
+            // Calculate MoM & YoY
+            for(let i=0; i<data.length; i++) {
+                // MoM
+                if(i>0) {
+                    const prev = parseFloat(data[i-1].rev);
+                    const curr = parseFloat(data[i].rev);
+                    if(prev) data[i].mom = ((curr-prev)/prev*100).toFixed(2);
+                }
+                // YoY (Approx 12 months back)
+                if(i>=12) {
+                    const prevY = parseFloat(data[i-12].rev);
+                    const curr = parseFloat(data[i].rev);
+                    if(prevY) data[i].yoy = ((curr-prevY)/prevY*100).toFixed(2);
+                }
+            }
+            META.revData.month[c] = data.slice(-13).reverse(); // Store last 13 months
+        });
+
+        // 3. Quarter
         const sheetQ = wb.Sheets['000_季營收'];
         if(sheetQ) {
             const rowsQ = XLSX.utils.sheet_to_json(sheetQ);
-            const headersQ = Object.keys(rowsQ[0] || {});
-            const qCols = headersQ.filter(h => h.includes('單季營收(億)'));
-            qCols.sort();
+            const headsQ = Object.keys(rowsQ[0]||{});
+            const qCols = headsQ.filter(h => h.includes('單季營收(億)')).sort();
             rowsQ.forEach(r => {
-                const code = safe(r['代號']);
-                if(code) {
-                    META.revData.quarter[code] = qCols.map(col => {
-                        const period = col.match(/(\d{2,3}Q\d)/)?.[0] || col;
-                        return { p: period, v: r[col] };
-                    }).filter(i => i.v).slice(-8).reverse();
+                const c = safe(r['代號']);
+                if(!c) return;
+                const data = qCols.map(col => ({ d: col.match(/(\d+Q\d)/)[0], rev: r[col] })).filter(i=>i.rev);
+                // Calc QoQ / YoY
+                for(let i=0; i<data.length; i++) {
+                    if(i>0) data[i].qoq = ((data[i].rev-data[i-1].rev)/data[i-1].rev*100).toFixed(2);
+                    if(i>=4) data[i].yoy = ((data[i].rev-data[i-4].rev)/data[i-4].rev*100).toFixed(2);
                 }
+                META.revData.quarter[c] = data.slice(-8).reverse();
             });
         }
 
-        // 3. Annual Revenue
+        // 4. Year
         const sheetY = wb.Sheets['000_年營收'];
         if(sheetY) {
             const rowsY = XLSX.utils.sheet_to_json(sheetY);
-            const headersY = Object.keys(rowsY[0] || {});
-            const yCols = headersY.filter(h => h.includes('年度營收(億)'));
-            yCols.sort();
+            const headsY = Object.keys(rowsY[0]||{});
+            const yCols = headsY.filter(h => h.includes('年度營收(億)')).sort();
             rowsY.forEach(r => {
-                const code = safe(r['代號']);
-                if(code) {
-                    META.revData.year[code] = yCols.map(col => {
-                        const period = col.match(/(\d{4})/)?.[0] || col;
-                        return { p: period, v: r[col] };
-                    }).filter(i => i.v).slice(-5).reverse();
+                const c = safe(r['代號']);
+                if(!c) return;
+                const data = yCols.map(col => ({ d: col.match(/(\d{4})/)[0], rev: r[col] })).filter(i=>i.rev);
+                for(let i=1; i<data.length; i++) {
+                    data[i].yoy = ((data[i].rev-data[i-1].rev)/data[i-1].rev*100).toFixed(2);
                 }
+                META.revData.year[c] = data.slice(-5).reverse();
             });
         }
-
-        // 4. Highlights (Note 10)
+        
+        // 5. Highlights
         const sheetN = wb.Sheets['10_財報備註'];
-        if(sheetN) {
-            XLSX.utils.sheet_to_json(sheetN).forEach(r => {
-                const code = safe(r['代號']);
-                if(code) META.revData.highlights[code] = r;
-            });
-        }
+        if(sheetN) XLSX.utils.sheet_to_json(sheetN).forEach(r=> META.revData.highlights[safe(r['代號'])] = r);
     }
 
     loadStep('讀取外電...', FILES.NEWS, 50);
@@ -437,7 +440,7 @@ window.openStock = (code) => {
     const s = DB.stocks[code] || { '公司名稱': code, '代號': code, '產業分類':'未知', '業務摘要':'' };
     const name = s['公司名稱'];
     
-    const cbs = META.cbMap[code], memos = META.relatedMemo[code]||[], news = META.relatedNews[code]||[], fin = META.finance[name]||{}, prod = META.products[name]||{}, track = META.tracking[name]||{}, rate = META.ratings[code]||{}, concepts = META.concepts[code]||[];
+    const cbs = META.cbMap[code], rev = META.revenue[code], memos = META.relatedMemo[code]||[], news = META.relatedNews[code]||[], fin = META.finance[name]||{}, prod = META.products[name]||{}, track = META.tracking[name]||{}, rate = META.ratings[code]||{}, concepts = META.concepts[code]||[];
     const revM = META.revData.month[code] || [];
     const revQ = META.revData.quarter[code] || [];
     const revY = META.revData.year[code] || [];
@@ -464,50 +467,50 @@ window.openStock = (code) => {
     }
     if(cbs) tBasic += `<div class="section-head">🎫 可轉債 (CB)</div>` + cbs.map(c=>`<div class="hl-block hl-orange"><b>${c['名稱']}</b><br>轉價:${c['轉換價格(元)']} | 餘額:${c['最新餘額(百萬)']}M</div>`).join('');
 
-    // 2. Finance (Unlocked)
+    // 2. Finance (Interactive Table)
     let tFin = `<div class="grid-stats">
         <div class="stat-box"><div class="stat-label">3Q25營收</div><div class="stat-val">${fin['3Q25營收']||'-'}</div></div>
         <div class="stat-box"><div class="stat-label">毛利率</div><div class="stat-val">${fin['毛利率']||'-'}</div></div>
         <div class="stat-box"><div class="stat-label">EPS</div><div class="stat-val">${fin['EPS']||'-'}</div></div>
-    </div>`;
+    </div>
     
-    // Revenue Highlights
-    if(revH['單月營收創紀錄月數'] || revH['單月營收連增減月數']) {
-        tFin += `<div class="section-head">營收亮點</div><div style="display:flex;gap:5px;flex-wrap:wrap;">
-            ${revH['單月營收創紀錄月數'] ? `<div class="fin-badge bg-red">🔥 歷史新高 (${revH['單月營收創紀錄月數']}次)</div>` : ''}
-            ${revH['單月營收連增減月數'] ? `<div class="fin-badge bg-green">📈 連續成長 ${revH['單月營收連增減月數']} 個月</div>` : ''}
-        </div>`;
-    }
+    <div class="fin-tab-group">
+        <div class="fin-tab-btn active" onclick="swFinTab('month',this)">月營收</div>
+        <div class="fin-tab-btn" onclick="swFinTab('quarter',this)">季營收</div>
+        <div class="fin-tab-btn" onclick="swFinTab('year',this)">年營收</div>
+    </div>
 
-    // Monthly Table (With MoM Calculation)
-    if(revM.length > 0) {
-        tFin += `<div class="section-head">近期月營收 (單位:億)</div><div class="table-wrap"><table class="fin-table"><thead><tr><th>月份</th><th>營收</th><th>月增%</th><th>備註</th></tr></thead><tbody>`;
-        for(let i=0; i<revM.length; i++) {
-            let mom = '-';
-            if(i < revM.length - 1 && revM[i+1].v) {
-                const curr = parseFloat(revM[i].v);
-                const prev = parseFloat(revM[i+1].v);
-                if(prev !== 0) mom = ((curr - prev) / prev * 100).toFixed(1) + '%';
-            }
-            tFin += `<tr><td>${revM[i].p}</td><td>${revM[i].v}</td><td class="${colorVal(mom)}">${mom}</td><td>${i===0?'最新':''}</td></tr>`;
-        }
-        tFin += `</tbody></table></div>`;
-    }
-
-    // Quarterly Table
-    if(revQ.length > 0) {
-        tFin += `<div class="section-head">季度營收趨勢</div><div class="table-wrap"><table class="fin-table"><thead><tr><th>季度</th><th>營收(億)</th></tr></thead><tbody>`;
-        revQ.forEach(r => tFin += `<tr><td>${r.p}</td><td>${r.v}</td></tr>`);
-        tFin += `</tbody></table></div>`;
-    }
-
-    // Annual Table
-    if(revY.length > 0) {
-        tFin += `<div class="section-head">年度營收</div><div class="table-wrap"><table class="fin-table"><thead><tr><th>年度</th><th>營收(億)</th></tr></thead><tbody>`;
-        revY.forEach(r => tFin += `<tr><td>${r.p}</td><td>${r.v}</td></tr>`);
-        tFin += `</tbody></table></div>`;
-    }
-
+    <div id="fin-month" class="fin-sub-pane active">
+        <div class="data-table-wrap">
+            <table class="data-table">
+                <thead><tr><th>月份</th><th>營收(億)</th><th>月增%</th><th>年增%</th><th>累計年增%</th></tr></thead>
+                <tbody>
+                    ${revM.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev)}</td><td class="${colorClass(r.mom)}">${fmtNum(r.mom,true)}</td><td class="${colorClass(r.yoy)}">${fmtNum(r.yoy,true)}</td><td class="${colorClass(r.accYoY)}">${fmtNum(r.accYoY,true)}</td></tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="fin-quarter" class="fin-sub-pane">
+        <div class="data-table-wrap">
+            <table class="data-table">
+                <thead><tr><th>季度</th><th>營收(億)</th><th>季增%</th><th>年增%</th></tr></thead>
+                <tbody>
+                    ${revQ.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev)}</td><td class="${colorClass(r.qoq)}">${fmtNum(r.qoq,true)}</td><td class="${colorClass(r.yoy)}">${fmtNum(r.yoy,true)}</td></tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="fin-year" class="fin-sub-pane">
+        <div class="data-table-wrap">
+            <table class="data-table">
+                <thead><tr><th>年度</th><th>營收(億)</th><th>年增%</th></tr></thead>
+                <tbody>
+                    ${revY.map(r=>`<tr><td>${r.d}</td><td>${fmtNum(r.rev)}</td><td class="${colorClass(r.yoy)}">${fmtNum(r.yoy,true)}</td></tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    `;
     if(fin['4Q25指引']) tFin += `<div class="hl-block hl-blue" style="margin-top:15px"><b>🔮 未來指引</b><br>${fmtTxt(fin['4Q25指引'])}</div>`;
 
     // 3. Product
@@ -583,6 +586,13 @@ window.swTab = (id, el) => {
     el.classList.add('active');
     document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
     $('tab-'+id).classList.add('active');
+};
+
+window.swFinTab = (id, el) => {
+    document.querySelectorAll('.fin-tab-btn').forEach(b=>b.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.fin-sub-pane').forEach(p=>p.classList.remove('active'));
+    $(`fin-${id}`).classList.add('active');
 };
 
 window.onload = init;
