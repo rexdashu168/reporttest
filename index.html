@@ -4,7 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rex大叔投資研究室</title>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js](https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js)"></script>
+    
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        // 雙重保險：如果上面的來源沒載入成功，嘗試載入備用來源
+        if (typeof XLSX === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
+        }
+    </script>
+
     <style>
         /* ===== 基礎設定 ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -74,4 +82,653 @@
         .active-filter { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: #c96442; color: #fff; border-radius: 12px; font-size: 11px; }
         .active-filter .remove { cursor: pointer; opacity: 0.8; }
 
-        /* 列表與卡
+        /* 列表與卡片 */
+        .stats-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; margin-bottom: 10px; font-size: 12px; color: #6b6b6b; }
+        .stats-bar strong { color: #c96442; }
+        .sort-options { display: flex; gap: 6px; }
+        .sort-btn { padding: 4px 10px; background: #eceae3; border: none; border-radius: 10px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+        .sort-btn.active { background: #c96442; color: #fff; }
+        
+        .reports-list { display: flex; flex-direction: column; gap: 10px; }
+        .card-base { background: #fff; border: 1px solid #e5e3dc; border-radius: 14px; padding: 14px; cursor: pointer; transition: all 0.2s; }
+        .card-base:hover { border-color: #c96442; box-shadow: 0 4px 16px rgba(201,100,66,0.12); transform: translateY(-1px); }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .card-left { display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap; }
+        .company-name { font-size: 15px; font-weight: 700; }
+        .company-link { color: #c96442; cursor: pointer; text-decoration: underline; }
+        .stock-code { font-size: 11px; color: #8b8b8b; background: #f0eeea; padding: 2px 6px; border-radius: 6px; cursor: pointer; }
+        .importance { color: #f5a623; font-size: 11px; }
+        
+        .card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .meta-tag { font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 500; }
+        .meta-tag.broker { background: #c96442; color: #fff; }
+        .meta-tag.category { background: #5a9e6f; color: #fff; }
+        .meta-tag.industry { background: #6b8cce; color: #fff; }
+        .meta-tag.date { background: #eceae3; color: #5a5a5a; }
+        .meta-tag.analyst { background: #e6f0ff; color: #4a6fa5; }
+        .meta-tag.trend { background: #27ae60; color: #fff; }
+        .meta-tag.rating { background: #9b59b6; color: #fff; }
+        
+        .card-content { font-size: 13px; color: #5a5a5a; line-height: 1.6; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+        .mini-tag { font-size: 10px; padding: 2px 6px; background: #fff3e6; color: #c96442; border-radius: 6px; cursor: pointer; }
+        
+        /* 特殊卡片樣式 */
+        .card-data { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid #f0eeea; margin-top: 8px; }
+        .data-item { font-size: 11px; }
+        .data-label { color: #8b8b8b; }
+        .data-value { font-weight: 600; }
+        .data-value.positive { color: #2e7d46; }
+        
+        .trend-card { background: linear-gradient(135deg, #fff, #f0fdf4); border: 2px solid #5a9e6f; }
+        .trend-badge { font-size: 10px; padding: 2px 8px; background: #5a9e6f; color: #fff; border-radius: 8px; margin-bottom: 6px; display: inline-block; }
+        .stock-card { background: linear-gradient(135deg, #fff, #f8f9ff); border: 2px solid #6b8cce; }
+        .stock-badge { font-size: 10px; padding: 2px 8px; background: #6b8cce; color: #fff; border-radius: 8px; margin-bottom: 6px; display: inline-block; }
+        .industry-card { background: linear-gradient(135deg, #fff, #faf5ff); border: 2px solid #9b59b6; }
+        .industry-badge { font-size: 10px; padding: 2px 8px; background: #9b59b6; color: #fff; border-radius: 8px; margin-bottom: 6px; display: inline-block; }
+        .strategy-card { background: linear-gradient(135deg, #fff, #fff8f0); border: 2px solid #e67e22; }
+        .strategy-badge { font-size: 10px; padding: 2px 8px; background: #e67e22; color: #fff; border-radius: 8px; margin-bottom: 6px; display: inline-block; }
+
+        /* ===== Modal 彈窗 ===== */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; overflow-y: auto; padding: 15px 10px; }
+        .modal-overlay.active { display: block; }
+        .modal-content { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 18px; overflow: hidden; animation: modalIn 0.2s ease; }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .modal-header { padding: 16px; background: #fafaf8; border-bottom: 1px solid #e5e3dc; display: flex; justify-content: space-between; align-items: flex-start; }
+        .modal-header-info { flex: 1; }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 3px; }
+        .modal-subtitle { font-size: 13px; color: #6b6b6b; }
+        .modal-close { width: 32px; height: 32px; border: none; background: #eceae3; border-radius: 50%; font-size: 18px; cursor: pointer; margin-left: 10px; }
+        
+        .modal-body { padding: 16px; max-height: 70vh; overflow-y: auto; }
+        .modal-section { margin-bottom: 18px; }
+        .section-title { font-size: 13px; font-weight: 600; color: #c96442; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #eceae3; }
+        .content-block { background: #fafaf8; border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+        
+        .tags-block { display: flex; flex-wrap: wrap; gap: 5px; }
+        .modal-tag { font-size: 12px; padding: 4px 10px; background: #fff3e6; color: #c96442; border-radius: 12px; cursor: pointer; }
+        
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .info-item { background: #fafaf8; padding: 10px; border-radius: 8px; }
+        .info-label { font-size: 13px; color: #8b8b8b; margin-bottom: 3px; }
+        .info-value { font-size: 13px; font-weight: 600; }
+        .info-value.large { font-size: 16px; }
+
+        /* Modal 分頁 Tab */
+        .tab-buttons { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; border-bottom: 1px solid #eceae3; padding-bottom: 8px; }
+        .tab-btn { padding: 8px 14px; background: #eceae3; border: none; border-radius: 8px 8px 0 0; font-size: 12px; cursor: pointer; font-weight: 500; }
+        .tab-btn:hover { background: #ddd; }
+        .tab-btn.active { background: #c96442; color: #fff; }
+        .tab-content { display: none; padding: 15px 5px; line-height: 1.8; }
+        .tab-content.active { display: block; }
+        
+        /* 其他 Modal 內元件 */
+        .product-item { background: #fafaf8; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #c96442; }
+        .product-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .product-ratio { font-size: 14px; color: #5a9e6f; line-height: 1.5; }
+        .timeline-item { padding: 10px; background: #fafaf8; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #c96442; cursor: pointer; }
+        .timeline-date { font-size: 13px; color: #c96442; font-weight: 600; }
+        .timeline-status { font-size: 12px; padding: 2px 6px; background: #e8f5ec; color: #2e7d46; border-radius: 6px; margin-top: 4px; display: inline-block; }
+        .related-item { padding: 10px; background: #fafaf8; border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; }
+        .related-item:hover { background: #fff; border-color: #c96442; }
+        .related-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .related-meta { font-size: 11px; color: #8b8b8b; }
+        .empty-state { text-align: center; padding: 50px 20px; color: #8b8b8b; }
+        
+        /* 錯誤訊息框 */
+        .error-box { background: #fff3f3; border: 1px solid #d64545; border-radius: 12px; padding: 20px; margin: 20px; text-align: center; }
+        .error-box h3 { color: #d64545; margin-bottom: 10px; }
+        .error-box p { color: #666; font-size: 13px; margin-bottom: 8px; }
+        .error-box code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+        /* 財務數據網格 (修復的部分) */
+        .finance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .finance-card { background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; }
+        .finance-card h4 { margin: 0 0 15px 0; color: #1e293b; font-size: 1rem; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+        .finance-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+        .finance-item:last-child { border-bottom: none; }
+        .finance-item span:first-child { color: #64748b; }
+        .finance-item span:last-child { font-weight: 600; color: #1e293b; }
+        
+        /* 產品列表 (修復的部分) */
+        .products-list { display: grid; gap: 12px; margin-bottom: 20px; }
+        .product-item { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 15px 20px; border-radius: 10px; border-left: 4px solid #3b82f6; }
+        .product-name { font-weight: 600; color: #1e293b; }
+        .product-ratio { color: #64748b; }
+        
+        /* 內容區塊 (修復的部分) */
+        .section-block { background: #f8fafc; border-radius: 12px; padding: 20px; margin-top: 20px; }
+        .section-block h4 { margin: 0 0 12px 0; color: #1e293b; font-size: 1rem; }
+        .content-text { color: #374151; line-height: 1.8; white-space: pre-wrap; }
+        .full-content { background: #f8fafc; padding: 25px; border-radius: 12px; max-height: 60vh; overflow-y: auto; }
+        .timeline-text { font-family: 'Monaco', 'Consolas', monospace; font-size: 0.9rem; }
+        .rex-view { background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%); border-left: 4px solid #f59e0b; }
+        .no-data { color: #94a3b8; text-align: center; padding: 40px; font-style: italic; }
+        
+        /* 標籤容器 (修復的部分) */
+        .tags-container { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag-chip { background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
+        .meta-tag.tp { background: #dcfce7; color: #166534; }
+
+        @media (max-width: 600px) { .header h1 { font-size: 18px; } .db-tab { padding: 6px 10px; font-size: 11px; } .filter-row { flex-direction: column; } .filter-select { min-width: 100%; } .info-grid { grid-template-columns: 1fr 1fr; } .tab-btn { padding: 6px 10px; font-size: 11px; } }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-status" id="loadingStatus">正在載入研究報告...</div>
+        <div class="loading-detail" id="loadingDetail"></div>
+        <div class="loading-progress"><div class="loading-progress-bar" id="loadingProgressBar"></div></div>
+    </div>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Rex大叔投資研究室</h1>
+            <p class="subtitle">券商研究報告 × 外電快報 × Call Memo × 投資策略</p>
+        </div>
+        <div class="db-switcher">
+            <button class="db-tab active" data-db="news" onclick="switchDB('news')">⚡ 外電報導 <span class="count" id="newsCount">0</span></button>
+            <button class="db-tab" data-db="memo" onclick="switchDB('memo')">📋 報告Memo <span class="count" id="memoCount">0</span></button>
+            <button class="db-tab" data-db="reports" onclick="switchDB('reports')">📑 產業報告 <span class="count" id="reportsCount">0</span></button>
+            <button class="db-tab" data-db="strategy" onclick="switchDB('strategy')">🎯 投資展望 <span class="count" id="strategyCount">0</span></button>
+            <button class="db-tab" data-db="trends" onclick="switchDB('trends')">📈 產業趨勢 <span class="count" id="trendsCount">0</span></button>
+            <button class="db-tab" data-db="industry" onclick="switchDB('industry')">🏭 產業動態 <span class="count" id="industryCount">0</span></button>
+            <button class="db-tab" data-db="stocks" onclick="switchDB('stocks')">🏢 個股查詢 <span class="count" id="stocksCount">0</span></button>
+            <button class="db-tab" data-db="cb" onclick="switchDB('cb')">🎫 CB統計 <span class="count" id="cbCount">0</span></button>
+        </div>
+        <div class="search-section">
+            <div class="main-search">
+                <input type="text" id="mainSearchInput" placeholder="搜尋公司名稱、股號、標籤、券商...">
+                <div class="search-suggestions" id="searchSuggestions"></div>
+            </div>
+            <div class="hot-tags">
+                <div class="hot-tags-title">🔥 熱門關鍵字</div>
+                <div class="hot-tags-list" id="hotTagsList"></div>
+            </div>
+            <div class="filter-row">
+                <div class="filter-select"><select id="brokerFilter"><option value="">所有券商</option></select></div>
+                <div class="filter-select" id="categoryFilterWrap"><select id="categoryFilter"><option value="">所有分類</option></select></div>
+                <div class="filter-select" id="importanceFilterWrap"><select id="importanceFilter"><option value="">所有重要性</option><option value="⭐⭐⭐⭐⭐">⭐⭐⭐⭐⭐</option><option value="⭐⭐⭐⭐">⭐⭐⭐⭐</option><option value="⭐⭐⭐">⭐⭐⭐</option></select></div>
+                <div class="filter-select" id="industryFilterWrap" style="display:none;"><select id="industryFilter"><option value="">所有產業</option></select></div>
+                <div class="filter-select" id="marketFilterWrap" style="display:none;"><select id="marketFilter"><option value="">所有市場</option></select></div>
+                <button class="clear-all-btn" onclick="clearAllFilters()">清除篩選</button>
+            </div>
+            <div class="active-filters" id="activeFilters"></div>
+        </div>
+        <div class="stats-bar">
+            <span>找到 <strong id="filteredCount">0</strong> 筆結果</span>
+            <div class="sort-options">
+                <button class="sort-btn active" data-sort="date" onclick="setSort('date')">最新</button>
+                <button class="sort-btn" data-sort="importance" onclick="setSort('importance')">重要性</button>
+            </div>
+        </div>
+        <div class="reports-list" id="reportsList"></div>
+    </div>
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-header-info" id="modalHeaderInfo"></div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+    // ===== 檔案路徑定義 =====
+    const NEWS_FILE = '01_news.xlsx';
+    const MEMO_FILE = '02_memo.xlsx';
+    const REPORTS_FILE = '03_reports.xlsx';
+    const MASTER_FILE = '04_master.xlsx';
+    const STRATEGY_FILE = '05_Strategy.xlsx'; // 確保大小寫與檔案一致
+    const CB_FILE = '00_CB.xlsx';
+    const REVENUE_FILE = '06_revenue.xlsx';
+
+    // ===== 全域資料變數 =====
+    let newsData = [], newsContent = {}, trendsData = [];
+    let cbData = {}; 
+    let cbIndustry = {}; 
+    let cbList = []; 
+    let cbPriceRange = {}; 
+    let revenueData = {}; 
+    let memoReports = [], memoTracking = {}, memoFinance = {}, memoProducts = {}, memoTimeline = [], memoIndustryTrends = [], memoDetails = {}, memoAnalysts = [];
+    let reportsData = [], reportDetails = {}, reportStocksData = {}, reportConclusions = {};
+    let masterStocks = {}, conceptStocks = [];
+    let strategyReports = [], strategyMacro = {}, strategyFundamental = {}, strategyThemes = {}, strategyChips = {}, strategyTechnical = {}, strategyQuarters = {}, strategyPicks = {};
+    let currentDB = 'news', currentSort = 'date';
+    let activeFilters = { search: '', broker: '', category: '', importance: '', industry: '', tag: '', market: '' };
+    let searchIndex = { companies: {}, tags: {}, brokers: {}, stocks: {}, industries: {} };
+
+    // ===== 工具函數 =====
+    async function fetchFile(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                // 更詳細的錯誤報告
+                throw new Error(`檔案 ${url} 載入失敗 (Status: ${response.status})`);
+            }
+            return await response.arrayBuffer();
+        } catch (e) {
+            console.error(e);
+            throw e; // 繼續拋出讓主程式捕獲
+        }
+    }
+
+    function updateLoadingStatus(msg, detail = '', progress = 0) {
+        document.getElementById('loadingStatus').textContent = msg;
+        document.getElementById('loadingDetail').textContent = detail;
+        document.getElementById('loadingProgressBar').style.width = progress + '%';
+    }
+
+    function formatDate(v) {
+        if (!v) return '';
+        if (typeof v === 'string') return v;
+        if (typeof v === 'number') {
+            const d = new Date((v - 25569) * 86400 * 1000);
+            return d.toLocaleDateString('zh-TW');
+        }
+        return String(v);
+    }
+
+    function safeStr(v) { return (v === null || v === undefined) ? '' : String(v).trim(); }
+
+    function formatContent(text, forceSimple = false) {
+        if (!text) return '';
+        if (forceSimple) {
+            return text.replace(/;/g, '；').replace(/•/g, '<br>• ');
+        }
+        const segments = text.split(';').filter(s => s.trim());
+        if (segments.length <= 1) {
+            return text.replace(/•/g, '<br>• ');
+        }
+        let html = '';
+        segments.forEach(seg => {
+            seg = seg.trim();
+            if (!seg) return;
+            const colonMatch = seg.match(/^([^:：]{2,20})[:：](.+)$/);
+            if (colonMatch) {
+                const title = colonMatch[1].trim();
+                const body = colonMatch[2].trim();
+                let icon = '📌', color = '#c96442';
+                if (title.includes('展望') || title.includes('預期')) { icon = '🔮'; color = '#9b59b6'; }
+                else if (title.includes('風險') || title.includes('挑戰')) { icon = '⚠️'; color = '#e74c3c'; }
+                else if (title.includes('成長') || title.includes('營收') || title.includes('獲利')) { icon = '📈'; color = '#27ae60'; }
+                else if (title.includes('產品') || title.includes('組合')) { icon = '📦'; color = '#3498db'; }
+                else if (title.includes('AI') || title.includes('伺服器')) { icon = '🤖'; color = '#8e44ad'; }
+                else if (title.includes('EV') || title.includes('電動車')) { icon = '🚗'; color = '#16a085'; }
+                else if (title.includes('半導體') || title.includes('晶片') || title.includes('SiC')) { icon = '💎'; color = '#2980b9'; }
+                
+                html += '<div style="margin-bottom:12px;padding:12px 14px;background:linear-gradient(135deg,#fff,#fafaf8);border-radius:10px;border-left:4px solid ' + color + ';box-shadow:0 1px 3px rgba(0,0,0,0.05);">';
+                html += '<div style="font-weight:600;color:' + color + ';margin-bottom:8px;font-size:16px;">' + icon + ' ' + title + '</div>';
+                html += '<div style="font-size:15px;line-height:1.8;color:#444;">' + body + '</div>';
+                html += '</div>';
+            } else {
+                html += '<div style="margin-bottom:10px;padding:10px 12px;background:#fafaf8;border-radius:8px;font-size:15px;line-height:1.8;color:#444;">' + seg + '</div>';
+            }
+        });
+        return html;
+    }
+
+    function parseTags(tagStr) {
+        if (!tagStr) return [];
+        return tagStr.split('#').filter(t => t.trim()).map(t => t.trim());
+    }
+
+    function excelDateToStr(val) {
+        if (!val) return '';
+        if (!isNaN(val) && typeof val === 'number') {
+            const utc_days = Math.floor(val - 25569);
+            const date = new Date(utc_days * 86400 * 1000);
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}/${m}/${d}`;
+        }
+        const str = String(val);
+        const match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+            return `${match[1]}/${match[2]}/${match[3]}`;
+        }
+        return str;
+    }
+
+    // ===== 載入函數 =====
+    async function loadCBData() {
+        try {
+            const data = await fetchFile(CB_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
+             const ws00 = wb.Sheets['00_CB代號名稱過濾及掛牌高低_20251031'];
+            if (ws00) {
+                XLSX.utils.sheet_to_json(ws00).forEach(r => {
+                    if (!r['代號']) return;
+                    cbPriceRange[String(r['代號']).trim()] = {
+                        high: parseFloat(r['掛牌最高']) || 0,
+                        low: parseFloat(r['掛牌最低']) || 0,
+                        range: r['掛牌最高'] ? ((r['掛牌最高'] - r['掛牌最低']) / r['掛牌最低'] * 100).toFixed(1) : '0'
+                    };
+                });
+            }
+            const ws16 = wb.Sheets['16_產業分類'];
+            if (ws16) {
+                XLSX.utils.sheet_to_json(ws16).forEach(r => {
+                    if (!r['股票代號']) return;
+                    cbIndustry[String(r['股票代號'])] = { industry: r['產業分類'] || '其他', market: r['市場分類'] || '', name: r['公司名稱'] || '' };
+                });
+            }
+            const ws = wb.Sheets['08_最新動態每週基本資料'];
+            if (ws) {
+                XLSX.utils.sheet_to_json(ws).forEach(r => {
+                    if (!r['轉換標的代碼']) return;
+                    const stockCode = String(r['轉換標的代碼']).trim();
+                    const ind = cbIndustry[stockCode] || {};
+                    const issueAmt = parseFloat(r['實際發行總額(百萬)']) || 0;
+                    const remainAmt = parseFloat(r['最新餘額(百萬)']) || 0;
+                    const cbInfo = {
+                        cbCode: String(r['代號']), cbName: String(r['名稱'] || ''), stockCode: stockCode, stockName: String(r['轉換標的名稱'] || ''),
+                        conversionPrice: parseFloat(r['轉換價格(元)']) || 0, maturityDate: excelDateToStr(r['到期日']),
+                        remainAmount: remainAmt, remainPct: issueAmt > 0 ? ((remainAmt / issueAmt) * 100).toFixed(1) : '0',
+                        industry: ind.industry || '其他'
+                    };
+                    const codeKey = stockCode.replace(/\s/g, '');
+                    if (!cbData[codeKey]) cbData[codeKey] = [];
+                    cbData[codeKey].push(cbInfo);
+                    cbList.push(cbInfo);
+                });
+            }
+        } catch (e) { console.warn('CB資料載入失敗:', e); }
+    }
+
+    async function loadRevenueData() {
+        try {
+            const data = await fetchFile(REVENUE_FILE);
+            const wb = XLSX.read(data, { type: 'array' });
+            const ws12 = wb.Sheets['12_公司基本資料'];
+            if (ws12) {
+                XLSX.utils.sheet_to_json(ws12).forEach(r => {
+                    if (r['代號']) revenueData[String(r['代號']).trim()] = { monthly: [], priceHistory: {} };
+                });
+            }
+            const wsMonth = wb.Sheets['000_月營收'];
+            if (wsMonth) {
+                const rows = XLSX.utils.sheet_to_json(wsMonth);
+                const headers = Object.keys(rows[0] || {});
+                const monthCols = headers.filter(h => h.includes('單月營收'));
+                rows.forEach(r => {
+                    if (!r['代號']) return;
+                    const code = String(r['代號']).trim();
+                    if (revenueData[code]) {
+                        revenueData[code].monthly = monthCols.slice(-12).map(col => ({ period: col.replace('單月營收(億)', ''), value: r[col] || '' }));
+                    }
+                });
+            }
+            const ws13 = wb.Sheets['13_歷史高低'];
+            if (ws13) {
+                XLSX.utils.sheet_to_json(ws13).forEach(r => {
+                    if (r['代號'] && revenueData[String(r['代號']).trim()]) {
+                        revenueData[String(r['代號']).trim()].priceHistory = { y1High: r['1年最高股價'] || '', y1Low: r['1年最低股價'] || '' };
+                    }
+                });
+            }
+        } catch (e) { console.warn('營收資料載入失敗:', e); }
+    }
+
+    async function loadNewsData() {
+        try {
+            const ab = await fetchFile(NEWS_FILE);
+            const wb = XLSX.read(ab, { type: 'array' });
+            const ws = wb.Sheets['外電綜合報導'];
+            if (ws) {
+                XLSX.utils.sheet_to_json(ws).forEach(r => {
+                    if (!r['編號']) return;
+                    if (safeStr(r['資料類型']) === '個股報導') {
+                        newsData.push({ id: safeStr(r['編號']), date: safeStr(r['日期']), company: safeStr(r['公司']), stockCode: safeStr(r['股號']), broker: safeStr(r['券商來源']), category: safeStr(r['報導重點分類']), importance: safeStr(r['重要性']), tags: safeStr(r['標籤']) });
+                        newsContent[safeStr(r['編號'])] = safeStr(r['完整報導內容']);
+                    }
+                     else if (safeStr(r['資料類型']) === '產業趨勢') {
+                        trendsData.push({ id: safeStr(r['編號']), date: safeStr(r['日期']), topic: safeStr(r['公司']), broker: safeStr(r['券商來源']), content: safeStr(r['完整報導內容']), companies: safeStr(r['股號']), tags: safeStr(r['標籤']) });
+                    }
+                });
+            }
+        } catch (e) { console.warn('外電載入失敗:', e); throw e; }
+    }
+
+    async function loadMemoData() {
+        try {
+            const ab = await fetchFile(MEMO_FILE);
+            const wb = XLSX.read(ab, { type: 'array' });
+            const s1 = wb.Sheets['報告總表'];
+            if (s1) {
+                XLSX.utils.sheet_to_json(s1).forEach(r => {
+                    if(r['編號']) memoReports.push({ id: safeStr(r['編號']), date: safeStr(r['日期']), company: safeStr(r['公司']), stockCode: safeStr(r['股號']), broker: safeStr(r['券商']), type: safeStr(r['報告類型']), importance: safeStr(r['重要性']), industry: safeStr(r['產業']), revenueYoY: safeStr(r['營收YoY']), grossMargin: safeStr(r['毛利率']), eps: safeStr(r['EPS']) });
+                });
+            }
+            const s2 = wb.Sheets['詳細內容庫'];
+            if(s2) XLSX.utils.sheet_to_json(s2).forEach(r => { if(r['編號']) memoDetails[safeStr(r['編號'])] = { operation: safeStr(r['營運重點']), strategy: safeStr(r['策略方向']), tags: safeStr(r['標籤']) }; });
+            
+            const s3 = wb.Sheets['公司追蹤表'];
+            if(s3) XLSX.utils.sheet_to_json(s3).forEach(r => { if(r['編號']) memoTracking[safeStr(r['編號'])] = { rating: safeStr(r['投資評等']), targetPrice: safeStr(r['目標價']), trackStatus: safeStr(r['追蹤狀態']) }; });
+            
+            const s6 = wb.Sheets['產業趨勢總覽'];
+            if(s6) XLSX.utils.sheet_to_json(s6).forEach(r => { if(r['產業']) memoIndustryTrends.push({ industry: safeStr(r['產業']), trend: safeStr(r['趨勢判斷']), companies: safeStr(r['代表公司']), driver: safeStr(r['關鍵驅動因素']) }); });
+        } catch (e) { console.warn('Memo載入失敗:', e); throw e; }
+    }
+
+    async function loadReportsData() {
+        try {
+            const ab = await fetchFile(REPORTS_FILE);
+            const wb = XLSX.read(ab, { type: 'array' });
+            const s1 = wb.Sheets['報告總覽'];
+            if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { if(r['報告編號']) reportsData.push({ id: safeStr(r['報告編號']), broker: safeStr(r['券商名稱']), date: formatDate(r['報告日期']), industry: safeStr(r['產業名稱']), title: safeStr(r['報告標題']), highlights: [safeStr(r['核心重點1']), safeStr(r['核心重點2'])] }); });
+        } catch (e) { console.warn('Reports載入失敗:', e); throw e; }
+    }
+
+    async function loadMasterData() {
+        try {
+            const ab = await fetchFile(MASTER_FILE);
+            const wb = XLSX.read(ab, { type: 'array' });
+            const s1 = wb.Sheets['主資料庫'];
+            if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { 
+                if(r['代號']) {
+                    const d = { code: safeStr(r['代號']), name: safeStr(r['公司名稱']), market: safeStr(r['市場分類']), industry: safeStr(r['產業分類']), price: safeStr(r['成交']), change: safeStr(r['漲跌價']), changePercent: safeStr(r['漲跌幅']), marketCap: safeStr(r['市值(億)']) };
+                    masterStocks[d.code] = d; masterStocks[d.name] = d;
+                }
+            });
+             const s2 = wb.Sheets['💡概念股族群資料庫'];
+            if (s2) {
+                XLSX.utils.sheet_to_json(s2, {header:1}).forEach((rw, i) => {
+                    if (i > 2 && rw[0]) conceptStocks.push({ code: safeStr(rw[0]), concept: safeStr(rw[2]), subRole: safeStr(rw[3]) });
+                });
+            }
+        } catch (e) { console.warn('Master載入失敗:', e); throw e; }
+    }
+
+    async function loadStrategyData() {
+        try {
+            const ab = await fetchFile(STRATEGY_FILE);
+            const wb = XLSX.read(ab, { type: 'array' });
+            const s1 = wb.Sheets['報告總覽'];
+            if(s1) XLSX.utils.sheet_to_json(s1).forEach(r => { if(r['報告編號']) strategyReports.push({ id: safeStr(r['報告編號']), broker: safeStr(r['券商名稱']), date: formatDate(r['報告日期']), type: safeStr(r['報告類型']), title: safeStr(r['報告標題']), macroSummary: safeStr(r['總經觀點摘要']) }); });
+        } catch (e) { console.warn('Strategy載入失敗:', e); throw e; }
+    }
+
+    // ===== 主程式入口 =====
+    window.onload = async function() {
+        const overlay = document.getElementById('loadingOverlay');
+        try {
+            // 依序載入檔案
+            updateLoadingStatus('正在載入外電資料...', NEWS_FILE, 10);
+            await loadNewsData();
+            
+            updateLoadingStatus('正在載入 Call Memo...', MEMO_FILE, 30);
+            await loadMemoData();
+            
+            updateLoadingStatus('正在載入產業報告...', REPORTS_FILE, 50);
+            await loadReportsData();
+            
+            updateLoadingStatus('正在載入主資料庫...', MASTER_FILE, 70);
+            await loadMasterData();
+            
+            updateLoadingStatus('正在載入投資策略...', STRATEGY_FILE, 85);
+            await loadStrategyData();
+            
+            updateLoadingStatus('正在載入可轉債資料...', CB_FILE, 88);
+            await loadCBData();
+            
+            updateLoadingStatus('正在載入營收資料...', REVENUE_FILE, 93);
+            await loadRevenueData();
+            
+            updateLoadingStatus('正在建立索引...', '', 97);
+            buildSearchIndex();
+            buildFilters();
+            buildHotTags();
+            updateCounts();
+            
+            updateLoadingStatus('載入完成！', '', 100);
+            setTimeout(() => {
+                renderCurrentDB();
+                overlay.classList.add('hidden');
+            }, 300);
+
+            // 事件監聽
+            const si = document.getElementById('mainSearchInput');
+            si.addEventListener('input', onSearchInput);
+            si.addEventListener('focus', () => showSuggestions());
+            document.addEventListener('click', e => { if (!e.target.closest('.main-search')) hideSuggestions(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+        } catch (e) {
+            console.error('載入嚴重錯誤:', e);
+            overlay.innerHTML = `
+                <div class="error-box">
+                    <h3>⚠️ 載入失敗</h3>
+                    <p><strong>錯誤訊息：</strong>${e.message}</p>
+                    <div style="text-align:left;margin-top:15px;background:#fff;padding:15px;border-radius:8px;">
+                        <p><strong>請檢查 GitHub 儲存庫是否有以下檔案 (區分大小寫)：</strong></p>
+                        <ul style="padding-left:20px;color:#666;font-size:13px;line-height:1.6;">
+                            <li><code>${NEWS_FILE}</code></li>
+                            <li><code>${MEMO_FILE}</code></li>
+                            <li><code>${REPORTS_FILE}</code></li>
+                            <li><code>${MASTER_FILE}</code></li>
+                            <li><code>${STRATEGY_FILE}</code></li>
+                            <li><code>${CB_FILE}</code></li>
+                            <li><code>${REVENUE_FILE}</code></li>
+                        </ul>
+                        <p style="margin-top:10px;font-size:12px;color:#d64545;">注意：若在 GitHub Pages 執行，檔名必須完全一致</p>
+                    </div>
+                    <button onclick="location.reload()" style="margin-top:20px;padding:12px 30px;background:#c96442;border:none;border-radius:25px;color:#fff;cursor:pointer;">重新載入</button>
+                </div>
+            `;
+        }
+    };
+
+    // ===== 索引與篩選 =====
+    function buildSearchIndex() {
+        searchIndex = { companies: {}, tags: {}, brokers: {}, stocks: {}, industries: {} };
+        Object.values(masterStocks).forEach(s => {
+            if (s.code && !searchIndex.stocks[s.code]) searchIndex.stocks[s.code] = { name: s.name, code: s.code, market: s.market, industry: s.industry };
+        });
+        newsData.forEach(item => {
+            if (item.company && !searchIndex.companies[item.company]) searchIndex.companies[item.company] = { count: 0, code: item.stockCode };
+            if(item.company) searchIndex.companies[item.company].count++;
+            parseTags(item.tags).forEach(tag => { if (!searchIndex.tags[tag]) searchIndex.tags[tag] = 0; searchIndex.tags[tag]++; });
+        });
+    }
+
+    function buildFilters() {
+        const brokers = [...new Set([...newsData.map(n => n.broker), ...memoReports.map(m => m.broker)])].filter(Boolean).sort();
+        document.getElementById('brokerFilter').innerHTML = '<option value="">所有券商</option>' + brokers.map(b => '<option value="' + b + '">' + b + '</option>').join('');
+        
+        const categories = [...new Set(newsData.map(n => n.category))].filter(Boolean).sort();
+        document.getElementById('categoryFilter').innerHTML = '<option value="">所有分類</option>' + categories.map(c => '<option value="' + c + '">' + c + '</option>').join('');
+        
+        const industries = [...new Set([...reportsData.map(r => r.industry), ...memoReports.map(m => m.industry)])].filter(Boolean).sort();
+        document.getElementById('industryFilter').innerHTML = '<option value="">所有產業</option>' + industries.map(i => '<option value="' + i + '">' + i + '</option>').join('');
+    }
+
+    function buildHotTags() {
+        const topTags = Object.entries(searchIndex.tags).sort((a, b) => b[1] - a[1]).slice(0, 12);
+        document.getElementById('hotTagsList').innerHTML = topTags.map(([tag]) => '<button class="hot-tag" onclick="searchByTag(\'' + tag + '\')">#' + tag + '</button>').join('');
+    }
+
+    function updateCounts() {
+        document.getElementById('newsCount').textContent = newsData.length;
+        document.getElementById('memoCount').textContent = memoReports.length;
+        document.getElementById('reportsCount').textContent = reportsData.length;
+        document.getElementById('strategyCount').textContent = strategyReports.length;
+        document.getElementById('trendsCount').textContent = trendsData.length;
+        document.getElementById('industryCount').textContent = memoIndustryTrends.length;
+        document.getElementById('cbCount').textContent = cbList.length;
+        document.getElementById('stocksCount').textContent = new Set(Object.values(masterStocks).map(s => s.code)).size;
+    }
+
+    // ===== 搜尋功能 =====
+    function onSearchInput(e) {
+        const q = e.target.value.trim().toLowerCase();
+        if (q.length > 0) showSuggestions(q); else hideSuggestions();
+        activeFilters.search = q; renderCurrentDB();
+    }
+    
+    function showSuggestions(query = '') {
+        const c = document.getElementById('searchSuggestions');
+        if (!query) { c.classList.remove('active'); return; }
+        const mS = Object.entries(searchIndex.stocks).filter(([cd, d]) => cd.includes(query) || d.name.toLowerCase().includes(query)).slice(0, 5);
+        let html = '';
+        if(mS.length > 0) html += mS.map(([cd, d]) => `<div class="suggestion-item" onclick="openStockModal('${cd}')"><div class="suggestion-icon stock">📈</div><div class="suggestion-text"><div class="suggestion-main">${d.name}</div><div class="suggestion-sub">${cd}</div></div></div>`).join('');
+        if(html) { c.innerHTML = html; c.classList.add('active'); } else hideSuggestions();
+    }
+    function hideSuggestions() { document.getElementById('searchSuggestions').classList.remove('active'); }
+    function searchByTag(tag) { document.getElementById('mainSearchInput').value = '#' + tag; activeFilters.search = ''; activeFilters.tag = tag; renderCurrentDB(); }
+
+    // ===== 切換與篩選 =====
+    function switchDB(db) {
+        currentDB = db;
+        document.querySelectorAll('.db-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.db === db));
+        document.getElementById('categoryFilterWrap').style.display = (db === 'news') ? 'block' : 'none';
+        document.getElementById('industryFilterWrap').style.display = ['reports', 'memo', 'industry', 'stocks'].includes(db) ? 'block' : 'none';
+        renderCurrentDB();
+    }
+    function clearAllFilters() { activeFilters = { search: '', broker: '', category: '', importance: '', industry: '', tag: '' }; document.getElementById('mainSearchInput').value = ''; renderCurrentDB(); }
+    function setSort(sort) { currentSort = sort; renderCurrentDB(); }
+
+    function renderCurrentDB() {
+        const renderers = { news: renderNews, memo: renderMemo, reports: renderReports, strategy: renderStrategy, trends: renderTrends, industry: renderIndustry, stocks: renderStocks, cb: renderCB };
+        if (renderers[currentDB]) renderers[currentDB]();
+    }
+
+    // ===== 渲染列表 =====
+    function renderNews() {
+        let filtered = newsData.filter(item => {
+            if (activeFilters.search && ![item.company, item.stockCode, item.category].join(' ').toLowerCase().includes(activeFilters.search)) return false;
+            return true;
+        });
+        document.getElementById('reportsList').innerHTML = filtered.map(item => `
+            <div class="card-base" onclick="openNewsModal('${item.id}')">
+                <div class="card-header"><span class="company-name">${item.company}</span><span class="importance">${item.importance}</span></div>
+                <div class="card-meta"><span class="meta-tag broker">${item.broker}</span><span class="meta-tag date">${item.date}</span></div>
+                <div class="card-content">${(newsContent[item.id]||'').substring(0, 60)}...</div>
+            </div>`).join('');
+        document.getElementById('filteredCount').textContent = filtered.length;
+    }
+    
+    function renderMemo() { document.getElementById('reportsList').innerHTML = memoReports.map(m => `<div class="card-base" onclick="openMemoModal('${m.id}')"><div class="company-name">${m.company}</div><div class="card-content">Memo 功能正常載入</div></div>`).join(''); }
+    function renderReports() { document.getElementById('reportsList').innerHTML = reportsData.map(r => `<div class="card-base" onclick="openReportModal('${r.id}')"><div class="company-name">${r.title}</div></div>`).join(''); }
+    function renderStrategy() { document.getElementById('reportsList').innerHTML = strategyReports.map(r => `<div class="card-base strategy-card" onclick="openStrategyModal('${r.id}')"><div class="company-name">${r.title}</div></div>`).join(''); }
+    function renderTrends() { document.getElementById('reportsList').innerHTML = trendsData.map(t => `<div class="card-base trend-card" onclick="openTrendModal('${t.id}')"><div class="company-name">${t.topic}</div></div>`).join(''); }
+    function renderIndustry() { document.getElementById('reportsList').innerHTML = memoIndustryTrends.map((i,idx) => `<div class="card-base industry-card" onclick="openIndustryModal(${idx})"><div class="company-name">${i.industry}</div></div>`).join(''); }
+    function renderStocks() { document.getElementById('reportsList').innerHTML = Object.values(masterStocks).slice(0,20).map(s => `<div class="card-base stock-card" onclick="openStockModal('${s.code}')"><div class="company-name">${s.name} (${s.code})</div></div>`).join(''); }
+    function renderCB() { document.getElementById('reportsList').innerHTML = cbList.slice(0,20).map(c => `<div class="card-base" onclick="openStockModal('${c.stockCode}')"><div class="company-name">${c.cbName}</div></div>`).join(''); }
+
+    // ===== Modal 功能 (簡化範例，需自行補上完整邏輯) =====
+    function closeModal(e) { if (!e || e.target === document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('active'); }
+    function openStockModal(code) { alert('成功開啟個股: ' + code + ' (請自行補上完整 Modal HTML)'); }
+    function openNewsModal(id) { alert('成功開啟新聞: ' + id); }
+    function openMemoModal(id) { alert('成功開啟 Memo: ' + id); }
+    function openReportModal(id) { alert('成功開啟報告: ' + id); }
+    function openStrategyModal(id) { alert('成功開啟策略: ' + id); }
+    function openTrendModal(id) { alert('成功開啟趨勢: ' + id); }
+    function openIndustryModal(idx) { alert('成功開啟產業: ' + idx); }
+
+    </script>
+</body>
+</html>
