@@ -238,6 +238,9 @@
 <!-- CB 統計區塊 (只在 CB 分頁顯示) -->
 <div id="cbStatsArea" style="display:none"></div>
 
+<!-- 個股統計區塊 (只在個股分頁顯示) -->
+<div id="stockStatsArea" style="display:none"></div>
+
 <div class="result-bar">
     <div style="font-size:12px;color:#666;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
     <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
@@ -265,15 +268,17 @@ const FILES = {
     MASTER: '04_master.xlsx', STRAT: '05_Strategy.xlsx', CB: '00_CB.xlsx', REV: '06_revenue.xlsx'
 };
 
-const DB = { news:[], memo:[], reports:[], strategy:[], stocks:{}, cb:[], cbHistory:[], cbAuction:[], trends:[] };
+const DB = { news:[], memo:[], reports:[], strategy:[], stocks:{}, cb:[], cbHistory:[], cbAuction:[], trends:[], conceptStocks:[] };
 let CB_MODE = 'active'; // 'active' 掛牌中, 'history' 歷史, 'auction' 競拍
+let STOCK_MODE = 'all'; // 'all' 全部個股, 'concept' 概念股
 const META = { 
     memoDetail:{}, tracking:{}, finance:{}, products:{}, 
     concepts:{}, cbMap:{}, relatedNews:{}, relatedMemo:{},
     reportFocus:{}, reportViews:{}, reportRatings:{},
     stratMacro:{}, stratFundamental:{}, stratTheme:{}, stratChip:{}, stratTech:{}, stratQuarter:{}, stratPicks:{},
     revData: { month:{}, quarter:{}, year:{}, highlights:{} },
-    cbStats: { total: 0, companies: 0, industries: {}, totalBalance: 0 }
+    cbStats: { total: 0, companies: 0, industries: {}, totalBalance: 0 },
+    stockStats: { total: 0, conceptTotal: 0, markets: {}, industries: {}, conceptCategories: {} }
 };
 
 let CURR_DB = 'news';
@@ -349,23 +354,55 @@ async function init() {
     // 1. Master + 概念股
     wb = await fetchXlsx(FILES.MASTER);
     if(wb) {
+        // 主資料庫
         XLSX.utils.sheet_to_json(wb.Sheets['主資料庫']||[]).forEach(r => {
             const code = normalizeCode(r['代號']);
-            if(code) DB.stocks[code] = {...r, '代號': code};
+            if(code) {
+                DB.stocks[code] = {...r, '代號': code};
+                // 統計市場和產業
+                const market = r['市場分類'] || '其他';
+                const industry = r['產業分類'] || '其他';
+                META.stockStats.markets[market] = (META.stockStats.markets[market] || 0) + 1;
+                META.stockStats.industries[industry] = (META.stockStats.industries[industry] || 0) + 1;
+            }
         });
+        META.stockStats.total = Object.keys(DB.stocks).length;
+        
+        // 概念股族群資料庫
         const csSheet = wb.Sheets['💡概念股族群資料庫'];
         if(csSheet) {
             const range = XLSX.utils.decode_range(csSheet['!ref']);
             for(let R=3; R<=range.e.r; R++) {
                 const code = normalizeCode(csSheet[XLSX.utils.encode_cell({r:R,c:0})]?.v);
+                const name = csSheet[XLSX.utils.encode_cell({r:R,c:1})]?.v;
                 const concept = csSheet[XLSX.utils.encode_cell({r:R,c:2})]?.v;
                 const subCat = csSheet[XLSX.utils.encode_cell({r:R,c:3})]?.v;
+                const desc = csSheet[XLSX.utils.encode_cell({r:R,c:4})]?.v;
+                const importance = csSheet[XLSX.utils.encode_cell({r:R,c:5})]?.v;
+                
                 if(code && concept) {
+                    // 原有的 META.concepts 對照
                     if(!META.concepts[code]) META.concepts[code] = [];
                     META.concepts[code].push({ concept: safe(concept), sub: safe(subCat) });
+                    
+                    // 新增到 conceptStocks 陣列
+                    DB.conceptStocks.push({
+                        '_code': code,
+                        '_name': safe(name),
+                        '_concept': safe(concept),
+                        '_subCat': safe(subCat),
+                        '_desc': safe(desc),
+                        '_importance': safe(importance),
+                        '_industry': DB.stocks[code]?.['產業分類'] || ''
+                    });
+                    
+                    // 統計概念分類
+                    META.stockStats.conceptCategories[concept] = (META.stockStats.conceptCategories[concept] || 0) + 1;
                 }
             }
         }
+        META.stockStats.conceptTotal = DB.conceptStocks.length;
+        console.log('個股載入:', META.stockStats.total, '概念股:', META.stockStats.conceptTotal);
     }
 
     // 2. Revenue - 完整讀取
@@ -811,6 +848,80 @@ async function init() {
   }
 }
 
+// 個股統計區塊
+function renderStockStats() {
+    const stats = META.stockStats;
+    const industries = Object.entries(stats.industries).sort((a,b) => b[1]-a[1]);
+    const concepts = Object.entries(stats.conceptCategories).sort((a,b) => b[1]-a[1]);
+    const markets = Object.entries(stats.markets).sort((a,b) => b[1]-a[1]);
+    
+    // 頁籤 HTML
+    const tabsHtml = `
+        <div class="cb-mode-switcher">
+            <span class="cb-mode-tab ${STOCK_MODE==='all'?'active':''}" onclick="setStockMode('all')">🏢 全部個股</span>
+            <span class="cb-mode-tab ${STOCK_MODE==='concept'?'active':''}" onclick="setStockMode('concept')">💡 概念股</span>
+        </div>
+    `;
+    
+    if(STOCK_MODE === 'all') {
+        // 全部個股統計
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                <div class="cb-stats-grid">
+                    <div class="cb-stat-item">
+                        <div class="cb-stat-num">${stats.total}</div>
+                        <div class="cb-stat-label">上市櫃公司</div>
+                    </div>
+                    ${markets.slice(0, 4).map(([m, cnt]) => 
+                        `<div class="cb-stat-item clickable" onclick="setSearch('${m}')">
+                            <div class="cb-stat-num">${cnt}</div>
+                            <div class="cb-stat-label">${m}</div>
+                        </div>`
+                    ).join('')}
+                </div>
+                <div class="cb-ind-title">📊 各產業分佈</div>
+                <div class="cb-ind-grid">
+                    ${industries.slice(0, 25).map(([ind, cnt]) => 
+                        `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${ind}<span class="num">${cnt}</span></div>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+    } else if(STOCK_MODE === 'concept') {
+        // 概念股統計
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                <div class="cb-stats-grid">
+                    <div class="cb-stat-item">
+                        <div class="cb-stat-num">${stats.conceptTotal}</div>
+                        <div class="cb-stat-label">概念股筆數</div>
+                    </div>
+                    <div class="cb-stat-item">
+                        <div class="cb-stat-num">${concepts.length}</div>
+                        <div class="cb-stat-label">概念分類數</div>
+                    </div>
+                </div>
+                <div class="cb-ind-title">💡 熱門概念分類</div>
+                <div class="cb-ind-grid">
+                    ${concepts.slice(0, 30).map(([c, cnt]) => 
+                        `<div class="cb-ind-tag" onclick="setSearch('${c}')">${c}<span class="num">${cnt}</span></div>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+    }
+    return '';
+}
+
+// 切換個股模式
+function setStockMode(mode) {
+    STOCK_MODE = mode;
+    $('search').value = '';
+    renderList();
+}
+
 // CB 統計區塊
 function renderCBStats() {
     const stats = META.cbStats;
@@ -970,6 +1081,7 @@ function renderCBStats() {
             </div>
         `;
     }
+    return ''; // 預設回傳空字串
 }
 
 // 切換 CB 模式
@@ -987,9 +1099,17 @@ function renderList() {
     if(CURR_DB === 'cb') {
         $('cbStatsArea').innerHTML = renderCBStats();
         $('cbStatsArea').style.display = 'block';
-        $('cbFilterTags').style.display = 'none'; // 篩選標籤已整合到統計區
+        $('stockStatsArea').style.display = 'none';
+        $('cbFilterTags').style.display = 'none';
+    } else if(CURR_DB === 'stocks') {
+        // 顯示個股統計
+        $('stockStatsArea').innerHTML = renderStockStats();
+        $('stockStatsArea').style.display = 'block';
+        $('cbStatsArea').style.display = 'none';
+        $('cbFilterTags').style.display = 'none';
     } else {
         $('cbStatsArea').style.display = 'none';
+        $('stockStatsArea').style.display = 'none';
         $('cbFilterTags').style.display = 'none';
     }
     
@@ -997,7 +1117,10 @@ function renderList() {
     else if(CURR_DB==='memo') list = DB.memo;
     else if(CURR_DB==='reports') list = DB.reports;
     else if(CURR_DB==='strategy') list = DB.strategy;
-    else if(CURR_DB==='stocks') list = Object.values(DB.stocks);
+    else if(CURR_DB==='stocks') {
+        if(STOCK_MODE === 'all') list = Object.values(DB.stocks);
+        else if(STOCK_MODE === 'concept') list = DB.conceptStocks;
+    }
     else if(CURR_DB==='trends') list = DB.trends;
     else if(CURR_DB==='cb') {
         if(CB_MODE === 'active') list = DB.cb;
@@ -1183,9 +1306,17 @@ function renderList() {
             let title='', sub='', date='', code='', tagClass='brk', body='', click='', cardClass='card';
             
             if(CURR_DB==='stocks') {
-                title = i['公司名稱']; code = i['代號']; sub = i['產業分類']; 
-                body = i['業務摘要'] || '';
-                click = `openStock('${code}')`;
+                if(STOCK_MODE === 'all') {
+                    title = i['公司名稱']; code = i['代號']; sub = i['產業分類']; 
+                    body = i['業務摘要'] || i['產業細分'] || '';
+                    click = `openStock('${code}')`;
+                } else if(STOCK_MODE === 'concept') {
+                    // 概念股模式
+                    title = i['_name']; code = i['_code']; 
+                    sub = i['_concept']; tagClass = 'concept';
+                    body = `${i['_subCat'] ? '【'+i['_subCat']+'】' : ''}${i['_desc'] || ''}`;
+                    click = `openStock('${code}')`;
+                }
             }
             else if(CURR_DB==='news') {
                 const dataType = i['資料類型'] || '';
