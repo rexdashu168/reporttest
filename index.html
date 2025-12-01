@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -199,6 +201,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -214,6 +217,8 @@
         <h1>📊 Rex大叔投資研究室</h1>
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
+
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -238,6 +243,7 @@
     <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -587,6 +593,23 @@ async function init() {
             });
         }
         
+        // 讀取 05_CB競拍篩選條件區間 - 建立產業簡稱對照表
+        const industrySimpleMap = {
+            '光電業': '光電', '其他業': '其他', '其他業電子業': '其他電子',
+            '化學工業': '化工', '半導體業': '半導體', '塑膠工業': '塑膠',
+            '居家生活': '居家生活', '建材營造業': '建材營造', '數位雲端': '數位雲端',
+            '文化創意業': '文化創意', '橡膠工業': '其他', '水泥工業': '水泥',
+            '汽車工業': '汽車', '油電燃氣業': '油電燃氣', '玻璃陶瓷': '其他',
+            '生技醫療業': '生技醫療', '紡織纖維': '紡織纖維', '綠能環保': '綠能環保',
+            '航運業': '航運', '觀光餐旅': '觀光餐旅', '證券業': '金融保險',
+            '貿易百貨業': '貿易百貨', '資訊服務業': '資訊服務', '農業科技業': '農業科技',
+            '通信網路業': '通信網路', '造紙工業': '造紙', '運動休閒': '運動休閒',
+            '金控業': '金融保險', '銀行業': '金融保險', '鋼鐵工業': '鋼鐵',
+            '電器電纜': '電器電纜', '電子通路業': '電子通路', '電子零組件業': '電子零組件',
+            '電機機械': '電機機械', '電腦及週邊設備業': '電腦及週邊', '食品工業': '食品'
+        };
+        const getSimpleIndustry = (ind) => industrySimpleMap[ind] || ind || '其他';
+        
         // 讀取 01_ALLCB基本資料 - 全部CB（含歷史）
         const cbBasicInfo = {};
         const activeCodes = new Set(); // 記錄掛牌中的代號
@@ -595,6 +618,7 @@ async function init() {
             const cbCode = safe(r['CB代號']);
             if(cbCode) {
                 const hl = cbHighLow[cbCode] || {};
+                const fullIndustry = safe(r['產業分類']);
                 cbBasicInfo[cbCode] = {
                     stockCode: normalizeCode(r['股票代號']),
                     name: safe(r['名稱']),
@@ -604,7 +628,7 @@ async function init() {
                     issuer: safe(r['發行券商']),
                     scale: r['發行規模'],
                     convPrice: r['轉換價格'],
-                    industry: safe(r['產業分類']),
+                    industry: getSimpleIndustry(fullIndustry),
                     listDate: r['掛牌日期'],
                     expDate: r['到期日期'],
                     high: hl.high || parseFloat(r['掛牌最高']) || 0,
@@ -640,7 +664,7 @@ async function init() {
         XLSX.utils.sheet_to_json(wb.Sheets['09_最新動態每週日行情']||[]).forEach(r => {
             const code = safe(r['代碼']);
             const name = safe(Object.values(r)[1]);
-            const ind = safe(r['產業']);
+            const ind = getSimpleIndustry(safe(r['產業']));
             
             if(code) {
                 dailyMap[code] = {
@@ -653,15 +677,13 @@ async function init() {
                     premium: r['溢(折)價%'],
                     expDate: r['到期日']
                 };
-                
-                if(ind) {
-                    META.cbStats.industries[ind] = (META.cbStats.industries[ind] || 0) + 1;
-                }
             }
         });
         
         // 掛牌中 CB - 合併日行情資料和掛牌高低
         const activeCbCodes = new Set();
+        META.cbStats.industries = {}; // 重置產業統計
+        
         XLSX.utils.sheet_to_json(wb.Sheets['08_最新動態每週基本資料']||[]).forEach(r => {
             const cbCode = safe(r['代號']);
             const stockCode = normalizeCode(r['轉換標的代碼']);
@@ -671,13 +693,16 @@ async function init() {
             
             activeCbCodes.add(cbCode); // 記錄掛牌中的代號
             
+            // 產業優先使用 01 工作表的資料（已轉換為簡潔名稱）
+            const industry = basic.industry || daily.industry || '其他';
+            
             const cbData = {
                 ...r,
                 '_stockCode': stockCode,
                 '_cbCode': cbCode,
                 '_name': safe(r['名稱']),
                 '_stockName': safe(r['轉換標的名稱']),
-                '_industry': daily.industry || '',
+                '_industry': industry,
                 '_cbPrice': daily.cbPrice,
                 '_stockPrice': daily.stockPrice,
                 '_convValue': daily.convValue,
@@ -693,6 +718,10 @@ async function init() {
             if(stockCode) { 
                 if(!META.cbMap[stockCode]) META.cbMap[stockCode]=[]; 
                 META.cbMap[stockCode].push(cbData); 
+            }
+            // 統計產業
+            if(industry) {
+                META.cbStats.industries[industry] = (META.cbStats.industries[industry] || 0) + 1;
             }
         });
         
@@ -780,8 +809,8 @@ function renderCBStats() {
                         <div class="cb-stat-label">發行公司數</div>
                     </div>
                     <div class="cb-stat-item">
-                        <div class="cb-stat-num">${fmtNum(stats.totalBalance, 0)}</div>
-                        <div class="cb-stat-label">總餘額(百萬)</div>
+                        <div class="cb-stat-num">${fmtNum(stats.totalBalance/100, 0)}</div>
+                        <div class="cb-stat-label">總餘額(億)</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('詢圈')">
                         <div class="cb-stat-num">${methodCnt['詢圈']}</div>
