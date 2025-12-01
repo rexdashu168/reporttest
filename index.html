@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -199,6 +201,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -215,6 +218,7 @@
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
 
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -237,11 +241,15 @@
 <!-- 個股統計區塊 (只在個股分頁顯示) -->
 <div id="stockStatsArea" style="display:none"></div>
 
+<!-- Memo 統計區塊 (只在 Memo 分頁顯示) -->
+<div id="memoStatsArea" style="display:none"></div>
+
 <div class="result-bar">
     <div style="font-size:12px;color:#666;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
     <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -263,9 +271,10 @@ const FILES = {
     MASTER: '04_master.xlsx', STRAT: '05_Strategy.xlsx', CB: '00_CB.xlsx', REV: '06_revenue.xlsx'
 };
 
-const DB = { news:[], memo:[], reports:[], strategy:[], stocks:{}, cb:[], cbHistory:[], cbAuction:[], trends:[], conceptStocks:[] };
+const DB = { news:[], memo:[], memoStock:[], memoIndustry:[], reports:[], strategy:[], stocks:{}, cb:[], cbHistory:[], cbAuction:[], trends:[], conceptStocks:[] };
 let CB_MODE = 'active'; // 'active' 掛牌中, 'history' 歷史, 'auction' 競拍
 let STOCK_MODE = 'all'; // 'all' 全部個股, 'concept' 概念股
+let MEMO_MODE = 'all'; // 'all' 全部, 'stock' 個股, 'industry' 產業
 const META = { 
     memoDetail:{}, tracking:{}, finance:{}, products:{}, 
     concepts:{}, cbMap:{}, relatedNews:{}, relatedMemo:{},
@@ -273,7 +282,8 @@ const META = {
     stratMacro:{}, stratFundamental:{}, stratTheme:{}, stratChip:{}, stratTech:{}, stratQuarter:{}, stratPicks:{},
     revData: { month:{}, quarter:{}, year:{}, highlights:{} },
     cbStats: { total: 0, companies: 0, industries: {}, totalBalance: 0 },
-    stockStats: { total: 0, conceptTotal: 0, markets: {}, industries: {}, conceptCategories: {} }
+    stockStats: { total: 0, conceptTotal: 0, markets: {}, industries: {}, conceptCategories: {} },
+    memoStats: { total: 0, stockTotal: 0, industryTotal: 0, brokers: {}, types: {} }
 };
 
 let CURR_DB = 'news';
@@ -544,15 +554,42 @@ async function init() {
     // 4. Memo
     wb = await fetchXlsx(FILES.MEMO);
     if(wb) {
+        // 產業類報告關鍵字
+        const industryKeywords = ['產業', 'TPCA', '國際股市', '總經', '策略'];
+        
         XLSX.utils.sheet_to_json(wb.Sheets['報告總表']||[]).forEach(r => {
             const code = normalizeCode(r['股號']);
-            DB.memo.push({...r, '股號': code});
+            const reportType = safe(r['報告類型']);
+            const memoData = {...r, '股號': code};
+            
+            DB.memo.push(memoData);
+            
+            // 判斷是個股還是產業
+            const isIndustry = industryKeywords.some(kw => reportType.includes(kw));
+            if(isIndustry) {
+                DB.memoIndustry.push(memoData);
+            } else {
+                DB.memoStock.push(memoData);
+            }
+            
+            // 統計券商和報告類型
+            const broker = safe(r['券商']);
+            if(broker) META.memoStats.brokers[broker] = (META.memoStats.brokers[broker] || 0) + 1;
+            if(reportType) META.memoStats.types[reportType] = (META.memoStats.types[reportType] || 0) + 1;
+            
             if(code) { 
                 if(!META.relatedMemo[code]) META.relatedMemo[code]=[]; 
                 META.relatedMemo[code].push(r); 
             }
         });
         DB.memo.sort((a,b) => getDateVal(b['日期'])-getDateVal(a['日期']));
+        DB.memoStock.sort((a,b) => getDateVal(b['日期'])-getDateVal(a['日期']));
+        DB.memoIndustry.sort((a,b) => getDateVal(b['日期'])-getDateVal(a['日期']));
+        
+        META.memoStats.total = DB.memo.length;
+        META.memoStats.stockTotal = DB.memoStock.length;
+        META.memoStats.industryTotal = DB.memoIndustry.length;
+        console.log('Memo載入:', META.memoStats.total, '個股:', META.memoStats.stockTotal, '產業:', META.memoStats.industryTotal);
         
         XLSX.utils.sheet_to_json(wb.Sheets['詳細內容庫']||[]).forEach(r => META.memoDetail[safe(r['編號'])] = r);
         XLSX.utils.sheet_to_json(wb.Sheets['財務數據彙總']||[]).forEach(r => META.finance[safe(r['公司'])] = r);
@@ -917,6 +954,98 @@ function setStockMode(mode) {
     renderList();
 }
 
+// Memo 統計區塊
+function renderMemoStats() {
+    const stats = META.memoStats;
+    const brokers = Object.entries(stats.brokers).sort((a,b) => b[1]-a[1]);
+    const types = Object.entries(stats.types).sort((a,b) => b[1]-a[1]);
+    
+    // 頁籤 HTML
+    const tabsHtml = `
+        <div class="cb-mode-switcher">
+            <span class="cb-mode-tab ${MEMO_MODE==='all'?'active':''}" onclick="setMemoMode('all')">📋 全部</span>
+            <span class="cb-mode-tab ${MEMO_MODE==='stock'?'active':''}" onclick="setMemoMode('stock')">🏢 個股</span>
+            <span class="cb-mode-tab ${MEMO_MODE==='industry'?'active':''}" onclick="setMemoMode('industry')">🏭 產業</span>
+        </div>
+    `;
+    
+    if(MEMO_MODE === 'all') {
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                <div class="cb-stats-grid">
+                    <div class="cb-stat-item">
+                        <div class="cb-stat-num">${stats.total}</div>
+                        <div class="cb-stat-label">Memo總數</div>
+                    </div>
+                    <div class="cb-stat-item clickable" onclick="setMemoMode('stock')">
+                        <div class="cb-stat-num">${stats.stockTotal}</div>
+                        <div class="cb-stat-label">個股報告</div>
+                    </div>
+                    <div class="cb-stat-item clickable" onclick="setMemoMode('industry')">
+                        <div class="cb-stat-num">${stats.industryTotal}</div>
+                        <div class="cb-stat-label">產業報告</div>
+                    </div>
+                </div>
+                <div class="cb-ind-title">📊 報告類型分佈</div>
+                <div class="cb-ind-grid">
+                    ${types.slice(0, 15).map(([t, cnt]) => 
+                        `<div class="cb-ind-tag" onclick="setSearch('${t}')">${t}<span class="num">${cnt}</span></div>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+    } else if(MEMO_MODE === 'stock') {
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                <div class="cb-stats-grid">
+                    <div class="cb-stat-item">
+                        <div class="cb-stat-num">${stats.stockTotal}</div>
+                        <div class="cb-stat-label">個股報告數</div>
+                    </div>
+                    <div class="cb-stat-item">
+                        <div class="cb-stat-num">${brokers.length}</div>
+                        <div class="cb-stat-label">券商數</div>
+                    </div>
+                </div>
+                <div class="cb-ind-title">🏦 各券商報告數</div>
+                <div class="cb-ind-grid">
+                    ${brokers.slice(0, 15).map(([b, cnt]) => 
+                        `<div class="cb-ind-tag" onclick="setSearch('${b}')">${b}<span class="num">${cnt}</span></div>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+    } else if(MEMO_MODE === 'industry') {
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                <div class="cb-stats-grid">
+                    <div class="cb-stat-item">
+                        <div class="cb-stat-num">${stats.industryTotal}</div>
+                        <div class="cb-stat-label">產業報告數</div>
+                    </div>
+                </div>
+                <div class="cb-ind-title">📊 產業報告類型</div>
+                <div class="cb-ind-grid">
+                    ${types.filter(([t]) => t.includes('產業') || t.includes('TPCA')).map(([t, cnt]) => 
+                        `<div class="cb-ind-tag" onclick="setSearch('${t}')">${t}<span class="num">${cnt}</span></div>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+    }
+    return '';
+}
+
+// 切換 Memo 模式
+function setMemoMode(mode) {
+    MEMO_MODE = mode;
+    $('search').value = '';
+    renderList();
+}
+
 // CB 統計區塊
 function renderCBStats() {
     const stats = META.cbStats;
@@ -1090,26 +1219,38 @@ function renderList() {
     const q = $('search').value.toLowerCase().trim();
     let list = [];
     
-    // 顯示/隱藏 CB 統計
+    // 顯示/隱藏統計區塊
     if(CURR_DB === 'cb') {
         $('cbStatsArea').innerHTML = renderCBStats();
         $('cbStatsArea').style.display = 'block';
         $('stockStatsArea').style.display = 'none';
+        $('memoStatsArea').style.display = 'none';
         $('cbFilterTags').style.display = 'none';
     } else if(CURR_DB === 'stocks') {
-        // 顯示個股統計
         $('stockStatsArea').innerHTML = renderStockStats();
         $('stockStatsArea').style.display = 'block';
         $('cbStatsArea').style.display = 'none';
+        $('memoStatsArea').style.display = 'none';
+        $('cbFilterTags').style.display = 'none';
+    } else if(CURR_DB === 'memo') {
+        $('memoStatsArea').innerHTML = renderMemoStats();
+        $('memoStatsArea').style.display = 'block';
+        $('cbStatsArea').style.display = 'none';
+        $('stockStatsArea').style.display = 'none';
         $('cbFilterTags').style.display = 'none';
     } else {
         $('cbStatsArea').style.display = 'none';
         $('stockStatsArea').style.display = 'none';
+        $('memoStatsArea').style.display = 'none';
         $('cbFilterTags').style.display = 'none';
     }
     
     if(CURR_DB==='news') list = DB.news;
-    else if(CURR_DB==='memo') list = DB.memo;
+    else if(CURR_DB==='memo') {
+        if(MEMO_MODE === 'all') list = DB.memo;
+        else if(MEMO_MODE === 'stock') list = DB.memoStock;
+        else if(MEMO_MODE === 'industry') list = DB.memoIndustry;
+    }
     else if(CURR_DB==='reports') list = DB.reports;
     else if(CURR_DB==='strategy') list = DB.strategy;
     else if(CURR_DB==='stocks') {
