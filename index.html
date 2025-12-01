@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -203,6 +205,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -219,11 +222,12 @@
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
 
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
     <div class="db-tab" data-db="reports">📑 產業 <span class="count" id="c-reports">0</span></div>
-    <div class="db-tab" data-db="strategy">🎯 策略 <span class="count" id="c-strategy">0</span></div>
+    <div class="db-tab" data-db="strategy">🔮 展望 <span class="count" id="c-strategy">0</span></div>
     <div class="db-tab" data-db="stocks">🏢 個股 <span class="count" id="c-stocks">0</span></div>
     <div class="db-tab" data-db="trends">📈 趨勢 <span class="count" id="c-trends">0</span></div>
     <div class="db-tab" data-db="cb">🎫 CB <span class="count" id="c-cb">0</span></div>
@@ -249,6 +253,7 @@
     <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -267,7 +272,7 @@
 <script>
 const FILES = {
     NEWS: '01_news.xlsx', MEMO: '02_memo.xlsx', REPORTS: '03_reports.xlsx',
-    MASTER: '04_master.xlsx', STRAT: '05_Strategy.xlsx', CB: '00_CB.xlsx', REV: '06_revenue.xlsx'
+    MASTER: '04_master.xlsx', STRAT: '05_Strategy_01.xlsx', CB: '00_CB.xlsx', REV: '06_revenue.xlsx'
 };
 
 const DB = { 
@@ -627,24 +632,83 @@ async function init() {
         });
     }
 
-    // 6. Strategy
+    // 6. Strategy (趨勢展望) - 新格式
     wb = await fetchXlsx(FILES.STRAT);
     if(wb) {
-        XLSX.utils.sheet_to_json(wb.Sheets['報告總覽']||[]).forEach(r => DB.strategy.push(r));
-        DB.strategy.sort((a,b) => getDateVal(b['報告日期'])-getDateVal(a['報告日期']));
+        // 讀取報告索引
+        const indexSheet = wb.Sheets['報告索引'];
+        if(indexSheet) {
+            const indexData = XLSX.utils.sheet_to_json(indexSheet, {header: 1});
+            // 找報告清單開始位置 (跳過標題)
+            for(let i = 0; i < indexData.length; i++) {
+                const row = indexData[i];
+                if(row[0] === '報告編號') {
+                    // 接下來是報告資料
+                    for(let j = i+1; j < indexData.length; j++) {
+                        const r = indexData[j];
+                        if(r[0] && r[0].startsWith('RPT-')) {
+                            const rptId = r[0];
+                            const sheetName = wb.SheetNames.find(n => n.includes(rptId.replace('-', '')));
+                            
+                            DB.strategy.push({
+                                '報告編號': rptId,
+                                '報告主題': r[1],
+                                '主講單位': r[2],
+                                '講者': r[3],
+                                '報告日期': r[4],
+                                '頁數': r[5],
+                                '_sheetName': sheetName
+                            });
+                        }
+                    }
+                    break;
+                }
+            }
+        }
         
-        ['總經分析', '基本面分析', '題材與趨勢', '籌碼分析', '技術分析', '季度行情規劃', '選股策略'].forEach(sn => {
-            const target = {
-                '總經分析': META.stratMacro, '基本面分析': META.stratFundamental,
-                '題材與趨勢': META.stratTheme, '籌碼分析': META.stratChip,
-                '技術分析': META.stratTech, '季度行情規劃': META.stratQuarter,
-                '選股策略': META.stratPicks
-            }[sn];
-            XLSX.utils.sheet_to_json(wb.Sheets[sn]||[]).forEach(r => {
-                const rid = safe(r['報告編號']);
-                if(rid) { if(!target[rid]) target[rid]=[]; target[rid].push(r); }
-            });
+        // 讀取每個報告的詳細內容
+        DB.strategy.forEach(report => {
+            const sheetName = report._sheetName;
+            if(sheetName && wb.Sheets[sheetName]) {
+                const sheetData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header: 1});
+                const sections = [];
+                let currentSection = null;
+                let basicInfo = {};
+                
+                for(let i = 1; i < sheetData.length; i++) {
+                    const row = sheetData[i];
+                    const tag = row[0];
+                    const val = row[1];
+                    
+                    if(!tag) continue;
+                    
+                    // 基本資訊欄位
+                    if(['報告編號', '報告主題', '副標題', '發布單位', '主講人', '發布日期', '報告頁數', '核心觀點', '標籤分類', '資料來源'].includes(tag)) {
+                        basicInfo[tag] = val;
+                        continue;
+                    }
+                    
+                    // 分類標題 (用【】包起來)
+                    if(tag.startsWith('【') && tag.endsWith('】')) {
+                        if(currentSection) sections.push(currentSection);
+                        currentSection = { title: tag, items: [] };
+                    } else if(currentSection) {
+                        currentSection.items.push({ label: tag, value: val });
+                    }
+                }
+                if(currentSection) sections.push(currentSection);
+                
+                // 儲存到 META
+                META.stratSections = META.stratSections || {};
+                META.stratSections[report['報告編號']] = {
+                    basic: basicInfo,
+                    sections: sections
+                };
+            }
         });
+        
+        DB.strategy.sort((a,b) => getDateVal(b['報告日期'])-getDateVal(a['報告日期']));
+        console.log('趨勢展望載入:', DB.strategy.length, '篇報告');
     }
 
     // 7. CB - 完整讀取
@@ -1870,8 +1934,15 @@ function renderList() {
                 click = `openReport('${i['報告編號']}')`;
             }
             else if(CURR_DB==='strategy') {
-                title = i['報告標題']; sub = i['券商名稱']; date = i['報告日期'];
-                body = i['大盤觀點'] || i['副標題'] || '';
+                // 趨勢展望新格式
+                title = i['報告主題']; 
+                sub = i['主講單位']; 
+                date = i['報告日期'];
+                tagClass = 'ind';
+                const secData = META.stratSections?.[i['報告編號']];
+                const coreView = secData?.basic?.['核心觀點'] || '';
+                const speaker = i['講者'] || '';
+                body = `${speaker ? '講者: '+speaker+' | ' : ''}${coreView.substring(0, 80)}${coreView.length > 80 ? '...' : ''}`;
                 click = `openStrategy('${i['報告編號']}')`;
             }
             else if(CURR_DB==='trends') {
@@ -2407,95 +2478,98 @@ window.openReport = rid => {
     showModal(infoHtml, navItems);
 };
 
-// 開啟策略報告
+// 開啟趨勢展望報告 (新格式)
 window.openStrategy = rid => {
     const r = DB.strategy.find(i => i['報告編號'] === rid);
     if(!r) return;
-
-    const macro = META.stratMacro[rid] || [];
-    const fund = META.stratFundamental[rid] || [];
-    const theme = META.stratTheme[rid] || [];
-    const quarter = META.stratQuarter[rid] || [];
-    const picks = META.stratPicks[rid] || [];
+    
+    const secData = META.stratSections?.[rid];
+    if(!secData) return;
+    
+    const basic = secData.basic || {};
+    const sections = secData.sections || [];
 
     const infoHtml = `
-        <div style="font-size:18px;font-weight:700;color:var(--primary);margin-bottom:5px">${r['報告標題']}</div>
+        <div style="font-size:18px;font-weight:700;color:var(--primary);margin-bottom:5px">${basic['報告主題'] || r['報告主題']}</div>
+        ${basic['副標題'] ? `<div style="font-size:13px;color:#666;margin-bottom:8px;font-style:italic">${basic['副標題']}</div>` : ''}
         <div class="card-meta">
-            <span class="tag brk">${r['券商名稱']}</span>
-            <span class="tag dt">${fmtDate(r['報告日期'])}</span>
+            <span class="tag brk">${basic['發布單位'] || r['主講單位']}</span>
+            ${basic['主講人'] ? `<span class="tag ind">${basic['主講人']}</span>` : ''}
+            <span class="tag dt">${fmtDate(basic['發布日期'] || r['報告日期'])}</span>
+            ${basic['報告頁數'] ? `<span class="tag dt">${basic['報告頁數']}</span>` : ''}
         </div>
     `;
 
-    const navItems = [
-        {id:'over', icon:'📊', label:'總覽'},
-        {id:'macro', icon:'🌍', label:'總經'},
-        {id:'theme', icon:'🎯', label:'題材'},
-        {id:'pick', icon:'⭐', label:'選股'}
-    ];
+    // 建立頁籤 - 第一個是總覽，其餘是各分類
+    const navItems = [{id:'overview', icon:'📋', label:'總覽'}];
+    sections.forEach((sec, idx) => {
+        // 從標題中提取簡短名稱
+        let label = sec.title.replace(/【|】/g, '').split(' ')[0];
+        if(label.length > 6) label = label.substring(0, 6);
+        const icons = ['🌍', '🏦', '🇺🇸', '🇨🇳', '🇪🇺', '🇹🇼', '💱', '🤖', '💻', '🏭', '📈', '⭐', '🔗', '💡', '📊', '🎯'];
+        navItems.push({id: `sec${idx}`, icon: icons[idx % icons.length], label: label});
+    });
 
-    let tOver = '';
-    if(r['大盤觀點']) tOver += `<div class="hl-block"><b>📊 大盤觀點</b><br>${fmtTxt(r['大盤觀點'])}</div>`;
-    if(r['指數預測區間_低'] && r['指數預測區間_高']) {
-        tOver += `<div class="rating-card"><div class="label">指數預測區間</div><div class="big-num">${r['指數預測區間_低']} ~ ${r['指數預測區間_高']}</div></div>`;
+    // 總覽內容
+    let tOverview = '';
+    if(basic['核心觀點']) {
+        tOverview += `<div class="hl-block"><b>📌 核心觀點</b><br>${fmtTxt(basic['核心觀點'])}</div>`;
     }
-    if(r['總經觀點摘要']) tOver += `<div class="hl-block"><b>🌍 總經觀點</b><br>${fmtTxt(r['總經觀點摘要'])}</div>`;
-    if(r['基本面觀點']) tOver += `<div class="hl-block"><b>📈 基本面觀點</b><br>${fmtTxt(r['基本面觀點'])}</div>`;
-
-    let tMacro = '';
-    macro.forEach(m => {
-        tMacro += `<div class="section-head">${m['分析主題']||'總經分析'}</div>`;
-        tMacro += `<div class="hl-block">${fmtTxt(m['分析內容'])}</div>`;
-    });
-    fund.forEach(f => {
-        tMacro += `<div class="section-head">${f['分析主題']||'基本面分析'}</div>`;
-        tMacro += `<div class="hl-block">${fmtTxt(f['分析內容'])}</div>`;
-    });
-    if(!tMacro) tMacro = '<div style="color:#999;text-align:center;padding:20px">無分析內容</div>';
-
-    let tTheme = '';
-    theme.forEach(t => {
-        tTheme += `<div class="section-head">${t['題材主題']||'題材趨勢'}</div>`;
-        tTheme += `<div class="hl-block">${fmtTxt(t['題材內容'])}</div>`;
-    });
-    if(quarter.length) {
-        tTheme += `<div class="section-head">📅 季度行情規劃</div>`;
-        quarter.forEach(q => {
-            tTheme += `<div class="list-item">
-                <div class="list-title">${q['季度']}</div>
-                <div style="font-size:12px;color:#666">指數預測: ${q['指數預測_低']} ~ ${q['指數預測_高']}</div>
-                <div style="font-size:12px;margin-top:5px"><span style="color:#27ae60">利多:</span> ${[q['利多因素1'],q['利多因素2'],q['利多因素3']].filter(i=>i).join('、')}</div>
-                <div style="font-size:12px"><span style="color:#e74c3c">利空:</span> ${[q['利空因素1'],q['利空因素2'],q['利空因素3']].filter(i=>i).join('、')}</div>
+    if(basic['標籤分類']) {
+        const tags = basic['標籤分類'].split('#').filter(t => t.trim());
+        tOverview += `<div style="margin:15px 0;display:flex;flex-wrap:wrap;gap:6px">`;
+        tags.forEach(tag => {
+            tOverview += `<span style="background:#f0f0f0;padding:4px 10px;border-radius:15px;font-size:12px;color:#666">#${tag.trim()}</span>`;
+        });
+        tOverview += `</div>`;
+    }
+    
+    // 在總覽顯示各分類摘要
+    sections.forEach(sec => {
+        tOverview += `<div class="section-head">${sec.title}</div>`;
+        const preview = sec.items.slice(0, 3);
+        preview.forEach(item => {
+            const val = item.value ? String(item.value).substring(0, 100) : '';
+            tOverview += `<div class="list-item" style="padding:8px 0;border-bottom:1px solid #f0f0f0">
+                <span style="font-weight:600;color:#333">${item.label}</span>: 
+                <span style="color:#666">${val}${String(item.value || '').length > 100 ? '...' : ''}</span>
             </div>`;
         });
-    }
-    if(!tTheme) tTheme = '<div style="color:#999;text-align:center;padding:20px">無題材分析</div>';
+        if(sec.items.length > 3) {
+            tOverview += `<div style="font-size:11px;color:#999;padding:5px 0">還有 ${sec.items.length - 3} 項...</div>`;
+        }
+    });
 
-    let tPick = '';
-    if(picks.length) {
-        const byInd = {};
-        picks.forEach(p => {
-            const cat = (p['產業類別']||'其他') + '/' + (p['產業分類']||'');
-            if(!byInd[cat]) byInd[cat] = [];
-            byInd[cat].push(p);
-        });
-        Object.keys(byInd).forEach(cat => {
-            tPick += `<div class="section-head">${cat}</div>`;
-            byInd[cat].forEach(p => {
-                const code = normalizeCode(p['股票代號']);
-                tPick += `<div class="list-item" onclick="openStock('${code}')">
-                    <div class="list-title">${p['公司名稱']} <span style="color:#999">${code}</span></div>
-                    <div class="list-sub">${p['投資題材']||''}</div>
+    // 各分類詳細內容
+    let tabPanes = `<div id="tab-overview" class="tab-pane active">${tOverview}</div>`;
+    
+    sections.forEach((sec, idx) => {
+        let content = `<div class="section-head">${sec.title}</div>`;
+        sec.items.forEach(item => {
+            const val = item.value ? String(item.value) : '';
+            // 檢查是否是股票代號 (4位數字)
+            const isStockCode = /^\d{4}$/.test(item.label);
+            
+            if(isStockCode) {
+                // 股票項目 - 可點擊
+                content += `<div class="list-item" onclick="openStock('${item.label}')" style="cursor:pointer">
+                    <div class="list-title">${val} <span style="color:#999">${item.label}</span></div>
                 </div>`;
-            });
+            } else if(val.length > 100) {
+                // 長內容 - 用區塊顯示
+                content += `<div class="hl-block"><b>${item.label}</b><br>${fmtTxt(val)}</div>`;
+            } else {
+                // 短內容 - 表格式顯示
+                content += `<div class="list-item" style="display:flex;padding:10px 0;border-bottom:1px solid #f0f0f0">
+                    <div style="font-weight:600;color:#333;min-width:120px">${item.label}</div>
+                    <div style="color:#555;flex:1">${val}</div>
+                </div>`;
+            }
         });
-    } else tPick = '<div style="color:#999;text-align:center;padding:20px">無選股策略</div>';
+        tabPanes += `<div id="tab-sec${idx}" class="tab-pane">${content}</div>`;
+    });
 
-    $('m-body').innerHTML = `
-        <div id="tab-over" class="tab-pane active">${tOver}</div>
-        <div id="tab-macro" class="tab-pane">${tMacro}</div>
-        <div id="tab-theme" class="tab-pane">${tTheme}</div>
-        <div id="tab-pick" class="tab-pane">${tPick}</div>
-    `;
+    $('m-body').innerHTML = tabPanes;
     showModal(infoHtml, navItems);
 };
 
