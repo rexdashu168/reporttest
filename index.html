@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -65,6 +67,14 @@
     .tag.trend-down { background: #e74c3c; }
     .news-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: 600; }
     .news-type.ind-type { background: #9b59b6; color: #fff; }
+    
+    /* 結果列和 CB 篩選標籤 */
+    .result-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .cb-filter-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cb-filter-tag { font-size: 11px; padding: 4px 10px; border-radius: 15px; cursor: pointer; border: 1px solid #ddd; background: #fff; transition: all 0.2s; }
+    .cb-filter-tag:hover { border-color: var(--primary); }
+    .cb-filter-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .cb-filter-tag .cnt { margin-left: 4px; opacity: 0.7; }
     .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
     /* CB 列表表格 */
@@ -186,6 +196,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
+```
 
 </head>
 <body>
@@ -202,6 +213,7 @@
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
 
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -221,8 +233,12 @@
 <!-- CB 統計區塊 (只在 CB 分頁顯示) -->
 <div id="cbStatsArea" style="display:none"></div>
 
-<div style="font-size:12px;color:#666;margin-bottom:10px;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
+<div class="result-bar">
+    <div style="font-size:12px;color:#666;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
+    <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
+</div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -571,6 +587,21 @@ async function init() {
             });
         }
         
+        // 讀取 01_ALLCB基本資料 - 取得詢圈競拍、擔保資訊
+        const cbBasicInfo = {};
+        XLSX.utils.sheet_to_json(wb.Sheets['01_ALLCB基本資料']||[]).forEach(r => {
+            const cbCode = safe(r['CB代號']);
+            if(cbCode) {
+                cbBasicInfo[cbCode] = {
+                    method: safe(r['詢圈競拍']),  // 詢圈 or 競拍
+                    guarantee: safe(r['擔保']),    // 有擔保 or 無擔保
+                    rating: r['信評'],
+                    issuer: safe(r['發行券商']),
+                    scale: r['發行規模']
+                };
+            }
+        });
+        
         // 日行情 (有產業資訊) - 先讀取建立產業對照
         const dailyMap = {};
         XLSX.utils.sheet_to_json(wb.Sheets['09_最新動態每週日行情']||[]).forEach(r => {
@@ -603,6 +634,7 @@ async function init() {
             const stockCode = normalizeCode(r['轉換標的代碼']);
             const daily = dailyMap[cbCode] || {};
             const hl = cbHighLow[cbCode] || {};
+            const basic = cbBasicInfo[cbCode] || {};
             
             const cbData = {
                 ...r,
@@ -617,7 +649,9 @@ async function init() {
                 '_premium': daily.premium,
                 '_high': hl.high || 0,
                 '_low': hl.low || 0,
-                '_range': hl.range || 0
+                '_range': hl.range || 0,
+                '_method': basic.method || '',      // 詢圈 or 競拍
+                '_guarantee': basic.guarantee || '' // 有擔保 or 無擔保
             };
             
             DB.cb.push(cbData);
@@ -711,12 +745,31 @@ function renderList() {
     const q = $('search').value.toLowerCase().trim();
     let list = [];
     
-    // 顯示/隱藏 CB 統計
+    // 顯示/隱藏 CB 統計和篩選標籤
     if(CURR_DB === 'cb') {
         $('cbStatsArea').innerHTML = renderCBStats();
         $('cbStatsArea').style.display = 'block';
+        
+        // 計算篩選標籤數量
+        const methodCnt = { '詢圈': 0, '競拍': 0 };
+        const guarCnt = { '有擔保': 0, '無擔保': 0 };
+        DB.cb.forEach(c => {
+            if(c._method === '詢圈') methodCnt['詢圈']++;
+            else if(c._method === '競拍') methodCnt['競拍']++;
+            if(c._guarantee === '有擔保') guarCnt['有擔保']++;
+            else if(c._guarantee === '無擔保' || c._guarantee === '0') guarCnt['無擔保']++;
+        });
+        
+        $('cbFilterTags').innerHTML = `
+            <span class="cb-filter-tag ${q==='詢圈'?'active':''}" onclick="setSearch('詢圈')">詢圈<span class="cnt">${methodCnt['詢圈']}</span></span>
+            <span class="cb-filter-tag ${q==='競拍'?'active':''}" onclick="setSearch('競拍')">競拍<span class="cnt">${methodCnt['競拍']}</span></span>
+            <span class="cb-filter-tag ${q==='有擔保'?'active':''}" onclick="setSearch('有擔保')">有擔保<span class="cnt">${guarCnt['有擔保']}</span></span>
+            <span class="cb-filter-tag ${q==='無擔保'?'active':''}" onclick="setSearch('無擔保')">無擔保<span class="cnt">${guarCnt['無擔保']}</span></span>
+        `;
+        $('cbFilterTags').style.display = 'flex';
     } else {
         $('cbStatsArea').style.display = 'none';
+        $('cbFilterTags').style.display = 'none';
     }
     
     if(CURR_DB==='news') list = DB.news;
@@ -757,15 +810,15 @@ function renderList() {
             <thead><tr>
                 <th class="sortable" data-col="_cbCode" data-type="string">CB代號 <span class="sort-icon">⇅</span></th>
                 <th>CB簡稱</th>
-                <th>標的股票</th>
+                <th class="hide-mobile">標的股票</th>
                 <th class="sortable hide-mobile" data-col="_industry" data-type="string">產業 <span class="sort-icon">⇅</span></th>
                 <th class="sortable hide-mobile" data-col="convPrice" data-type="num">轉換價 <span class="sort-icon">⇅</span></th>
                 <th class="sortable hide-mobile" data-col="_stockPrice" data-type="num">股價 <span class="sort-icon">⇅</span></th>
-                <th class="sortable" data-col="_convValue" data-type="num">轉換價值 <span class="sort-icon">⇅</span></th>
-                <th class="sortable" data-col="_premium" data-type="num">溢折價% <span class="sort-icon">⇅</span></th>
-                <th class="sortable hide-mobile" data-col="_high" data-type="num">掛牌最高 <span class="sort-icon">⇅</span></th>
-                <th class="sortable hide-mobile" data-col="_low" data-type="num">掛牌最低 <span class="sort-icon">⇅</span></th>
-                <th class="sortable hide-mobile" data-col="_range" data-type="num">震幅% <span class="sort-icon">⇅</span></th>
+                <th class="sortable hide-mobile" data-col="_convValue" data-type="num">轉換價值 <span class="sort-icon">⇅</span></th>
+                <th class="sortable hide-mobile" data-col="_premium" data-type="num">溢折價% <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="_high" data-type="num">掛牌最高 <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="_low" data-type="num">掛牌最低 <span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-col="_range" data-type="num">震幅% <span class="sort-icon">⇅</span></th>
                 <th class="sortable" data-col="expDate" data-type="date">到期日 <span class="sort-icon">⇅</span></th>
             </tr></thead><tbody>`;
         
@@ -787,30 +840,31 @@ function renderList() {
             html += `<tr>
                 <td class="code">${cbCode}</td>
                 <td>${cbName}</td>
-                <td class="stock" onclick="openStock('${stockCode}')">${stockName} ${stockCode}</td>
+                <td class="stock hide-mobile" onclick="openStock('${stockCode}')">${stockName} ${stockCode}</td>
                 <td class="hide-mobile">${ind}</td>
                 <td class="hide-mobile">${fmtNum(convPrice, 1)}</td>
                 <td class="hide-mobile">${fmtNum(stockPrice, 2)}</td>
-                <td class="${colorClass(convValue)}">${fmtNum(convValue, 2)}</td>
-                <td class="${colorClass(premium)}">${premium ? fmtNum(premium, 1)+'%' : '-'}</td>
-                <td class="hide-mobile">${fmtNum(high, 1)}</td>
-                <td class="hide-mobile">${fmtNum(low, 1)}</td>
-                <td class="hide-mobile ${colorClass(range)}">${fmtNum(range, 1)}%</td>
+                <td class="hide-mobile ${colorClass(convValue)}">${fmtNum(convValue, 2)}</td>
+                <td class="hide-mobile ${colorClass(premium)}">${premium ? fmtNum(premium, 1)+'%' : '-'}</td>
+                <td>${fmtNum(high, 1)}</td>
+                <td>${fmtNum(low, 1)}</td>
+                <td class="${colorClass(range)}">${fmtNum(range, 1)}%</td>
                 <td>${expDate}</td>
             </tr>`;
         });
         
         // 合計列
         html += `</tbody><tfoot><tr class="summary-row">
-            <td colspan="3"><b>平均值 (${validData.length} 筆)</b></td>
+            <td colspan="2"><b>平均值 (${validData.length} 筆)</b></td>
+            <td class="hide-mobile"></td>
             <td class="hide-mobile"></td>
             <td class="hide-mobile"><b>${fmtNum(avgConvPrice, 1)}</b></td>
             <td class="hide-mobile"><b>${fmtNum(avgStockPrice, 2)}</b></td>
-            <td><b>${fmtNum(avgConvValue, 2)}</b></td>
-            <td class="${colorClass(avgPremium)}"><b>${fmtNum(avgPremium, 1)}%</b></td>
-            <td class="hide-mobile"><b>${fmtNum(avgHigh, 1)}</b></td>
-            <td class="hide-mobile"><b>${fmtNum(avgLow, 1)}</b></td>
-            <td class="hide-mobile"><b>${fmtNum(avgRange, 1)}%</b></td>
+            <td class="hide-mobile"><b>${fmtNum(avgConvValue, 2)}</b></td>
+            <td class="hide-mobile ${colorClass(avgPremium)}"><b>${fmtNum(avgPremium, 1)}%</b></td>
+            <td><b>${fmtNum(avgHigh, 1)}</b></td>
+            <td><b>${fmtNum(avgLow, 1)}</b></td>
+            <td><b>${fmtNum(avgRange, 1)}%</b></td>
             <td></td>
         </tr></tfoot></table></div>`;
     } else {
