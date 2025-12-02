@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -229,9 +231,45 @@
     .timeline-date { font-size: 12px; font-weight: 700; color: var(--primary); }
     .timeline-text { font-size: 13px; color: #444; margin-top: 2px; }
 
+    /* 底部網址識別列 */
+    .url-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 50px;
+        background: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+        border-top: 1px solid #e0e0e0;
+        cursor: pointer;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .url-bar-inner {
+        background: #fff;
+        border-radius: 20px;
+        padding: 8px 20px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        font-size: 14px;
+        font-weight: 500;
+        color: #333;
+    }
+    .url-icon { font-size: 12px; }
+    .url-text { letter-spacing: 0.5px; }
+    .url-bar:active .url-bar-inner { background: #f0f0f0; }
+    
+    /* 調整容器底部空間 */
+    .container { padding-bottom: 70px; }
+
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -247,6 +285,8 @@
         <h1>📊 Rex大叔投資研究室</h1>
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
+
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -290,6 +330,15 @@
         <div class="nav-grid" id="navGrid"></div>
         <div class="m-body" id="m-body"></div>
         <div class="m-footer-tags" id="m-tags"></div>
+    </div>
+</div>
+
+<!-- 底部網址識別列 -->
+
+<div class="url-bar" onclick="window.open('https://rexdashu168.github.io/','_blank')">
+    <div class="url-bar-inner">
+        <span class="url-icon">🔒</span>
+        <span class="url-text">168.cb</span>
     </div>
 </div>
 
@@ -2285,6 +2334,7 @@ function renderList() {
                     <th class="sortable hide-mobile" data-col="_premium" data-type="num">溢折價% <span class="sort-icon">⇅</span></th>
                     <th class="sortable" data-col="_high" data-type="num">掛牌最高 <span class="sort-icon">⇅</span></th>
                     <th class="sortable" data-col="_low" data-type="num">掛牌最低 <span class="sort-icon">⇅</span></th>
+                    <th class="sortable" data-col="_cbPrice" data-type="num">CB收盤 <span class="sort-icon">⇅</span></th>
                     <th class="sortable" data-col="_range" data-type="num">震幅% <span class="sort-icon">⇅</span></th>
                     <th class="sortable" data-col="expDate" data-type="date">到期日 <span class="sort-icon">⇅</span></th>
                 </tr></thead><tbody>`;
@@ -2301,6 +2351,7 @@ function renderList() {
             const premium = r['_premium'];
             const high = r['_high'];
             const low = r['_low'];
+            const cbPrice = r['_cbPrice'];
             const range = r['_range'];
             const expDate = fmtDate(r['到期日']);
             
@@ -2315,6 +2366,7 @@ function renderList() {
                 <td class="hide-mobile ${colorClass(premium)}">${premium ? fmtNum(premium, 1)+'%' : '-'}</td>
                 <td>${fmtNum(high, 1)}</td>
                 <td>${fmtNum(low, 1)}</td>
+                <td>${fmtNum(cbPrice, 2)}</td>
                 <td class="${colorClass(range)}">${fmtNum(range, 1)}%</td>
                 <td>${expDate}</td>
             </tr>`;
