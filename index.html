@@ -2171,11 +2171,19 @@ function setCbInfoSub(sub) {
 }
 
 // 點擊 CB 代號查詢詳情
-function openCbInfo(cbCode) {
+window.openCbInfo = cbCode => {
+    console.log('openCbInfo:', cbCode, 'cbAll:', DB.cbAll.length);
+    
     // 從所有 CB 資料中找到這檔 CB
-    const cb = DB.cbAll.find(c => c._cbCode === cbCode);
+    let cb = DB.cbAll.find(c => c._cbCode === cbCode);
+    
+    // 如果找不到，嘗試字串比對
     if(!cb) {
-        alert('找不到此 CB 資料');
+        cb = DB.cbAll.find(c => String(c._cbCode) === String(cbCode));
+    }
+    
+    if(!cb) {
+        alert('找不到此 CB 資料：' + cbCode);
         return;
     }
     
@@ -2414,7 +2422,7 @@ function openCbInfo(cbCode) {
             document.getElementById(btn.dataset.tab).classList.add('active');
         };
     });
-}
+};
 
 function renderList() {
     const q = $('search').value.toLowerCase().trim();
@@ -3199,114 +3207,6 @@ window.initCbSort = () => {
 };
 
 // 開啟個股
-// 開啟 CB 基本資料詳情
-window.openCbInfo = cbCode => {
-    if(!cbCode) return;
-    const cb = DB.cbAll.find(c => c._cbCode === cbCode);
-    if(!cb) return;
-    
-    const isActive = DB.cb.find(c => c._cbCode === cbCode);
-    const statusTag = isActive ? '<span class="tag trend-up">掛牌中</span>' : '<span class="tag dt">已下市</span>';
-    
-    const infoHtml = `
-        <div style="font-size:22px;font-weight:700;margin-bottom:5px">${cb._name} <span style="color:#999;font-size:16px">${cbCode}</span></div>
-        <div class="card-meta">
-            ${statusTag}
-            <span class="tag brk">${cb._industry || '未分類'}</span>
-            <span class="tag ind">${cb._method || ''}</span>
-            <span class="tag ${cb._guarantee === '有擔保' ? 'trend-up' : 'dt'}">${cb._guarantee || ''}</span>
-        </div>
-    `;
-
-    // Tab 1: 發行條件
-    let tIssue = `
-        <div class="section-head">📝 發行條件</div>
-        <div class="grid-2">
-            <div class="stat-box"><div class="num">${fmtNum(cb._convPrice, 2)}</div><div class="lbl">轉換價格</div></div>
-            <div class="stat-box"><div class="num">${cb._scale || '-'}</div><div class="lbl">發行規模(億)</div></div>
-        </div>
-        <div class="info-row"><span class="info-label">信用評等</span><span class="info-val">${cb._rating || '-'}</span></div>
-        <div class="info-row"><span class="info-label">發行年期</span><span class="info-val">${cb._years || '-'} 年</span></div>
-        <div class="info-row"><span class="info-label">發行價格</span><span class="info-val">${cb._issuePrice || '-'}</span></div>
-        <div class="info-row"><span class="info-label">到期還本價格</span><span class="info-val">${cb._expPrice || '-'}</span></div>
-        <div class="info-row"><span class="info-label">訂價溢價率</span><span class="info-val">${cb._premium ? fmtNum(cb._premium * 100, 1) + '%' : '-'}</span></div>
-        <div class="info-row"><span class="info-label">發行券商</span><span class="info-val">${cb._issuer || '-'}</span></div>
-        <div class="info-row"><span class="info-label">產業地位</span><span class="info-val">${cb._position || '-'}</span></div>
-        <div class="info-row"><span class="info-label">股本大小</span><span class="info-val">${cb._capital || '-'}</span></div>
-    `;
-    
-    // Tab 2: 時程資訊
-    let tTimeline = `
-        <div class="section-head">📅 時程資訊</div>
-        <div class="info-row"><span class="info-label">董事會公告</span><span class="info-val">${fmtDate(cb._boardDate)}</span></div>
-        <div class="info-row"><span class="info-label">送件日期</span><span class="info-val">${fmtDate(cb._sendDate)}</span></div>
-        <div class="info-row"><span class="info-label">生效日期</span><span class="info-val">${fmtDate(cb._effectDate)}</span></div>
-        <div class="info-row"><span class="info-label">詢圈/競拍日期</span><span class="info-val">${cb._bidDate || '-'}</span></div>
-        <div class="info-row"><span class="info-label">掛牌日期</span><span class="info-val">${fmtDate(cb._listDate)}</span></div>
-        <div class="info-row"><span class="info-label">到期日期</span><span class="info-val">${fmtDate(cb._expDate)}</span></div>
-        <div class="info-row"><span class="info-label">CBAS拆解日</span><span class="info-val">${fmtDate(cb._cbasDate)}</span></div>
-    `;
-    if(cb._high > 0 && cb._low > 0) {
-        const range = ((cb._high - cb._low) / cb._low * 100);
-        tTimeline += `
-            <div class="section-head">📊 掛牌期間表現</div>
-            <div class="grid-3">
-                <div class="stat-box"><div class="num">${fmtNum(cb._high, 1)}</div><div class="lbl">掛牌最高</div></div>
-                <div class="stat-box"><div class="num">${fmtNum(cb._low, 1)}</div><div class="lbl">掛牌最低</div></div>
-                <div class="stat-box"><div class="num ${colorClass(range)}">${fmtNum(range, 1)}%</div><div class="lbl">震幅</div></div>
-            </div>
-        `;
-    }
-    
-    // Tab 3: 賣回條件
-    let tPutback = `
-        <div class="section-head">💰 賣回條件</div>
-        <div class="info-row"><span class="info-label">賣回日期1</span><span class="info-val">${fmtDate(cb._putDate1)}</span></div>
-        <div class="info-row"><span class="info-label">賣回日期2</span><span class="info-val">${fmtDate(cb._putDate2)}</span></div>
-        <div class="info-row"><span class="info-label">投資人提前賣回</span><span class="info-val">${cb._putTiming || '-'}</span></div>
-        <div class="info-row"><span class="info-label">賣回條件</span><span class="info-val">${cb._putCondition || '-'}</span></div>
-    `;
-    
-    // 連結到股票基本資料
-    let tStock = `
-        <div class="section-head">🏢 發行公司</div>
-        <div class="hl-block clickable" onclick="openStock('${cb._stockCode}');closeModal()">
-            <b>${cb._stockCode}</b> - 點擊查看公司基本資料
-        </div>
-    `;
-
-    const navItems = [
-        {id:'issue', icon:'📝', label:'發行條件'},
-        {id:'timeline', icon:'📅', label:'時程'},
-        {id:'putback', icon:'💰', label:'賣回'},
-        {id:'stock', icon:'🏢', label:'公司'}
-    ];
-
-    const fullHtml = `
-        <div class="modal-info">${infoHtml}</div>
-        <div class="modal-nav">${navItems.map(n => `<div class="nav-item" data-tab="${n.id}"><div class="nav-icon">${n.icon}</div><div class="nav-label">${n.label}</div></div>`).join('')}</div>
-        <div class="modal-tabs">
-            <div class="tab-pane" id="tab-issue">${tIssue}</div>
-            <div class="tab-pane" id="tab-timeline">${tTimeline}</div>
-            <div class="tab-pane" id="tab-putback">${tPutback}</div>
-            <div class="tab-pane" id="tab-stock">${tStock}</div>
-        </div>
-    `;
-    
-    showModal(fullHtml, () => {
-        document.querySelectorAll('.modal-nav .nav-item').forEach((item, idx) => {
-            item.onclick = () => {
-                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                document.getElementById('tab-' + item.dataset.tab).classList.add('active');
-            };
-            if(idx === 0) item.classList.add('active');
-        });
-        document.getElementById('tab-issue').classList.add('active');
-    });
-};
-
 window.openStock = code => {
     if(!code || code==='-') return;
     code = normalizeCode(code);
