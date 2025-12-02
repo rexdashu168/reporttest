@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rex大叔投資研究室 v11.9</title>
+    <title>Rex大叔投資研究室 v11.6</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; --up: #e74c3c; --down: #27ae60; }
@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -240,6 +242,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -255,6 +258,8 @@
         <h1>📊 Rex大叔投資研究室</h1>
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
+
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -285,6 +290,7 @@
     <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -1469,7 +1475,7 @@ function renderAuctionTop10() {
                 <tbody>
                 ${list.map((c, i) => `<tr>
                     <td>${i+1}</td>
-                    <td class="code" onclick="openCbInfo('${c._cbCode}')">${c._cbCode}</td>
+                    <td class="code">${c._cbCode}</td>
                     <td>${c._name}</td>
                     <td>${fmtDate(c['開標日期'])}</td>
                     <td class="${valueField === '最低得標' ? 'highlight' : ''}">${fmtNum(c['最低得標'], 2)}</td>
@@ -1872,7 +1878,7 @@ function renderCBStats() {
                     <tbody>
                     ${list.map((c, i) => `<tr>
                         <td>${i+1}</td>
-                        <td class="code" onclick="openCbInfo('${c._cbCode}')">${c._cbCode}</td>
+                        <td class="code">${c._cbCode}</td>
                         <td class="name-cell">${c._name}</td>
                         <td>${fmtNum(c._thisWeek, 0)}</td>
                         <td>${fmtNum(c._lastWeek, 0)}</td>
@@ -2290,7 +2296,7 @@ function renderList() {
                 const range = r['_range'];
                 
                 html += `<tr>
-                    <td class="code" onclick="openCbInfo('${cbCode}')">${cbCode}</td>
+                    <td class="code">${cbCode}</td>
                     <td>${cbName}</td>
                     <td class="hide-mobile">${openDate}</td>
                     <td>${fmtNum(multiple, 2)}x</td>
@@ -2401,7 +2407,7 @@ function renderList() {
                 const change = parseFloat(r._change) || 0;
                 const changeRate = parseFloat(r._changeRate) || 0;
                 html += `<tr>
-                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                    <td class="code">${r._cbCode}</td>
                     <td class="name-col">${r._name}</td>
                     <td>${fmtNum(r._thisWeek, 0)}</td>
                     <td>${fmtNum(r._lastWeek, 0)}</td>
@@ -2431,7 +2437,7 @@ function renderList() {
             validFiltered.slice(0, 150).forEach(r => {
                 const premPct = parseFloat(r._premiumPct) || 0;
                 html += `<tr>
-                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                    <td class="code">${r._cbCode}</td>
                     <td class="name-col">${r._name}</td>
                     <td>${r._guarantee}</td>
                     <td>${fmtNum(r._remainYears, 2)}</td>
@@ -2461,7 +2467,7 @@ function renderList() {
             
             validFiltered.forEach(r => {
                 html += `<tr>
-                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                    <td class="code">${r._cbCode}</td>
                     <td>${r._cbName}</td>
                     <td>${r._reportDate}</td>
                     <td>${r._endDate}</td>
@@ -2485,7 +2491,7 @@ function renderList() {
             
             validFiltered.forEach(r => {
                 html += `<tr>
-                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                    <td class="code">${r._cbCode}</td>
                     <td>${r._name}</td>
                     <td>${r._startDate}</td>
                     <td>${r._endDate}</td>
@@ -2510,7 +2516,7 @@ function renderList() {
                 const newPrice = parseFloat(r._newPrice) || 0;
                 const priceChange = newPrice - origPrice;
                 html += `<tr>
-                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                    <td class="code">${r._cbCode}</td>
                     <td>${r._cbName}</td>
                     <td>${r._adjDate}</td>
                     <td>${r._origPrice}</td>
@@ -2565,7 +2571,7 @@ function renderList() {
             const expDate = fmtDate(r['到期日']);
             
             html += `<tr>
-                <td class="code" onclick="openCbInfo('${cbCode}')">${cbCode}</td>
+                <td class="code">${cbCode}</td>
                 <td>${cbName}</td>
                 <td class="stock hide-mobile" onclick="openStock('${stockCode}')">${stockName} ${stockCode}</td>
                 <td class="hide-mobile">${ind}</td>
@@ -2795,9 +2801,17 @@ window.initCbSort = () => {
 // 開啟個股
 // 開啟 CB 基本資料詳情
 window.openCbInfo = cbCode => {
-    if(!cbCode) return;
-    const cb = DB.cbAll.find(c => c._cbCode === cbCode);
-    if(!cb) return;
+    if(!cbCode) { alert('無CB代號'); return; }
+    
+    // 嘗試多種方式查找
+    let cb = DB.cbAll.find(c => c._cbCode === cbCode);
+    if(!cb) cb = DB.cbAll.find(c => String(c._cbCode) === String(cbCode));
+    if(!cb) cb = DB.cbAll.find(c => c._cbCode == cbCode);
+    
+    if(!cb) {
+        alert('找不到CB資料: ' + cbCode + '\nDB.cbAll有 ' + DB.cbAll.length + ' 筆');
+        return;
+    }
     
     const isActive = DB.cb.find(c => c._cbCode === cbCode);
     const statusTag = isActive ? '<span class="tag trend-up">掛牌中</span>' : '<span class="tag dt">已下市</span>';
@@ -2900,7 +2914,6 @@ window.openCbInfo = cbCode => {
         document.getElementById('tab-issue').classList.add('active');
     });
 };
-
 
 window.openStock = code => {
     if(!code || code==='-') return;
