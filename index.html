@@ -33,6 +33,9 @@
     .search-input:focus { border-color: var(--primary); }
     .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
     .clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; }
+    
+    /* 搜尋框固定在頂部 */
+    .search-sticky { position: sticky; top: 0; z-index: 100; background: linear-gradient(180deg, var(--bg) 0%, var(--bg) 85%, transparent 100%); padding: 10px 0 15px; margin: 0 -15px; padding-left: 15px; padding-right: 15px; }
 
     /* CB 統計區塊 */
     .cb-stats { background: #fff5f5; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #ffe0e0; }
@@ -276,7 +279,7 @@
 <div class="container">
     <div class="header">
         <h1>📊 Rex大叔投資研究室</h1>
-        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
+        <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.7</p>
     </div>
 
 ```
@@ -290,10 +293,13 @@
     <div class="db-tab" data-db="cb">🎫 CB <span class="count" id="c-cb">0</span></div>
 </div>
 
-<div class="search-box">
-    <span class="search-icon">🔍</span>
-    <input type="text" class="search-input" id="search" placeholder="搜尋公司、代號、產業、#Tag..." oninput="handleInput(this)">
-    <div class="clear-btn" id="clearBtn" onclick="clearSearch()">✕</div>
+<!-- 搜尋框固定在頂部 -->
+<div class="search-sticky">
+    <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="search" placeholder="搜尋公司、代號、產業、#Tag..." oninput="handleInput(this)">
+        <div class="clear-btn" id="clearBtn" onclick="clearSearch()">✕</div>
+    </div>
 </div>
 
 <!-- CB 統計區塊 (只在 CB 分頁顯示) -->
@@ -1652,13 +1658,34 @@ function renderCBStats() {
             </div>
         `;
     } else if(CB_MODE === 'active') {
-        // 掛牌中 CB 統計
-        return `
-            <div class="cb-stats">
-                ${tabsHtml}
+        // 掛牌中 CB 統計 - 用掛牌中的資料計算
+        const activeInd = {};
+        const activeMethod = { '詢圈': 0, '競拍': 0 };
+        const activeGuar = { '有擔保': 0, '無擔保': 0 };
+        DB.cb.forEach(c => {
+            const ind = c._industry || '其他';
+            activeInd[ind] = (activeInd[ind] || 0) + 1;
+            if(c._method === '詢圈') activeMethod['詢圈']++;
+            else if(c._method === '競拍') activeMethod['競拍']++;
+            if(c._guarantee === '有擔保') activeGuar['有擔保']++;
+            else if(c._guarantee === '無擔保' || c._guarantee === '0') activeGuar['無擔保']++;
+        });
+        const sortedActiveInd = Object.entries(activeInd).sort((a,b) => b[1]-a[1]);
+        
+        // 次標籤 - 統計/產業分佈（藍色系）
+        const activeSubHtml = `
+            <div class="cb-sub-switcher">
+                <span class="cb-sub-tab ${CB_INFO_SUB==='stats'?'active':''}" onclick="setCbInfoSub('stats')">📊 統計</span>
+                <span class="cb-sub-tab ${CB_INFO_SUB==='industry'?'active':''}" onclick="setCbInfoSub('industry')">🏭 產業分佈</span>
+            </div>
+        `;
+        
+        let activeSubContent = '';
+        if(CB_INFO_SUB === 'stats') {
+            activeSubContent = `
                 <div class="cb-stats-grid">
                     <div class="cb-stat-item">
-                        <div class="cb-stat-num">${stats.total}</div>
+                        <div class="cb-stat-num">${DB.cb.length}</div>
                         <div class="cb-stat-label">掛牌中CB</div>
                     </div>
                     <div class="cb-stat-item">
@@ -1670,70 +1697,104 @@ function renderCBStats() {
                         <div class="cb-stat-label">總餘額(億)</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('詢圈')">
-                        <div class="cb-stat-num">${methodCnt['詢圈']}</div>
+                        <div class="cb-stat-num">${activeMethod['詢圈']}</div>
                         <div class="cb-stat-label">詢圈</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('競拍')">
-                        <div class="cb-stat-num">${methodCnt['競拍']}</div>
+                        <div class="cb-stat-num">${activeMethod['競拍']}</div>
                         <div class="cb-stat-label">競拍</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('有擔保')">
-                        <div class="cb-stat-num">${guarCnt['有擔保']}</div>
+                        <div class="cb-stat-num">${activeGuar['有擔保']}</div>
                         <div class="cb-stat-label">有擔保</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('無擔保')">
-                        <div class="cb-stat-num">${guarCnt['無擔保']}</div>
+                        <div class="cb-stat-num">${activeGuar['無擔保']}</div>
                         <div class="cb-stat-label">無擔保</div>
                     </div>
                 </div>
-                <div class="cb-ind-title">📊 各產業CB分佈</div>
+            `;
+        } else if(CB_INFO_SUB === 'industry') {
+            activeSubContent = `
                 <div class="cb-ind-grid">
-                    ${industries.slice(0, 20).map(([ind, cnt]) => 
+                    ${sortedActiveInd.slice(0, 25).map(([ind, cnt]) => 
                         `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${ind}<span class="num">${cnt}</span></div>`
                     ).join('')}
                 </div>
-            </div>
-        `;
-    } else if(CB_MODE === 'history') {
-        // 歷史 CB
-        const historyInd = {};
-        DB.cbHistory.forEach(c => {
-            const ind = c._industry || '其他';
-            historyInd[ind] = (historyInd[ind] || 0) + 1;
-        });
-        const sortedHistInd = Object.entries(historyInd).sort((a,b) => b[1]-a[1]);
+            `;
+        }
         
         return `
             <div class="cb-stats">
                 ${tabsHtml}
+                ${activeSubHtml}
+                ${activeSubContent}
+            </div>
+        `;
+    } else if(CB_MODE === 'history') {
+        // 歷史 CB - 用歷史資料獨立計算
+        const historyInd = {};
+        const historyMethod = { '詢圈': 0, '競拍': 0 };
+        const historyGuar = { '有擔保': 0, '無擔保': 0 };
+        DB.cbHistory.forEach(c => {
+            const ind = c._industry || '其他';
+            historyInd[ind] = (historyInd[ind] || 0) + 1;
+            if(c._method === '詢圈') historyMethod['詢圈']++;
+            else if(c._method === '競拍') historyMethod['競拍']++;
+            if(c._guarantee === '有擔保') historyGuar['有擔保']++;
+            else if(c._guarantee === '無擔保' || c._guarantee === '0') historyGuar['無擔保']++;
+        });
+        const sortedHistInd = Object.entries(historyInd).sort((a,b) => b[1]-a[1]);
+        
+        // 次標籤
+        const histSubHtml = `
+            <div class="cb-sub-switcher">
+                <span class="cb-sub-tab ${CB_INFO_SUB==='stats'?'active':''}" onclick="setCbInfoSub('stats')">📊 統計</span>
+                <span class="cb-sub-tab ${CB_INFO_SUB==='industry'?'active':''}" onclick="setCbInfoSub('industry')">🏭 產業分佈</span>
+            </div>
+        `;
+        
+        let histSubContent = '';
+        if(CB_INFO_SUB === 'stats') {
+            histSubContent = `
                 <div class="cb-stats-grid">
                     <div class="cb-stat-item">
                         <div class="cb-stat-num">${DB.cbHistory.length}</div>
                         <div class="cb-stat-label">歷史CB總數</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('詢圈')">
-                        <div class="cb-stat-num">${methodCnt['詢圈']}</div>
+                        <div class="cb-stat-num">${historyMethod['詢圈']}</div>
                         <div class="cb-stat-label">詢圈</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('競拍')">
-                        <div class="cb-stat-num">${methodCnt['競拍']}</div>
+                        <div class="cb-stat-num">${historyMethod['競拍']}</div>
                         <div class="cb-stat-label">競拍</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('有擔保')">
-                        <div class="cb-stat-num">${guarCnt['有擔保']}</div>
+                        <div class="cb-stat-num">${historyGuar['有擔保']}</div>
                         <div class="cb-stat-label">有擔保</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('無擔保')">
-                        <div class="cb-stat-num">${guarCnt['無擔保']}</div>
+                        <div class="cb-stat-num">${historyGuar['無擔保']}</div>
                         <div class="cb-stat-label">無擔保</div>
                     </div>
                 </div>
-                <div class="cb-ind-title">📊 各產業歷史CB分佈</div>
+            `;
+        } else if(CB_INFO_SUB === 'industry') {
+            histSubContent = `
                 <div class="cb-ind-grid">
-                    ${sortedHistInd.slice(0, 20).map(([ind, cnt]) => 
+                    ${sortedHistInd.slice(0, 25).map(([ind, cnt]) => 
                         `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${ind}<span class="num">${cnt}</span></div>`
                     ).join('')}
                 </div>
+            `;
+        }
+        
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                ${histSubHtml}
+                ${histSubContent}
             </div>
         `;
     } else if(CB_MODE === 'auction') {
@@ -1775,9 +1836,18 @@ function renderCBStats() {
         const avgMultiple = multipleCnt > 0 ? totalMultiple / multipleCnt : 0;
         const sortedAuctionInd = Object.entries(auctionInd).sort((a,b) => b[1]-a[1]);
         
-        return `
-            <div class="cb-stats">
-                ${tabsHtml}
+        // 次標籤
+        const auctionSubHtml = `
+            <div class="cb-sub-switcher">
+                <span class="cb-sub-tab ${CB_INFO_SUB==='stats'?'active':''}" onclick="setCbInfoSub('stats')">📊 統計</span>
+                <span class="cb-sub-tab ${CB_INFO_SUB==='industry'?'active':''}" onclick="setCbInfoSub('industry')">🏭 產業分佈</span>
+                <span class="cb-sub-tab ${CB_INFO_SUB==='top10'?'active':''}" onclick="setCbInfoSub('top10')">🏆 排行榜</span>
+            </div>
+        `;
+        
+        let auctionSubContent = '';
+        if(CB_INFO_SUB === 'stats') {
+            auctionSubContent = `
                 <div class="cb-stats-grid">
                     <div class="cb-stat-item">
                         <div class="cb-stat-num">${DB.cbAuction.length}</div>
@@ -1808,18 +1878,24 @@ function renderCBStats() {
                         <div class="cb-stat-label">無擔保</div>
                     </div>
                 </div>
-                <div class="cb-ind-title">📊 各產業競拍CB分佈</div>
+            `;
+        } else if(CB_INFO_SUB === 'industry') {
+            auctionSubContent = `
                 <div class="cb-ind-grid">
-                    ${sortedAuctionInd.slice(0, 20).map(([ind, cnt]) => 
+                    ${sortedAuctionInd.slice(0, 25).map(([ind, cnt]) => 
                         `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${ind}<span class="num">${cnt}</span></div>`
                     ).join('')}
                 </div>
-                <div class="cb-ind-title" style="margin-top:15px">🔍 擔保篩選</div>
-                <div class="cb-ind-grid">
-                    <div class="cb-ind-tag" onclick="setSearch('有擔保')">有擔保<span class="num">${auctionGuar['有擔保']}</span></div>
-                    <div class="cb-ind-tag" onclick="setSearch('無擔保')">無擔保<span class="num">${auctionGuar['無擔保']}</span></div>
-                </div>
-                ${renderAuctionTop10()}
+            `;
+        } else if(CB_INFO_SUB === 'top10') {
+            auctionSubContent = renderAuctionTop10();
+        }
+        
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                ${auctionSubHtml}
+                ${auctionSubContent}
             </div>
         `;
     } else if(CB_MODE === 'primary') {
@@ -2075,6 +2151,7 @@ function setPrimaryMode(mode) {
 // 切換 CB 模式
 function setCbMode(mode) {
     CB_MODE = mode;
+    CB_INFO_SUB = 'stats'; // 重置次標籤為統計
     $('search').value = '';
     renderList();
 }
