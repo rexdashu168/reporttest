@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -212,6 +214,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -227,6 +230,8 @@
         <h1>📊 Rex大叔投資研究室</h1>
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
+
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -257,6 +262,7 @@
     <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -736,6 +742,15 @@ async function init() {
             });
         }
         
+        // 讀取 09_最新動態每週日行情 - 取得最新收盤價
+        const cbLatestPrice = {};
+        XLSX.utils.sheet_to_json(wb.Sheets['09_最新動態每週日行情']||[]).forEach(r => {
+            const cbCode = safe(r['代碼']);
+            if(cbCode) {
+                cbLatestPrice[cbCode] = parseFloat(r['CB收盤價']) || 0;
+            }
+        });
+        
         // 讀取 05_CB競拍篩選條件區間 - 建立產業簡稱對照表
         const industrySimpleMap = {
             '光電業': '光電', '其他業': '其他', '其他業電子業': '其他電子',
@@ -884,6 +899,8 @@ async function init() {
             const hl = cbHighLow[cbCode] || {};
             const high = hl.high || parseFloat(r['掛牌最高']) || 0;
             const low = hl.low || parseFloat(r['掛牌最低']) || 0;
+            // 最新收盤從 09 工作表取得
+            const latestPrice = cbLatestPrice[cbCode] || 0;
             
             DB.cbAuction.push({
                 '_cbCode': cbCode,
@@ -893,6 +910,7 @@ async function init() {
                 '_guarantee': safe(r['擔保']),
                 '_high': high,
                 '_low': low,
+                '_latestPrice': latestPrice,
                 '_range': low > 0 ? (high - low) / low * 100 : 0,
                 '開標日期': r['開標日期'],
                 '截標日': r['截標日'],
@@ -1245,7 +1263,7 @@ function renderAuctionTop10() {
         return `<div class="cb-ind-title" style="margin-top:15px">${title}</div>
         <div class="auction-top10-table">
             <table>
-                <thead><tr><th>排名</th><th>CB代號</th><th>名稱</th><th>開標日</th><th>最低得標</th><th>平均得標</th><th>投標倍數</th></tr></thead>
+                <thead><tr><th>排名</th><th>CB代號</th><th>名稱</th><th>開標日</th><th>最低得標</th><th>平均得標</th><th>最新收盤</th><th>掛牌最高</th><th>掛牌最低</th><th>投標倍數</th></tr></thead>
                 <tbody>
                 ${list.map((c, i) => `<tr>
                     <td>${i+1}</td>
@@ -1254,6 +1272,9 @@ function renderAuctionTop10() {
                     <td>${fmtDate(c['開標日期'])}</td>
                     <td class="${valueField === '最低得標' ? 'highlight' : ''}">${fmtNum(c['最低得標'], 2)}</td>
                     <td class="${valueField === '平均得標' ? 'highlight' : ''}">${fmtNum(c['平均得標'], 2)}</td>
+                    <td>${c._latestPrice > 0 ? fmtNum(c._latestPrice, 2) : '-'}</td>
+                    <td>${c._high > 0 ? fmtNum(c._high, 2) : '-'}</td>
+                    <td>${c._low > 0 ? fmtNum(c._low, 2) : '-'}</td>
                     <td>${fmtNum(c['投標倍數'], 2)}x</td>
                 </tr>`).join('')}
                 </tbody>
