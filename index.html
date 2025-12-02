@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rex大叔投資研究室 v11.6</title>
+    <title>Rex大叔投資研究室 v11.7</title>
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root { --primary: #c96442; --bg: #f5f4ef; --text: #333; --gray: #666; --border: #e0e0e0; --link: #2980b9; --up: #e74c3c; --down: #27ae60; }
@@ -36,14 +36,28 @@
 
     /* CB 統計區塊 */
     .cb-stats { background: #fff5f5; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #ffe0e0; }
-    .cb-mode-switcher { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-    .cb-mode-tab { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #666; transition: all 0.2s; }
-    .cb-mode-tab:hover { border-color: var(--primary); }
-    .cb-mode-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .cb-sub-switcher { display: flex; gap: 6px; margin-bottom: 12px; padding-left: 10px; }
-    .cb-sub-tab { padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #ccc; background: #f9f9f9; color: #666; transition: all 0.2s; }
-    .cb-sub-tab:hover { border-color: #e67e22; }
-    .cb-sub-tab.active { background: #e67e22; color: #fff; border-color: #e67e22; }
+    
+    /* 主標籤 - 橘色系 */
+    .cb-mode-switcher { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; padding: 10px; background: linear-gradient(135deg, #fef3e8 0%, #fce8dc 100%); border-radius: 10px; border: 1px solid #f5d5c3; }
+    .cb-mode-tab { padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: #fff; color: #666; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .cb-mode-tab:hover { background: #fff8f0; color: var(--primary); }
+    .cb-mode-tab.active { background: var(--primary); color: #fff; box-shadow: 0 2px 6px rgba(201,100,66,0.3); }
+    
+    /* 次標籤 - 藍色系 */
+    .cb-sub-switcher { display: flex; gap: 6px; margin: 12px 0; padding: 8px 12px; background: linear-gradient(135deg, #e8f4fc 0%, #d6eaf8 100%); border-radius: 8px; border: 1px solid #aed6f1; }
+    .cb-sub-tab { padding: 6px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; background: #fff; color: #5dade2; transition: all 0.2s; }
+    .cb-sub-tab:hover { background: #ebf5fb; }
+    .cb-sub-tab.active { background: #3498db; color: #fff; }
+    
+    /* 次次標籤 - 綠色系 */
+    .cb-detail-switcher { display: flex; gap: 6px; margin: 10px 0; padding: 6px 10px; background: linear-gradient(135deg, #e8f8f0 0%, #d5f5e3 100%); border-radius: 6px; border: 1px solid #a9dfbf; }
+    .cb-detail-tab { padding: 5px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; cursor: pointer; border: none; background: #fff; color: #27ae60; transition: all 0.2s; }
+    .cb-detail-tab:hover { background: #eafaf1; }
+    .cb-detail-tab.active { background: #27ae60; color: #fff; }
+    
+    /* 統計區塊標題 */
+    .cb-section-title { font-size: 13px; font-weight: 700; color: #555; margin: 15px 0 10px; padding: 6px 10px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid var(--primary); }
+    
     .cb-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
     .cb-stat-item { background: #fff; padding: 12px 8px; border-radius: 8px; text-align: center; }
     .cb-stat-item.clickable { cursor: pointer; transition: all 0.2s; }
@@ -55,6 +69,12 @@
     .cb-ind-tag { padding: 6px 12px; background: #fff; border-radius: 20px; font-size: 12px; color: #666; cursor: pointer; transition: all 0.2s; border: 1px solid #eee; }
     .cb-ind-tag:hover { border-color: var(--primary); color: var(--primary); }
     .cb-ind-tag .num { background: var(--primary); color: #fff; padding: 1px 6px; border-radius: 10px; font-size: 10px; margin-left: 4px; }
+    
+    /* CB 基本資料子標籤 - 改用次次標籤樣式 */
+    .cb-info-tabs { display: flex; gap: 6px; margin: 10px 0; padding: 6px 10px; background: linear-gradient(135deg, #e8f8f0 0%, #d5f5e3 100%); border-radius: 6px; border: 1px solid #a9dfbf; flex-wrap: wrap; }
+    .cb-info-tabs .cb-sub-tab { padding: 5px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; cursor: pointer; border: none; background: #fff; color: #27ae60; transition: all 0.2s; }
+    .cb-info-tabs .cb-sub-tab:hover { background: #eafaf1; }
+    .cb-info-tabs .cb-sub-tab.active { background: #27ae60; color: #fff; }
     
     /* 競拍前十名表格 */
     .auction-top10-table { overflow-x: auto; margin-bottom: 10px; }
@@ -321,6 +341,7 @@ const DB = {
 };
 let CB_MODE = 'info'; // 'info' 基本資料, 'active' 掛牌中, 'history' 歷史, 'auction' 競拍, 'primary' 初級市場, 'balance' 流通餘額, 'cbas' CBAS報價
 let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'putback' 賣回條件
+let CB_INFO_SUB = 'stats'; // 'stats' 統計, 'industry' 產業分佈
 let PRIMARY_MODE = 'underwriting'; // 'underwriting' 承銷中, 'board' 董事會公告
 let STOCK_MODE = 'all'; // 'all' 全部個股, 'concept' 概念股
 let MEMO_MODE = 'all'; // 'all' 全部, 'stock' 個股, 'industry' 產業
@@ -1560,14 +1581,27 @@ function renderCBStats() {
         const activeCnt = DB.cb.length;
         const historyCnt = DB.cbAll.length - activeCnt;
         
-        return `
-            <div class="cb-stats">
-                ${tabsHtml}
-                <div class="cb-info-tabs">
-                    <span class="cb-sub-tab ${CB_INFO_TAB==='issue'?'active':''}" onclick="setCbInfoTab('issue')">📝 發行條件</span>
-                    <span class="cb-sub-tab ${CB_INFO_TAB==='timeline'?'active':''}" onclick="setCbInfoTab('timeline')">📅 時程資訊</span>
-                    <span class="cb-sub-tab ${CB_INFO_TAB==='putback'?'active':''}" onclick="setCbInfoTab('putback')">💰 賣回條件</span>
-                </div>
+        // 次標籤 - 統計/產業分佈（藍色系）
+        const subTabsHtml = `
+            <div class="cb-sub-switcher">
+                <span class="cb-sub-tab ${CB_INFO_SUB==='stats'?'active':''}" onclick="setCbInfoSub('stats')">📊 統計</span>
+                <span class="cb-sub-tab ${CB_INFO_SUB==='industry'?'active':''}" onclick="setCbInfoSub('industry')">🏭 產業分佈</span>
+            </div>
+        `;
+        
+        // 次次標籤 - 發行條件/時程資訊/賣回條件（綠色系）
+        const detailTabsHtml = `
+            <div class="cb-info-tabs">
+                <span class="cb-sub-tab ${CB_INFO_TAB==='issue'?'active':''}" onclick="setCbInfoTab('issue')">📝 發行條件</span>
+                <span class="cb-sub-tab ${CB_INFO_TAB==='timeline'?'active':''}" onclick="setCbInfoTab('timeline')">📅 時程資訊</span>
+                <span class="cb-sub-tab ${CB_INFO_TAB==='putback'?'active':''}" onclick="setCbInfoTab('putback')">💰 賣回條件</span>
+            </div>
+        `;
+        
+        // 根據次標籤顯示內容
+        let subContent = '';
+        if(CB_INFO_SUB === 'stats') {
+            subContent = `
                 <div class="cb-stats-grid">
                     <div class="cb-stat-item">
                         <div class="cb-stat-num">${DB.cbAll.length}</div>
@@ -1598,12 +1632,23 @@ function renderCBStats() {
                         <div class="cb-stat-label">無擔保</div>
                     </div>
                 </div>
-                <div class="cb-ind-title">📊 各產業CB分佈</div>
+            `;
+        } else if(CB_INFO_SUB === 'industry') {
+            subContent = `
                 <div class="cb-ind-grid">
-                    ${sortedAllInd.slice(0, 20).map(([ind, cnt]) => 
+                    ${sortedAllInd.slice(0, 25).map(([ind, cnt]) => 
                         `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${ind}<span class="num">${cnt}</span></div>`
                     ).join('')}
                 </div>
+            `;
+        }
+        
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                ${subTabsHtml}
+                ${subContent}
+                ${detailTabsHtml}
             </div>
         `;
     } else if(CB_MODE === 'active') {
@@ -2036,6 +2081,11 @@ function setCbMode(mode) {
 
 function setCbInfoTab(tab) {
     CB_INFO_TAB = tab;
+    renderList();
+}
+
+function setCbInfoSub(sub) {
+    CB_INFO_SUB = sub;
     renderList();
 }
 
