@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -232,6 +234,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -248,6 +251,7 @@
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
 
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -278,6 +282,7 @@
     <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -1066,6 +1071,10 @@ async function init() {
             const cbNameMatch = subject.match(/簡稱[：:]([^，,]+)[，,]/);
             const cbName = cbNameMatch ? cbNameMatch[1] : '';
             
+            // 取得 CB 收盤價和掛牌高低
+            const daily = dailyMap[cbCode] || {};
+            const hl = cbHighLow[cbCode] || {};
+            
             DB.cbRedeem.push({
                 '_stockCode': normalizeCode(r['公司代號']),
                 '_name': safe(r['公司名稱']),
@@ -1073,6 +1082,9 @@ async function init() {
                 '_cbName': cbName,
                 '_reportDate': safe(r['申報日期']),
                 '_endDate': endDate,
+                '_cbPrice': daily.cbPrice || 0,
+                '_high': hl.high || 0,
+                '_low': hl.low || 0,
                 '_subject': subject,
                 '_asoExpiry': r['ASO到期日']
             });
@@ -1091,10 +1103,36 @@ async function init() {
         
         // 讀取 14_轉換價格調整
         XLSX.utils.sheet_to_json(wb.Sheets['14_轉換價格調整']||[]).forEach(r => {
+            const subject = safe(r['主旨']);
+            
+            // 解析調整日期
+            const dateMatch = subject.match(/自(\d{3})年(\d{1,2})月(\d{1,2})日起/);
+            let adjDate = '';
+            if(dateMatch) {
+                const year = parseInt(dateMatch[1]) + 1911;
+                adjDate = `${year}/${dateMatch[2].padStart(2,'0')}/${dateMatch[3].padStart(2,'0')}`;
+            }
+            
+            // 解析原始價格和調整後價格
+            const priceMatch = subject.match(/轉換價格自([\d.]+)元調整為([\d.]+)元/);
+            const origPrice = priceMatch ? priceMatch[1] : '';
+            const newPrice = priceMatch ? priceMatch[2] : '';
+            
+            // 解析 CB 代號和簡稱
+            const cbMatch = subject.match(/代碼[：:](\d+)/);
+            const cbCode = cbMatch ? cbMatch[1] : '';
+            const nameMatch = subject.match(/簡稱[：:]([^，,]+)[，,]/);
+            const cbName = nameMatch ? nameMatch[1] : '';
+            
             DB.cbPriceAdj.push({
                 '_stockCode': normalizeCode(r['公司代號']),
                 '_name': safe(r['公司名稱']),
-                '_subject': safe(r['主旨'])
+                '_cbCode': cbCode,
+                '_cbName': cbName,
+                '_adjDate': adjDate,
+                '_origPrice': origPrice,
+                '_newPrice': newPrice,
+                '_subject': subject
             });
         });
         
@@ -1805,6 +1843,9 @@ function renderCBStats() {
             conceptCbCounts[cName] = cbCount;
         });
         
+        // 取得原始搜尋字串（不轉小寫）
+        const searchVal = $('search').value.trim();
+        
         return `
             <div class="cb-stats">
                 ${tabsHtml}
@@ -1817,7 +1858,7 @@ function renderCBStats() {
                 <div class="cb-ind-title">💡 概念股分類</div>
                 <div class="cb-ind-grid">
                     ${conceptNames.map(cName => 
-                        `<div class="cb-ind-tag ${q === cName.toLowerCase() ? 'active' : ''}" onclick="setSearch('${cName}')">${cName.replace('成份股','').replace('概念股','')}<span class="num">${conceptCbCounts[cName]}</span></div>`
+                        `<div class="cb-ind-tag ${searchVal === cName ? 'active' : ''}" onclick="setSearch('${cName}')">${cName.replace('成份股','').replace('概念股','')}<span class="num">${conceptCbCounts[cName]}</span></div>`
                     ).join('')}
                 </div>
             </div>
@@ -1842,6 +1883,7 @@ function setCbMode(mode) {
 
 function renderList() {
     const q = $('search').value.toLowerCase().trim();
+    const qOriginal = $('search').value.trim(); // 保留原始大小寫
     let list = [];
     
     // 顯示/隱藏統計區塊
@@ -1909,13 +1951,17 @@ function renderList() {
         // 概念股篩選
         if(CURR_DB === 'cb' && CB_MODE === 'concept') {
             const conceptNames = ['富櫃50成份股', '台灣50成份股', '中型100成份股', 'NVDIA概念股', '台積電概念股'];
-            const matchedConcept = conceptNames.find(c => c.toLowerCase() === q);
+            // 用原始大小寫比對
+            const matchedConcept = conceptNames.find(c => c === qOriginal || c.toLowerCase() === q);
             if(matchedConcept) {
                 const stockCodes = DB.conceptLists[matchedConcept] || [];
-                return stockCodes.includes(i._stockCode);
+                // 檢查 CB 的轉換標的代碼是否在概念股清單中
+                const cbStockCode = i._stockCode || '';
+                return stockCodes.includes(cbStockCode);
             }
-            // 沒有選擇概念股時顯示所有
+            // 沒有選擇概念股時顯示所有掛牌中 CB
             if(!q) return true;
+            // 如果有搜尋字串但不是概念股名稱，進行一般搜尋
         }
         
         if(str.includes(q)) return true;
@@ -2150,23 +2196,25 @@ function renderList() {
             // 強制贖回表格
             html = `<div class="cb-table-wrap"><table class="cb-table" id="cbTable">
                 <thead><tr>
-                    <th>股票代號</th>
-                    <th>公司名稱</th>
                     <th>CB代號</th>
                     <th>CB簡稱</th>
                     <th>申報日期</th>
                     <th>終止買賣日</th>
+                    <th>掛牌最高</th>
+                    <th>掛牌最低</th>
+                    <th>CB收盤</th>
                     <th class="hide-mobile">主旨</th>
                 </tr></thead><tbody>`;
             
             validFiltered.forEach(r => {
                 html += `<tr>
-                    <td class="code">${r._stockCode}</td>
-                    <td>${r._name}</td>
                     <td class="code">${r._cbCode}</td>
                     <td>${r._cbName}</td>
                     <td>${r._reportDate}</td>
                     <td>${r._endDate}</td>
+                    <td>${fmtNum(r._high, 2)}</td>
+                    <td>${fmtNum(r._low, 2)}</td>
+                    <td>${fmtNum(r._cbPrice, 2)}</td>
                     <td class="hide-mobile subject-col">${r._subject}</td>
                 </tr>`;
             });
@@ -2196,16 +2244,25 @@ function renderList() {
             // 轉換價格調整表格
             html = `<div class="cb-table-wrap"><table class="cb-table" id="cbTable">
                 <thead><tr>
-                    <th>公司代號</th>
-                    <th>公司名稱</th>
-                    <th>主旨</th>
+                    <th>CB代號</th>
+                    <th>CB簡稱</th>
+                    <th>調整日期</th>
+                    <th>原始價格</th>
+                    <th>調整後價格</th>
+                    <th class="hide-mobile">主旨</th>
                 </tr></thead><tbody>`;
             
             validFiltered.forEach(r => {
+                const origPrice = parseFloat(r._origPrice) || 0;
+                const newPrice = parseFloat(r._newPrice) || 0;
+                const priceChange = newPrice - origPrice;
                 html += `<tr>
-                    <td class="code">${r._stockCode}</td>
-                    <td>${r._name}</td>
-                    <td class="subject-col">${r._subject}</td>
+                    <td class="code">${r._cbCode}</td>
+                    <td>${r._cbName}</td>
+                    <td>${r._adjDate}</td>
+                    <td>${r._origPrice}</td>
+                    <td class="${priceChange < 0 ? 'down' : priceChange > 0 ? 'up' : ''}">${r._newPrice}</td>
+                    <td class="hide-mobile subject-col">${r._subject}</td>
                 </tr>`;
             });
             html += `</tbody></table></div>`;
