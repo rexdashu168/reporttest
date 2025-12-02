@@ -2887,35 +2887,21 @@ window.openCbInfo = function(cbCode) {
     `;
 
     const navItems = [
-        {id:'issue', icon:'📝', label:'發行條件'},
+        {id:'issue', icon:'📝', label:'發行'},
         {id:'timeline', icon:'📅', label:'時程'},
         {id:'putback', icon:'💰', label:'賣回'},
         {id:'stock', icon:'🏢', label:'公司'}
     ];
 
-    const fullHtml = `
-        <div class="modal-info">${infoHtml}</div>
-        <div class="modal-nav">${navItems.map(n => `<div class="nav-item" data-tab="${n.id}"><div class="nav-icon">${n.icon}</div><div class="nav-label">${n.label}</div></div>`).join('')}</div>
-        <div class="modal-tabs">
-            <div class="tab-pane" id="tab-issue">${tIssue}</div>
-            <div class="tab-pane" id="tab-timeline">${tTimeline}</div>
-            <div class="tab-pane" id="tab-putback">${tPutback}</div>
-            <div class="tab-pane" id="tab-stock">${tStock}</div>
-        </div>
+    // 組合內容
+    $('m-body').innerHTML = `
+        <div class="tab-pane active" id="tab-issue">${tIssue}</div>
+        <div class="tab-pane" id="tab-timeline">${tTimeline}</div>
+        <div class="tab-pane" id="tab-putback">${tPutback}</div>
+        <div class="tab-pane" id="tab-stock">${tStock}</div>
     `;
     
-    showModal(fullHtml, () => {
-        document.querySelectorAll('.modal-nav .nav-item').forEach((item, idx) => {
-            item.onclick = () => {
-                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                document.getElementById('tab-' + item.dataset.tab).classList.add('active');
-            };
-            if(idx === 0) item.classList.add('active');
-        });
-        document.getElementById('tab-issue').classList.add('active');
-    });
+    showModal(infoHtml, navItems);
 };
 
 window.openStock = code => {
