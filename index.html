@@ -103,6 +103,9 @@
     .tag.concept { background: #8e44ad; }
     .tag.trend-up { background: #27ae60; }
     .tag.trend-down { background: #e74c3c; }
+    .tag.cb-tag { background: #e74c3c; font-size: 10px; padding: 1px 6px; }
+    .cb-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-left: auto; }
+    .card-head { display: flex; align-items: center; gap: 8px; }
     .news-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: 600; }
     .news-type.ind-type { background: #9b59b6; color: #fff; }
     
@@ -2360,6 +2363,12 @@ function renderList() {
                     body = `${i['_subCat'] ? '【'+i['_subCat']+'】' : ''}${i['_desc'] || ''}`;
                     click = `openStock('${code}')`;
                 }
+                // 查詢該股票是否有掛牌中的 CB
+                const cbList = META.cbMap[code] || [];
+                if(cbList.length > 0) {
+                    const cbTags = cbList.map(cb => `<span class="tag cb-tag">${cb._name || cb['名稱']}</span>`).join('');
+                    i._cbTags = cbTags;
+                }
             }
             else if(CURR_DB==='news') {
                 const dataType = i['資料類型'] || '';
@@ -2412,7 +2421,7 @@ function renderList() {
             }
 
             html += `<div class="${cardClass}" onclick="${click}">
-                <div class="card-head"><div class="card-title">${title} ${code?`<span style="color:#999;font-weight:400">${code}</span>`:''}</div></div>
+                <div class="card-head"><div class="card-title">${title} ${code?`<span style="color:#999;font-weight:400">${code}</span>`:''}</div>${i._cbTags ? `<div class="cb-tags">${i._cbTags}</div>` : ''}</div>
                 <div class="card-meta"><span class="tag ${tagClass}">${sub||'一般'}</span>${date?`<span class="tag dt">${fmtDate(date)}</span>`:''}</div>
                 <div class="card-body">${body}</div>
             </div>`;
