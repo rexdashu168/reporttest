@@ -2800,20 +2800,27 @@ window.initCbSort = () => {
 
 // 開啟個股
 // 開啟 CB 基本資料詳情
-window.openCbInfo = cbCode => {
-    if(!cbCode) { alert('無CB代號'); return; }
+window.openCbInfo = function(cbCode) {
+    console.log('openCbInfo called:', cbCode, typeof cbCode);
+    console.log('DB.cbAll length:', DB.cbAll ? DB.cbAll.length : 'undefined');
     
-    // 嘗試多種方式查找
-    let cb = DB.cbAll.find(c => c._cbCode === cbCode);
-    if(!cb) cb = DB.cbAll.find(c => String(c._cbCode) === String(cbCode));
-    if(!cb) cb = DB.cbAll.find(c => c._cbCode == cbCode);
-    
-    if(!cb) {
-        alert('找不到CB資料: ' + cbCode + '\nDB.cbAll有 ' + DB.cbAll.length + ' 筆');
+    if(!cbCode) {
+        console.log('No cbCode');
         return;
     }
     
-    const isActive = DB.cb.find(c => c._cbCode === cbCode);
+    // 轉成字串比對
+    const cbCodeStr = String(cbCode).trim();
+    let cb = DB.cbAll.find(c => String(c._cbCode).trim() === cbCodeStr);
+    
+    console.log('Found cb:', cb);
+    
+    if(!cb) {
+        console.log('CB not found, first 3 items:', DB.cbAll.slice(0,3).map(c => c._cbCode));
+        return;
+    }
+    
+    const isActive = DB.cb.find(c => String(c._cbCode) === cbCodeStr);
     const statusTag = isActive ? '<span class="tag trend-up">掛牌中</span>' : '<span class="tag dt">已下市</span>';
     
     const infoHtml = `
