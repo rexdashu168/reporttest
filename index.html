@@ -1702,12 +1702,16 @@ function renderList() {
     
     // CB 用表格形式
     if(CURR_DB === 'cb') {
-        // 過濾掉掛牌最高或最低為 0 的資料
-        const validFiltered = filtered.filter(r => {
-            const high = parseFloat(r['_high']) || 0;
-            const low = parseFloat(r['_low']) || 0;
-            return high > 0 && low > 0;
-        });
+        // 初級市場和董事會公告不需要過濾掛牌高低
+        let validFiltered = filtered;
+        if(CB_MODE !== 'primary') {
+            // 過濾掉掛牌最高或最低為 0 的資料（僅適用於掛牌中、歷史、競拍）
+            validFiltered = filtered.filter(r => {
+                const high = parseFloat(r['_high']) || 0;
+                const low = parseFloat(r['_low']) || 0;
+                return high > 0 && low > 0;
+            });
+        }
         
         // 更新顯示筆數
         $('resCount').innerText = validFiltered.length;
