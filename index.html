@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -14,236 +13,233 @@
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
 
-```
-    .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
-    .loading-overlay.hidden { opacity: 0; pointer-events: none; }
-    .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
+        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+        .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-    .header { text-align: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
-    .header h1 { color: var(--primary); font-size: 22px; margin-bottom: 5px; font-weight: 800; }
-    .db-switcher { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 15px 0; }
-    .db-tab { padding: 6px 14px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--gray); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
-    .db-tab:hover { border-color: var(--primary); }
-    .db-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
+        .header { text-align: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .header h1 { color: var(--primary); font-size: 22px; margin-bottom: 5px; font-weight: 800; }
+        .db-switcher { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 15px 0; }
+        .db-tab { padding: 6px 14px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--gray); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
+        .db-tab:hover { border-color: var(--primary); }
+        .db-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .count { background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
 
-    .search-box { position: relative; margin-bottom: 15px; }
-    .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; transition: border-color 0.2s; }
-    .search-input:focus { border-color: var(--primary); }
-    .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
-    .clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; }
+        .search-box { position: relative; margin-bottom: 15px; }
+        .search-input { width: 100%; padding: 12px 35px 12px 40px; border-radius: 25px; border: 2px solid var(--border); background: #fff; font-size: 15px; outline: none; transition: border-color 0.2s; }
+        .search-input:focus { border-color: var(--primary); }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; }
+        .clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #ccc; color: #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; }
 
-    /* CB 統計區塊 */
-    .cb-stats { background: #fff5f5; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #ffe0e0; }
-    .cb-mode-switcher { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-    .cb-mode-tab { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #666; transition: all 0.2s; }
-    .cb-mode-tab:hover { border-color: var(--primary); }
-    .cb-mode-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .cb-sub-switcher { display: flex; gap: 6px; margin-bottom: 12px; padding-left: 10px; }
-    .cb-sub-tab { padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #ccc; background: #f9f9f9; color: #666; transition: all 0.2s; }
-    .cb-sub-tab:hover { border-color: #e67e22; }
-    .cb-sub-tab.active { background: #e67e22; color: #fff; border-color: #e67e22; }
-    .cb-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
-    .cb-stat-item { background: #fff; padding: 12px 8px; border-radius: 8px; text-align: center; }
-    .cb-stat-item.clickable { cursor: pointer; transition: all 0.2s; }
-    .cb-stat-item.clickable:hover { background: #fff8f0; border: 1px solid var(--primary); }
-    .cb-stat-num { font-size: 22px; font-weight: 800; color: var(--primary); }
-    .cb-stat-label { font-size: 11px; color: #888; margin-top: 2px; }
-    .cb-ind-title { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; }
-    .cb-ind-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-    .cb-ind-tag { padding: 6px 12px; background: #fff; border-radius: 20px; font-size: 12px; color: #666; cursor: pointer; transition: all 0.2s; border: 1px solid #eee; }
-    .cb-ind-tag:hover { border-color: var(--primary); color: var(--primary); }
-    .cb-ind-tag .num { background: var(--primary); color: #fff; padding: 1px 6px; border-radius: 10px; font-size: 10px; margin-left: 4px; }
-    
-    /* 競拍前十名表格 */
-    .auction-top10-table { overflow-x: auto; margin-bottom: 10px; }
-    .auction-top10-table table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 8px; overflow: hidden; }
-    .auction-top10-table th { background: #f8f8f8; padding: 8px 6px; text-align: center; font-weight: 600; color: #555; border-bottom: 1px solid #eee; white-space: nowrap; }
-    .auction-top10-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #f5f5f5; }
-    .auction-top10-table tr:hover { background: #fff8f0; }
-    .auction-top10-table .code { color: var(--primary); font-weight: 600; }
-    .auction-top10-table .highlight { color: var(--primary); font-weight: 700; }
-    .auction-top10-table .highlight-red { color: #e74c3c; font-weight: 700; }
-    
-    /* 流通餘額前十名表格 */
-    .balance-top10-table { overflow-x: auto; margin-bottom: 10px; }
-    .balance-top10-table table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 8px; overflow: hidden; }
-    .balance-top10-table th { background: #f8f8f8; padding: 8px 4px; text-align: center; font-weight: 600; color: #555; border-bottom: 1px solid #eee; white-space: nowrap; font-size: 11px; }
-    .balance-top10-table td { padding: 6px 4px; text-align: center; border-bottom: 1px solid #f5f5f5; font-size: 11px; }
-    .balance-top10-table tr:hover { background: #fff8f0; }
-    .balance-top10-table .code { color: var(--primary); font-weight: 600; }
-    .balance-top10-table .name-cell { text-align: left; min-width: 80px; max-width: 120px; white-space: normal; line-height: 1.3; }
-    .balance-top10-table .highlight-red { color: #e74c3c; font-weight: 700; }
-    
-    /* 流通餘額主表格欄寬縮減 */
-    .cb-table.balance-table { font-size: 11px; }
-    .cb-table.balance-table th, .cb-table.balance-table td { padding: 6px 4px; }
-    .cb-table.balance-table .name-col { max-width: 90px; white-space: normal; line-height: 1.3; text-align: left; }
-    
-    /* 主旨欄位 */
-    .cb-table .subject-col { text-align: left; font-size: 11px; line-height: 1.4; max-width: 300px; white-space: normal; }
-    .cb-table .name-col { max-width: 100px; white-space: normal; line-height: 1.3; text-align: left; }
+        /* CB 統計區塊 */
+        .cb-stats { background: #fff5f5; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #ffe0e0; }
+        .cb-mode-switcher { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .cb-mode-tab { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #666; transition: all 0.2s; }
+        .cb-mode-tab:hover { border-color: var(--primary); }
+        .cb-mode-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .cb-sub-switcher { display: flex; gap: 6px; margin-bottom: 12px; padding-left: 10px; }
+        .cb-sub-tab { padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #ccc; background: #f9f9f9; color: #666; transition: all 0.2s; }
+        .cb-sub-tab:hover { border-color: #e67e22; }
+        .cb-sub-tab.active { background: #e67e22; color: #fff; border-color: #e67e22; }
+        .cb-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+        .cb-stat-item { background: #fff; padding: 12px 8px; border-radius: 8px; text-align: center; }
+        .cb-stat-item.clickable { cursor: pointer; transition: all 0.2s; }
+        .cb-stat-item.clickable:hover { background: #fff8f0; border: 1px solid var(--primary); }
+        .cb-stat-num { font-size: 22px; font-weight: 800; color: var(--primary); }
+        .cb-stat-label { font-size: 11px; color: #888; margin-top: 2px; }
+        .cb-ind-title { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; }
+        .cb-ind-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .cb-ind-tag { padding: 6px 12px; background: #fff; border-radius: 20px; font-size: 12px; color: #666; cursor: pointer; transition: all 0.2s; border: 1px solid #eee; }
+        .cb-ind-tag:hover { border-color: var(--primary); color: var(--primary); }
+        .cb-ind-tag .num { background: var(--primary); color: #fff; padding: 1px 6px; border-radius: 10px; font-size: 10px; margin-left: 4px; }
+        
+        /* 競拍前十名表格 */
+        .auction-top10-table { overflow-x: auto; margin-bottom: 10px; }
+        .auction-top10-table table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 8px; overflow: hidden; }
+        .auction-top10-table th { background: #f8f8f8; padding: 8px 6px; text-align: center; font-weight: 600; color: #555; border-bottom: 1px solid #eee; white-space: nowrap; }
+        .auction-top10-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #f5f5f5; }
+        .auction-top10-table tr:hover { background: #fff8f0; }
+        .auction-top10-table .code { color: var(--primary); font-weight: 600; }
+        .auction-top10-table .highlight { color: var(--primary); font-weight: 700; }
+        .auction-top10-table .highlight-red { color: #e74c3c; font-weight: 700; }
+        
+        /* 流通餘額前十名表格 */
+        .balance-top10-table { overflow-x: auto; margin-bottom: 10px; }
+        .balance-top10-table table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 8px; overflow: hidden; }
+        .balance-top10-table th { background: #f8f8f8; padding: 8px 4px; text-align: center; font-weight: 600; color: #555; border-bottom: 1px solid #eee; white-space: nowrap; font-size: 11px; }
+        .balance-top10-table td { padding: 6px 4px; text-align: center; border-bottom: 1px solid #f5f5f5; font-size: 11px; }
+        .balance-top10-table tr:hover { background: #fff8f0; }
+        .balance-top10-table .code { color: var(--primary); font-weight: 600; }
+        .balance-top10-table .name-cell { text-align: left; min-width: 80px; max-width: 120px; white-space: normal; line-height: 1.3; }
+        .balance-top10-table .highlight-red { color: #e74c3c; font-weight: 700; }
+        
+        /* 流通餘額主表格欄寬縮減 */
+        .cb-table.balance-table { font-size: 11px; }
+        .cb-table.balance-table th, .cb-table.balance-table td { padding: 6px 4px; }
+        .cb-table.balance-table .name-col { max-width: 90px; white-space: normal; line-height: 1.3; text-align: left; }
+        
+        /* 主旨欄位 */
+        .cb-table .subject-col { text-align: left; font-size: 11px; line-height: 1.4; max-width: 300px; white-space: normal; }
+        .cb-table .name-col { max-width: 100px; white-space: normal; line-height: 1.3; text-align: left; }
 
-    .card-list { display: flex; flex-direction: column; gap: 12px; }
-    @media(min-width: 1024px) { .card-list:not(.cb-mode) { display: grid; grid-template-columns: repeat(2, 1fr); } }
-    @media(min-width: 1400px) { .card-list:not(.cb-mode) { grid-template-columns: repeat(3, 1fr); } }
-    .card-list.cb-mode { display: block; }
-    .card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; transition: all 0.2s; }
-    .card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .card.industry-card { border-left: 4px solid #9b59b6; background: linear-gradient(135deg, #faf8fc 0%, #fff 100%); }
-    .card-head { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .card-title { font-weight: 700; font-size: 16px; color: #2c3e50; }
-    .card-meta { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
-    .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 500; }
-    .tag.brk { background: var(--primary); }
-    .tag.ind { background: #2980b9; }
-    .tag.trend-ind { background: #8e44ad; }
-    .tag.dt { background: #e0e0e0; color: #666; }
-    .tag.concept { background: #8e44ad; }
-    .tag.trend-up { background: #27ae60; }
-    .tag.trend-down { background: #e74c3c; }
-    .tag.cb-tag { background: #e74c3c; font-size: 10px; padding: 1px 6px; }
-    .cb-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-left: auto; }
-    .card-head { display: flex; align-items: center; gap: 8px; }
-    .news-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: 600; }
-    .news-type.ind-type { background: #9b59b6; color: #fff; }
-    
-    /* CB 基本資料子標籤 */
-    .cb-info-tabs { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
-    .cb-table tr.active-cb td { background: #e8f5e9; }
-    .cb-table tr.active-cb:hover td { background: #c8e6c9; }
-    
-    /* 結果列和 CB 篩選標籤 */
-    .result-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .cb-filter-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-    .cb-filter-tag { font-size: 11px; padding: 4px 10px; border-radius: 15px; cursor: pointer; border: 1px solid #ddd; background: #fff; transition: all 0.2s; }
-    .cb-filter-tag:hover { border-color: var(--primary); }
-    .cb-filter-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .cb-filter-tag .cnt { margin-left: 4px; opacity: 0.7; }
-    .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .card-list { display: flex; flex-direction: column; gap: 12px; }
+        @media(min-width: 1024px) { .card-list:not(.cb-mode) { display: grid; grid-template-columns: repeat(2, 1fr); } }
+        @media(min-width: 1400px) { .card-list:not(.cb-mode) { grid-template-columns: repeat(3, 1fr); } }
+        .card-list.cb-mode { display: block; }
+        .card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; transition: all 0.2s; }
+        .card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .card.industry-card { border-left: 4px solid #9b59b6; background: linear-gradient(135deg, #faf8fc 0%, #fff 100%); }
+        .card-head { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .card-title { font-weight: 700; font-size: 16px; color: #2c3e50; }
+        .card-meta { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 500; }
+        .tag.brk { background: var(--primary); }
+        .tag.ind { background: #2980b9; }
+        .tag.trend-ind { background: #8e44ad; }
+        .tag.dt { background: #e0e0e0; color: #666; }
+        .tag.concept { background: #8e44ad; }
+        .tag.trend-up { background: #27ae60; }
+        .tag.trend-down { background: #e74c3c; }
+        .tag.cb-tag { background: #e74c3c; font-size: 10px; padding: 1px 6px; }
+        .cb-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-left: auto; }
+        .card-head { display: flex; align-items: center; gap: 8px; }
+        .news-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: 600; }
+        .news-type.ind-type { background: #9b59b6; color: #fff; }
+        
+        /* CB 基本資料子標籤 */
+        .cb-info-tabs { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+        .cb-table tr.active-cb td { background: #e8f5e9; }
+        .cb-table tr.active-cb:hover td { background: #c8e6c9; }
+        
+        /* 結果列和 CB 篩選標籤 */
+        .result-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .cb-filter-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+        .cb-filter-tag { font-size: 11px; padding: 4px 10px; border-radius: 15px; cursor: pointer; border: 1px solid #ddd; background: #fff; transition: all 0.2s; }
+        .cb-filter-tag:hover { border-color: var(--primary); }
+        .cb-filter-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .cb-filter-tag .cnt { margin-left: 4px; opacity: 0.7; }
+        .card-body { font-size: 13px; color: #555; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-    /* CB 列表表格 */
-    .cb-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .cb-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 8px; overflow: hidden; }
-    .cb-table th { background: #f8f9fa; padding: 12px 8px; text-align: center; color: #666; font-weight: 600; border-bottom: 2px solid #eee; white-space: nowrap; }
-    .cb-table td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; text-align: center; white-space: nowrap; }
-    .cb-table tr:hover td { background: #fffaf8; }
-    .cb-table .code { color: var(--primary); font-weight: 600; cursor: pointer; }
-    .cb-table .stock { color: var(--link); cursor: pointer; }
-    .cb-table th.sortable { cursor: pointer; user-select: none; }
-    .cb-table th.sortable:hover { background: #eee; }
-    .cb-table th .sort-icon { font-size: 10px; color: #999; margin-left: 2px; }
-    .cb-table th.sort-asc .sort-icon { color: var(--primary); }
-    .cb-table th.sort-desc .sort-icon { color: var(--primary); }
-    .cb-table th.sort-asc .sort-icon::after { content: '↑'; }
-    .cb-table th.sort-desc .sort-icon::after { content: '↓'; }
-    .cb-table tfoot { background: #f8f9fa; }
-    .cb-table tfoot td { border-top: 2px solid #ddd; padding: 12px 8px; }
-    
-    /* 手機版隱藏部分欄位 */
-    @media(max-width: 768px) {
-        .cb-table { font-size: 12px; }
-        .cb-table th, .cb-table td { padding: 8px 5px; }
-        .cb-table .hide-mobile { display: none; }
-    }
-    
-    /* 桌機版滿版 */
-    @media(min-width: 1024px) {
-        .cb-table { font-size: 14px; }
-        .cb-table th, .cb-table td { padding: 12px 10px; }
-    }
+        /* CB 列表表格 */
+        .cb-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .cb-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 8px; overflow: hidden; }
+        .cb-table th { background: #f8f9fa; padding: 12px 8px; text-align: center; color: #666; font-weight: 600; border-bottom: 2px solid #eee; white-space: nowrap; }
+        .cb-table td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; text-align: center; white-space: nowrap; }
+        .cb-table tr:hover td { background: #fffaf8; }
+        .cb-table .code { color: var(--primary); font-weight: 600; cursor: pointer; }
+        .cb-table .stock { color: var(--link); cursor: pointer; }
+        .cb-table th.sortable { cursor: pointer; user-select: none; }
+        .cb-table th.sortable:hover { background: #eee; }
+        .cb-table th .sort-icon { font-size: 10px; color: #999; margin-left: 2px; }
+        .cb-table th.sort-asc .sort-icon { color: var(--primary); }
+        .cb-table th.sort-desc .sort-icon { color: var(--primary); }
+        .cb-table th.sort-asc .sort-icon::after { content: '↑'; }
+        .cb-table th.sort-desc .sort-icon::after { content: '↓'; }
+        .cb-table tfoot { background: #f8f9fa; }
+        .cb-table tfoot td { border-top: 2px solid #ddd; padding: 12px 8px; }
+        
+        /* 手機版隱藏部分欄位 */
+        @media(max-width: 768px) {
+            .cb-table { font-size: 12px; }
+            .cb-table th, .cb-table td { padding: 8px 5px; }
+            .cb-table .hide-mobile { display: none; }
+        }
+        
+        /* 桌機版滿版 */
+        @media(min-width: 1024px) {
+            .cb-table { font-size: 14px; }
+            .cb-table th, .cb-table td { padding: 12px 10px; }
+        }
 
-    /* Modal */
-    .modal { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: flex-end; }
-    .modal.show { display: flex; }
-    .modal-inner { background: #fff; width: 100%; max-width: 650px; height: 92vh; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s; }
-    @media(min-width: 1024px) { .modal-inner { max-width: 900px; } }
-    @media(min-width: 1400px) { .modal-inner { max-width: 1100px; } }
-    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-    
-    .m-head { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-start; }
-    .m-close { width: 32px; height: 32px; border-radius: 50%; border: none; background: #f0f0f0; font-size: 20px; color: #666; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
-    .m-close:hover { background: #e0e0e0; }
-    
-    .nav-grid { display: flex; gap: 4px; padding: 10px 15px; background: #fafafa; border-bottom: 1px solid #eee; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .nav-btn { padding: 6px 10px; border-radius: 8px; border: none; background: #f0f0f0; font-size: 11px; font-weight: 600; color: #666; cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
-    .nav-btn.active { background: var(--primary); color: #fff; }
+        /* Modal */
+        .modal { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: flex-end; }
+        .modal.show { display: flex; }
+        .modal-inner { background: #fff; width: 100%; max-width: 650px; height: 92vh; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s; }
+        @media(min-width: 1024px) { .modal-inner { max-width: 900px; } }
+        @media(min-width: 1400px) { .modal-inner { max-width: 1100px; } }
+        @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        
+        .m-head { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-start; }
+        .m-close { width: 32px; height: 32px; border-radius: 50%; border: none; background: #f0f0f0; font-size: 20px; color: #666; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        .m-close:hover { background: #e0e0e0; }
+        
+        .nav-grid { display: flex; gap: 4px; padding: 10px 15px; background: #fafafa; border-bottom: 1px solid #eee; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .nav-btn { padding: 6px 10px; border-radius: 8px; border: none; background: #f0f0f0; font-size: 11px; font-weight: 600; color: #666; cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
+        .nav-btn.active { background: var(--primary); color: #fff; }
 
-    .m-body { flex: 1; overflow-y: auto; padding: 15px; background: #fff; -webkit-overflow-scrolling: touch; }
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
-    
-    .m-footer-tags { padding: 12px 15px; border-top: 1px solid #eee; background: #fafafa; display: none; }
-    .m-footer-tags.show { display: block; }
-    .m-footer-tags .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
-    .m-footer-tags .tag { padding: 6px 12px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
-    .m-footer-tags .tag:hover { transform: scale(1.05); }
+        .m-body { flex: 1; overflow-y: auto; padding: 15px; background: #fff; -webkit-overflow-scrolling: touch; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        
+        .m-footer-tags { padding: 12px 15px; border-top: 1px solid #eee; background: #fafafa; display: none; }
+        .m-footer-tags.show { display: block; }
+        .m-footer-tags .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+        .m-footer-tags .tag { padding: 6px 12px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .m-footer-tags .tag:hover { transform: scale(1.05); }
 
-    .section-head { font-size: 14px; font-weight: 700; color: #444; margin: 20px 0 10px; padding: 8px 12px; background: linear-gradient(90deg, #f8f9fa, transparent); border-left: 4px solid var(--primary); border-radius: 0 8px 8px 0; }
-    .section-head:first-child { margin-top: 0; }
-    .hl-block { background: #fafaf8; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
-    .hl-block b { color: var(--primary); }
-    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
-    .info-label { color: #666; }
-    .info-val { font-weight: 600; color: #333; }
-    
-    .list-item { padding: 12px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 8px; background: #fff; cursor: pointer; transition: all 0.2s; }
-    .list-item:hover { border-color: var(--primary); background: #fffaf8; }
-    .list-title { font-weight: 700; font-size: 14px; color: #2c3e50; margin-bottom: 4px; }
-    .list-sub { font-size: 12px; color: #888; margin-bottom: 6px; }
-    .list-content { font-size: 13px; color: #555; line-height: 1.6; white-space: pre-wrap; }
+        .section-head { font-size: 14px; font-weight: 700; color: #444; margin: 20px 0 10px; padding: 8px 12px; background: linear-gradient(90deg, #f8f9fa, transparent); border-left: 4px solid var(--primary); border-radius: 0 8px 8px 0; }
+        .section-head:first-child { margin-top: 0; }
+        .hl-block { background: #fafaf8; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); margin-bottom: 10px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
+        .hl-block b { color: var(--primary); }
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .info-label { color: #666; }
+        .info-val { font-weight: 600; color: #333; }
+        
+        .list-item { padding: 12px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 8px; background: #fff; cursor: pointer; transition: all 0.2s; }
+        .list-item:hover { border-color: var(--primary); background: #fffaf8; }
+        .list-title { font-weight: 700; font-size: 14px; color: #2c3e50; margin-bottom: 4px; }
+        .list-sub { font-size: 12px; color: #888; margin-bottom: 6px; }
+        .list-content { font-size: 13px; color: #555; line-height: 1.6; white-space: pre-wrap; }
 
-    .tag-link { color: var(--link); cursor: pointer; font-weight: 600; }
-    .tag-link:hover { text-decoration: underline; }
-    
-    .fin-switcher { display: flex; margin-bottom: 10px; border: 1px solid var(--primary); border-radius: 6px; overflow: hidden; }
-    .fin-btn { flex: 1; padding: 8px; text-align: center; font-size: 13px; color: var(--primary); background: #fff; cursor: pointer; font-weight: 600; border-right: 1px solid var(--primary); transition: all 0.2s; }
-    .fin-btn:last-child { border-right: none; }
-    .fin-btn.active { background: var(--primary); color: #fff; }
-    .fin-sub-pane { display: none; }
-    .fin-sub-pane.active { display: block; }
-    
-    .rev-unit { text-align: right; font-size: 11px; color: #888; margin-bottom: 8px; }
+        .tag-link { color: var(--link); cursor: pointer; font-weight: 600; }
+        .tag-link:hover { text-decoration: underline; }
+        
+        .fin-switcher { display: flex; margin-bottom: 10px; border: 1px solid var(--primary); border-radius: 6px; overflow: hidden; }
+        .fin-btn { flex: 1; padding: 8px; text-align: center; font-size: 13px; color: var(--primary); background: #fff; cursor: pointer; font-weight: 600; border-right: 1px solid var(--primary); transition: all 0.2s; }
+        .fin-btn:last-child { border-right: none; }
+        .fin-btn.active { background: var(--primary); color: #fff; }
+        .fin-sub-pane { display: none; }
+        .fin-sub-pane.active { display: block; }
+        
+        .rev-unit { text-align: right; font-size: 11px; color: #888; margin-bottom: 8px; }
 
-    .table-wrap { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; }
-    .fin-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
-    .fin-table th { background: #f8f9fa; padding: 10px 8px; border-bottom: 2px solid #ddd; text-align: right; color: #555; position: sticky; top: 0; }
-    .fin-table td { padding: 10px 8px; border-bottom: 1px solid #eee; text-align: right; color: #333; }
-    .fin-table th:first-child, .fin-table td:first-child { position: sticky; left: 0; background: #fff; border-right: 1px solid #eee; text-align: left; z-index: 2; font-weight: 700; }
-    .fin-table tr:nth-child(even) td { background: #fcfcfc; }
-    .fin-table tr:nth-child(even) td:first-child { background: #fcfcfc; }
-    .fin-table .highlight-row td { background: #fff3e0; font-weight: 700; }
-    .fin-table .highlight-row td:first-child { background: #fff3e0; color: var(--primary); }
-    
-    .t-up { color: var(--up); font-weight: 700; }
-    .t-down { color: var(--down); font-weight: 700; }
+        .table-wrap { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; }
+        .fin-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+        .fin-table th { background: #f8f9fa; padding: 10px 8px; border-bottom: 2px solid #ddd; text-align: right; color: #555; position: sticky; top: 0; }
+        .fin-table td { padding: 10px 8px; border-bottom: 1px solid #eee; text-align: right; color: #333; }
+        .fin-table th:first-child, .fin-table td:first-child { position: sticky; left: 0; background: #fff; border-right: 1px solid #eee; text-align: left; z-index: 2; font-weight: 700; }
+        .fin-table tr:nth-child(even) td { background: #fcfcfc; }
+        .fin-table tr:nth-child(even) td:first-child { background: #fcfcfc; }
+        .fin-table .highlight-row td { background: #fff3e0; font-weight: 700; }
+        .fin-table .highlight-row td:first-child { background: #fff3e0; color: var(--primary); }
+        
+        .t-up { color: var(--up); font-weight: 700; }
+        .t-down { color: var(--down); font-weight: 700; }
 
-    .rating-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
-    .rating-card .big-num { font-size: 28px; font-weight: 800; }
-    .rating-card .label { font-size: 12px; opacity: 0.8; }
+        .rating-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+        .rating-card .big-num { font-size: 28px; font-weight: 800; }
+        .rating-card .label { font-size: 12px; opacity: 0.8; }
 
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-    .stat-box { background: #f8f9fa; padding: 12px; text-align: center; border-radius: 8px; }
-    .stat-box .num { font-size: 18px; font-weight: 700; color: var(--primary); }
-    .stat-box .lbl { font-size: 11px; color: #888; margin-top: 2px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-box { background: #f8f9fa; padding: 12px; text-align: center; border-radius: 8px; }
+        .stat-box .num { font-size: 18px; font-weight: 700; color: var(--primary); }
+        .stat-box .lbl { font-size: 11px; color: #888; margin-top: 2px; }
 
-    .qa-item { margin-bottom: 15px; }
-    .qa-q { background: #e3f2fd; padding: 10px 12px; border-radius: 8px 8px 0 0; font-weight: 600; color: #1565c0; font-size: 13px; }
-    .qa-a { background: #f5f5f5; padding: 10px 12px; border-radius: 0 0 8px 8px; font-size: 13px; line-height: 1.6; color: #444; }
+        .qa-item { margin-bottom: 15px; }
+        .qa-q { background: #e3f2fd; padding: 10px 12px; border-radius: 8px 8px 0 0; font-weight: 600; color: #1565c0; font-size: 13px; }
+        .qa-a { background: #f5f5f5; padding: 10px 12px; border-radius: 0 0 8px 8px; font-size: 13px; line-height: 1.6; color: #444; }
 
-    .timeline-item { position: relative; padding-left: 20px; margin-bottom: 12px; }
-    .timeline-item::before { content: ''; position: absolute; left: 0; top: 8px; width: 10px; height: 10px; background: var(--primary); border-radius: 50%; }
-    .timeline-item::after { content: ''; position: absolute; left: 4px; top: 20px; width: 2px; height: calc(100% + 4px); background: #e0e0e0; }
-    .timeline-item:last-child::after { display: none; }
-    .timeline-date { font-size: 12px; font-weight: 700; color: var(--primary); }
-    .timeline-text { font-size: 13px; color: #444; margin-top: 2px; }
+        .timeline-item { position: relative; padding-left: 20px; margin-bottom: 12px; }
+        .timeline-item::before { content: ''; position: absolute; left: 0; top: 8px; width: 10px; height: 10px; background: var(--primary); border-radius: 50%; }
+        .timeline-item::after { content: ''; position: absolute; left: 4px; top: 20px; width: 2px; height: calc(100% + 4px); background: #e0e0e0; }
+        .timeline-item:last-child::after { display: none; }
+        .timeline-date { font-size: 12px; font-weight: 700; color: var(--primary); }
+        .timeline-text { font-size: 13px; color: #444; margin-top: 2px; }
 
-    @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
-    @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
-</style>
-```
-
+        @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
+        @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
+    </style>
 </head>
 <body>
 
@@ -259,39 +255,36 @@
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
 
-```
-<div class="db-switcher">
-    <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
-    <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
-    <div class="db-tab" data-db="reports">📑 產業 <span class="count" id="c-reports">0</span></div>
-    <div class="db-tab" data-db="strategy">🔮 展望 <span class="count" id="c-strategy">0</span></div>
-    <div class="db-tab" data-db="stocks">🏢 個股 <span class="count" id="c-stocks">0</span></div>
-    <div class="db-tab" data-db="trends">📈 趨勢 <span class="count" id="c-trends">0</span></div>
-    <div class="db-tab" data-db="cb">🎫 CB <span class="count" id="c-cb">0</span></div>
-</div>
+    <div class="db-switcher">
+        <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
+        <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
+        <div class="db-tab" data-db="reports">📑 產業 <span class="count" id="c-reports">0</span></div>
+        <div class="db-tab" data-db="strategy">🔮 展望 <span class="count" id="c-strategy">0</span></div>
+        <div class="db-tab" data-db="stocks">🏢 個股 <span class="count" id="c-stocks">0</span></div>
+        <div class="db-tab" data-db="trends">📈 趨勢 <span class="count" id="c-trends">0</span></div>
+        <div class="db-tab" data-db="cb">🎫 CB <span class="count" id="c-cb">0</span></div>
+    </div>
 
-<div class="search-box">
-    <span class="search-icon">🔍</span>
-    <input type="text" class="search-input" id="search" placeholder="搜尋公司、代號、產業、#Tag..." oninput="handleInput(this)">
-    <div class="clear-btn" id="clearBtn" onclick="clearSearch()">✕</div>
-</div>
+    <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="search" placeholder="搜尋公司、代號、產業、#Tag..." oninput="handleInput(this)">
+        <div class="clear-btn" id="clearBtn" onclick="clearSearch()">✕</div>
+    </div>
 
-<!-- CB 統計區塊 (只在 CB 分頁顯示) -->
-<div id="cbStatsArea" style="display:none"></div>
+    <!-- CB 統計區塊 (只在 CB 分頁顯示) -->
+    <div id="cbStatsArea" style="display:none"></div>
+    
+    <!-- 個股統計區塊 (只在個股分頁顯示) -->
+    <div id="stockStatsArea" style="display:none"></div>
+    
+    <!-- Memo 統計區塊 (只在 Memo 分頁顯示) -->
+    <div id="memoStatsArea" style="display:none"></div>
 
-<!-- 個股統計區塊 (只在個股分頁顯示) -->
-<div id="stockStatsArea" style="display:none"></div>
-
-<!-- Memo 統計區塊 (只在 Memo 分頁顯示) -->
-<div id="memoStatsArea" style="display:none"></div>
-
-<div class="result-bar">
-    <div style="font-size:12px;color:#666;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
-    <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
-</div>
-<div class="card-list" id="list"></div>
-```
-
+    <div class="result-bar">
+        <div style="font-size:12px;color:#666;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
+        <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
+    </div>
+    <div class="card-list" id="list"></div>
 </div>
 
 <div class="modal" id="modal" onclick="closeModal(event)">
@@ -2174,8 +2167,9 @@ function renderList() {
                 validFiltered.slice(0, 150).forEach(r => {
                     const isActive = DB.cb.find(c => c._cbCode === r._cbCode);
                     const statusClass = isActive ? 'active-cb' : '';
+                    const cbCode = r._cbCode || '';
                     html += `<tr class="${statusClass}">
-                        <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                        <td class="code cb-link" data-cb="${cbCode}">${cbCode}</td>
                         <td>${r._name || ''}</td>
                         <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
                         <td class="hide-mobile">${r._industry || ''}</td>
@@ -2207,8 +2201,9 @@ function renderList() {
                 validFiltered.slice(0, 150).forEach(r => {
                     const isActive = DB.cb.find(c => c._cbCode === r._cbCode);
                     const statusClass = isActive ? 'active-cb' : '';
+                    const cbCode = r._cbCode || '';
                     html += `<tr class="${statusClass}">
-                        <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                        <td class="code cb-link" data-cb="${cbCode}">${cbCode}</td>
                         <td>${r._name || ''}</td>
                         <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
                         <td>${fmtDate(r._boardDate)}</td>
@@ -2238,8 +2233,9 @@ function renderList() {
                 validFiltered.slice(0, 150).forEach(r => {
                     const isActive = DB.cb.find(c => c._cbCode === r._cbCode);
                     const statusClass = isActive ? 'active-cb' : '';
+                    const cbCode = r._cbCode || '';
                     html += `<tr class="${statusClass}">
-                        <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                        <td class="code cb-link" data-cb="${cbCode}">${cbCode}</td>
                         <td>${r._name || ''}</td>
                         <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
                         <td>${fmtDate(r._listDate)}</td>
@@ -3480,8 +3476,19 @@ window.openNews = id => {
     showModal(infoHtml, []);
 };
 
+// ✅ 正確的事件委派：綁定在 document 上，監聽所有動態生成的 .cb-link
+document.addEventListener('click', function(e) {
+    // 檢查點擊的目標是否有 cb-link class
+    if (e.target && e.target.classList.contains('cb-link')) {
+        const cbCode = e.target.dataset.cb;
+        console.log('CB clicked via delegation:', cbCode);
+        if (cbCode) {
+            openCbInfo(cbCode);
+        }
+    }
+});
+
 window.onload = init;
 </script>
-
 </body>
 </html>
