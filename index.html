@@ -40,8 +40,16 @@
         .cb-mode-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
         .cb-sub-switcher { display: flex; gap: 6px; margin-bottom: 12px; padding-left: 10px; }
         .cb-sub-tab { padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #ccc; background: #f9f9f9; color: #666; transition: all 0.2s; }
-        .cb-sub-tab:hover { border-color: #e67e22; }
-        .cb-sub-tab.active { background: #e67e22; color: #fff; border-color: #e67e22; }
+        .cb-sub-tab:hover { border-color: #3498db; }
+        .cb-sub-tab.active { background: #3498db; color: #fff; border-color: #3498db; }
+        .cb-sub-tab.blue { border-color: #90caf9; background: #e3f2fd; color: #1976d2; }
+        .cb-sub-tab.blue:hover { border-color: #1976d2; }
+        .cb-sub-tab.blue.active { background: #1976d2; color: #fff; border-color: #1976d2; }
+        .cb-sub-tabs { display: flex; gap: 8px; margin-bottom: 12px; padding: 10px; background: #e3f2fd; border-radius: 10px; flex-wrap: wrap; }
+        .cb-info-tabs { display: flex; gap: 8px; margin-top: 12px; padding: 10px; background: #e8f5e9; border-radius: 10px; flex-wrap: wrap; }
+        .cb-info-tab { padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #a5d6a7; background: #e8f5e9; color: #2e7d32; transition: all 0.2s; }
+        .cb-info-tab:hover { border-color: #4caf50; }
+        .cb-info-tab.active { background: #4caf50; color: #fff; border-color: #4caf50; }
         .cb-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
         .cb-stat-item { background: #fff; padding: 12px 8px; border-radius: 8px; text-align: center; }
         .cb-stat-item.clickable { cursor: pointer; transition: all 0.2s; }
@@ -330,6 +338,7 @@ const DB = {
 };
 let CB_MODE = 'info'; // 'info' 基本資料, 'active' 掛牌中, 'history' 歷史, 'auction' 競拍, 'primary' 初級市場, 'balance' 流通餘額, 'cbas' CBAS報價
 let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'putback' 賣回條件
+let CB_INFO_SUB = 'stats'; // 'stats' 統計, 'industry' 產業分佈
 let PRIMARY_MODE = 'underwriting'; // 'underwriting' 承銷中, 'board' 董事會公告
 let STOCK_MODE = 'all'; // 'all' 全部個股, 'concept' 概念股
 let MEMO_MODE = 'all'; // 'all' 全部, 'stock' 個股, 'industry' 產業
@@ -1569,14 +1578,10 @@ function renderCBStats() {
         const activeCnt = DB.cb.length;
         const historyCnt = DB.cbAll.length - activeCnt;
         
-        return `
-            <div class="cb-stats">
-                ${tabsHtml}
-                <div class="cb-info-tabs">
-                    <span class="cb-sub-tab ${CB_INFO_TAB==='issue'?'active':''}" onclick="setCbInfoTab('issue')">📝 發行條件</span>
-                    <span class="cb-sub-tab ${CB_INFO_TAB==='timeline'?'active':''}" onclick="setCbInfoTab('timeline')">📅 時程資訊</span>
-                    <span class="cb-sub-tab ${CB_INFO_TAB==='putback'?'active':''}" onclick="setCbInfoTab('putback')">💰 賣回條件</span>
-                </div>
+        // 次標籤內容（藍色區塊）
+        let subContent = '';
+        if(CB_INFO_SUB === 'stats') {
+            subContent = `
                 <div class="cb-stats-grid">
                     <div class="cb-stat-item">
                         <div class="cb-stat-num">${DB.cbAll.length}</div>
@@ -1587,7 +1592,7 @@ function renderCBStats() {
                         <div class="cb-stat-label">掛牌中</div>
                     </div>
                     <div class="cb-stat-item">
-                        <div class="cb-stat-num">${historyCnt}</div>
+                        <div class="cb-stat-num trend-down">${historyCnt}</div>
                         <div class="cb-stat-label">已下市</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('詢圈')">
@@ -1599,7 +1604,7 @@ function renderCBStats() {
                         <div class="cb-stat-label">競拍</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('有擔保')">
-                        <div class="cb-stat-num">${allGuar['有擔保']}</div>
+                        <div class="cb-stat-num trend-up">${allGuar['有擔保']}</div>
                         <div class="cb-stat-label">有擔保</div>
                     </div>
                     <div class="cb-stat-item clickable" onclick="setSearch('無擔保')">
@@ -1607,11 +1612,29 @@ function renderCBStats() {
                         <div class="cb-stat-label">無擔保</div>
                     </div>
                 </div>
-                <div class="cb-ind-title">📊 各產業CB分佈</div>
+            `;
+        } else if(CB_INFO_SUB === 'industry') {
+            subContent = `
                 <div class="cb-ind-grid">
-                    ${sortedAllInd.slice(0, 20).map(([ind, cnt]) => 
+                    ${sortedAllInd.slice(0, 24).map(([ind, cnt]) => 
                         `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${ind}<span class="num">${cnt}</span></div>`
                     ).join('')}
+                </div>
+            `;
+        }
+        
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                <div class="cb-sub-tabs">
+                    <span class="cb-sub-tab blue ${CB_INFO_SUB==='stats'?'active':''}" onclick="setCbInfoSub('stats')">📊 統計</span>
+                    <span class="cb-sub-tab blue ${CB_INFO_SUB==='industry'?'active':''}" onclick="setCbInfoSub('industry')">🏭 產業分佈</span>
+                </div>
+                ${subContent}
+                <div class="cb-info-tabs">
+                    <span class="cb-info-tab ${CB_INFO_TAB==='issue'?'active':''}" onclick="setCbInfoTab('issue')">📋 發行條件</span>
+                    <span class="cb-info-tab ${CB_INFO_TAB==='timeline'?'active':''}" onclick="setCbInfoTab('timeline')">🗓 時程資訊</span>
+                    <span class="cb-info-tab ${CB_INFO_TAB==='putback'?'active':''}" onclick="setCbInfoTab('putback')">💰 賣回條件</span>
                 </div>
             </div>
         `;
@@ -2045,6 +2068,11 @@ function setCbMode(mode) {
 
 function setCbInfoTab(tab) {
     CB_INFO_TAB = tab;
+    renderList();
+}
+
+function setCbInfoSub(sub) {
+    CB_INFO_SUB = sub;
     renderList();
 }
 
