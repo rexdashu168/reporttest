@@ -307,7 +307,8 @@ const FILES = {
 const DB = { 
     news:[], memo:[], memoStock:[], memoIndustry:[], reports:[], strategy:[], stocks:{}, 
     cb:[], cbHistory:[], cbAuction:[], cbPrimary:[], cbBoard:[], cbBalance:[], cbCBAS:[],
-    cbRedeem:[], cbStopConv:[], cbPriceAdj:[],
+    cbRedeem:[], cbStopConv:[], cbPriceAdj:[], cbConcept:[],
+    conceptLists: {}, // 各概念股清單 { 'NVDIA概念股': ['6579','2353',...], ... }
     trends:[], conceptStocks:[] 
 };
 let CB_MODE = 'active'; // 'active' 掛牌中, 'history' 歷史, 'auction' 競拍, 'primary' 初級市場, 'balance' 流通餘額, 'cbas' CBAS報價
@@ -450,6 +451,17 @@ async function init() {
         }
         META.stockStats.conceptTotal = DB.conceptStocks.length;
         console.log('個股載入:', META.stockStats.total, '概念股:', META.stockStats.conceptTotal);
+        
+        // 載入各概念股清單工作表
+        const conceptSheets = ['富櫃50成份股', '台灣50成份股', '中型100成份股', 'NVDIA概念股', '台積電概念股'];
+        conceptSheets.forEach(sheetName => {
+            const sheet = wb.Sheets[sheetName];
+            if(sheet) {
+                const rows = XLSX.utils.sheet_to_json(sheet);
+                DB.conceptLists[sheetName] = rows.map(r => normalizeCode(r['代碼'])).filter(c => c);
+                console.log(`${sheetName}: ${DB.conceptLists[sheetName].length} 檔`);
+            }
+        });
     }
 
     // 2. Revenue - 完整讀取
@@ -1044,11 +1056,29 @@ async function init() {
         
         // 讀取 12_公司執行贖回權
         XLSX.utils.sheet_to_json(wb.Sheets['12_公司執行贖回權']||[]).forEach(r => {
+            const subject = safe(r['主旨']);
+            // 從主旨解析終止櫃檯買賣日期
+            const endMatch = subject.match(/(\d{3})年(\d{1,2})月(\d{1,2})日終止櫃檯買賣/);
+            let endDate = '';
+            if(endMatch) {
+                const year = parseInt(endMatch[1]) + 1911;
+                endDate = `${year}/${endMatch[2].padStart(2,'0')}/${endMatch[3].padStart(2,'0')}`;
+            }
+            // 從主旨解析CB代號
+            const cbMatch = subject.match(/代碼[：:](\d+)/);
+            const cbCode = cbMatch ? cbMatch[1] : '';
+            // 從主旨解析CB簡稱
+            const cbNameMatch = subject.match(/簡稱[：:]([^，,]+)[，,]/);
+            const cbName = cbNameMatch ? cbNameMatch[1] : '';
+            
             DB.cbRedeem.push({
                 '_stockCode': normalizeCode(r['公司代號']),
                 '_name': safe(r['公司名稱']),
+                '_cbCode': cbCode,
+                '_cbName': cbName,
                 '_reportDate': safe(r['申報日期']),
-                '_subject': safe(r['主旨']),
+                '_endDate': endDate,
+                '_subject': subject,
                 '_asoExpiry': r['ASO到期日']
             });
         });
@@ -1386,6 +1416,7 @@ function renderCBStats() {
             <span class="cb-mode-tab ${CB_MODE==='redeem'?'active':''}" onclick="setCbMode('redeem')">🔔 強制贖回</span>
             <span class="cb-mode-tab ${CB_MODE==='stopconv'?'active':''}" onclick="setCbMode('stopconv')">⏸️ 停止轉換</span>
             <span class="cb-mode-tab ${CB_MODE==='priceadj'?'active':''}" onclick="setCbMode('priceadj')">💰 價格調整</span>
+            <span class="cb-mode-tab ${CB_MODE==='concept'?'active':''}" onclick="setCbMode('concept')">💡 概念股</span>
         </div>
     `;
     
@@ -1767,6 +1798,35 @@ function renderCBStats() {
                 </div>
             </div>
         `;
+    } else if(CB_MODE === 'concept') {
+        // 概念股 CB
+        // 計算各概念股對應的掛牌中 CB 數量
+        const conceptCbCounts = {};
+        const conceptNames = ['富櫃50成份股', '台灣50成份股', '中型100成份股', 'NVDIA概念股', '台積電概念股'];
+        
+        conceptNames.forEach(cName => {
+            const stockCodes = DB.conceptLists[cName] || [];
+            const cbCount = DB.cb.filter(cb => stockCodes.includes(cb._stockCode)).length;
+            conceptCbCounts[cName] = cbCount;
+        });
+        
+        return `
+            <div class="cb-stats">
+                ${tabsHtml}
+                <div class="cb-stats-grid">
+                    <div class="cb-stat-item">
+                        <div class="cb-stat-num">${DB.cb.length}</div>
+                        <div class="cb-stat-label">掛牌中CB</div>
+                    </div>
+                </div>
+                <div class="cb-ind-title">💡 概念股分類</div>
+                <div class="cb-ind-grid">
+                    ${conceptNames.map(cName => 
+                        `<div class="cb-ind-tag ${q === cName.toLowerCase() ? 'active' : ''}" onclick="setSearch('${cName}')">${cName.replace('成份股','').replace('概念股','')}<span class="num">${conceptCbCounts[cName]}</span></div>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
     }
     return '';
 }
@@ -1838,6 +1898,7 @@ function renderList() {
         else if(CB_MODE === 'redeem') list = DB.cbRedeem;
         else if(CB_MODE === 'stopconv') list = DB.cbStopConv;
         else if(CB_MODE === 'priceadj') list = DB.cbPriceAdj;
+        else if(CB_MODE === 'concept') list = DB.cb; // 概念股用掛牌中 CB
     }
 
     const filtered = list.filter(i => {
@@ -1848,6 +1909,18 @@ function renderList() {
             const years = parseFloat(i._remainYears) || 0;
             const premium = parseFloat(i._premium) || 0;
             return years > 2 && premium < 5;
+        }
+        
+        // 概念股篩選
+        if(CURR_DB === 'cb' && CB_MODE === 'concept') {
+            const conceptNames = ['富櫃50成份股', '台灣50成份股', '中型100成份股', 'NVDIA概念股', '台積電概念股'];
+            const matchedConcept = conceptNames.find(c => c.toLowerCase() === q);
+            if(matchedConcept) {
+                const stockCodes = DB.conceptLists[matchedConcept] || [];
+                return stockCodes.includes(i._stockCode);
+            }
+            // 沒有選擇概念股時顯示所有
+            if(!q) return true;
         }
         
         if(str.includes(q)) return true;
@@ -2082,10 +2155,12 @@ function renderList() {
             // 強制贖回表格
             html = `<div class="cb-table-wrap"><table class="cb-table" id="cbTable">
                 <thead><tr>
-                    <th>公司代號</th>
+                    <th>股票代號</th>
                     <th>公司名稱</th>
+                    <th>CB代號</th>
+                    <th>CB簡稱</th>
                     <th>申報日期</th>
-                    <th>ASO到期日</th>
+                    <th>終止買賣日</th>
                     <th class="hide-mobile">主旨</th>
                 </tr></thead><tbody>`;
             
@@ -2093,8 +2168,10 @@ function renderList() {
                 html += `<tr>
                     <td class="code">${r._stockCode}</td>
                     <td>${r._name}</td>
+                    <td class="code">${r._cbCode}</td>
+                    <td>${r._cbName}</td>
                     <td>${r._reportDate}</td>
-                    <td>${fmtDate(r._asoExpiry)}</td>
+                    <td>${r._endDate}</td>
                     <td class="hide-mobile subject-col">${r._subject}</td>
                 </tr>`;
             });
