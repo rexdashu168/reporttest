@@ -64,6 +64,7 @@
     .auction-top10-table tr:hover { background: #fff8f0; }
     .auction-top10-table .code { color: var(--primary); font-weight: 600; }
     .auction-top10-table .highlight { color: var(--primary); font-weight: 700; }
+    .auction-top10-table .highlight-red { color: #e74c3c; font-weight: 700; }
 
     .card-list { display: flex; flex-direction: column; gap: 12px; }
     @media(min-width: 1024px) { .card-list:not(.cb-mode) { display: grid; grid-template-columns: repeat(2, 1fr); } }
@@ -1579,6 +1580,40 @@ function renderCBStats() {
         }
     } else if(CB_MODE === 'balance') {
         // 流通餘額
+        // 計算減幅前五名（增減比率由小到大，負數越大減越多）
+        const topDecreaseRate = [...DB.cbBalance]
+            .filter(c => parseFloat(c._changeRate) < 0)
+            .sort((a, b) => parseFloat(a._changeRate) - parseFloat(b._changeRate))
+            .slice(0, 5);
+        
+        // 計算減少數額前五名（增減數額由小到大，負數越大減越多）
+        const topDecreaseAmount = [...DB.cbBalance]
+            .filter(c => parseFloat(c._change) < 0)
+            .sort((a, b) => parseFloat(a._change) - parseFloat(b._change))
+            .slice(0, 5);
+        
+        const renderBalanceTop5 = (list, title, highlightField) => {
+            if(list.length === 0) return '';
+            return `<div class="cb-ind-title" style="margin-top:15px">${title}</div>
+            <div class="auction-top10-table">
+                <table>
+                    <thead><tr><th>排名</th><th>CB代號</th><th>名稱</th><th>本週股額</th><th>上週股額</th><th>增減數額</th><th>增減比率</th><th>剩餘比率%</th></tr></thead>
+                    <tbody>
+                    ${list.map((c, i) => `<tr>
+                        <td>${i+1}</td>
+                        <td class="code">${c._cbCode}</td>
+                        <td>${c._name}</td>
+                        <td>${fmtNum(c._thisWeek, 0)}</td>
+                        <td>${fmtNum(c._lastWeek, 0)}</td>
+                        <td class="${highlightField === '_change' ? 'highlight-red' : ''}">${fmtNum(c._change, 0)}</td>
+                        <td class="${highlightField === '_changeRate' ? 'highlight-red' : ''}">${fmtNum(parseFloat(c._changeRate)*100, 2)}%</td>
+                        <td>${fmtNum(c._remainRate, 1)}%</td>
+                    </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+        };
+        
         return `
             <div class="cb-stats">
                 ${tabsHtml}
@@ -1588,6 +1623,8 @@ function renderCBStats() {
                         <div class="cb-stat-label">CB檔數</div>
                     </div>
                 </div>
+                ${renderBalanceTop5(topDecreaseRate, '📉 本週減幅前5名', '_changeRate')}
+                ${renderBalanceTop5(topDecreaseAmount, '📉 減少數額前5名', '_change')}
             </div>
         `;
     } else if(CB_MODE === 'cbas') {
@@ -1702,9 +1739,9 @@ function renderList() {
     
     // CB 用表格形式
     if(CURR_DB === 'cb') {
-        // 初級市場和董事會公告不需要過濾掛牌高低
+        // 初級市場、流通餘額、CBAS 不需要過濾掛牌高低
         let validFiltered = filtered;
-        if(CB_MODE !== 'primary') {
+        if(CB_MODE !== 'primary' && CB_MODE !== 'balance' && CB_MODE !== 'cbas') {
             // 過濾掉掛牌最高或最低為 0 的資料（僅適用於掛牌中、歷史、競拍）
             validFiltered = filtered.filter(r => {
                 const high = parseFloat(r['_high']) || 0;
