@@ -1262,9 +1262,11 @@ async function init() {
                     // 讀取文章詳細內容
                     const articleNum = articleId.replace('CB-', '');
                     const sheetNames = wb.SheetNames.filter(n => n.startsWith(`CB${articleNum}_`));
+                    console.log(`  ${articleId}: 尋找工作表 CB${articleNum}_*, 找到:`, sheetNames);
                     if(sheetNames.length > 0) {
                         const articleSheet = wb.Sheets[sheetNames[0]];
                         const articleRows = XLSX.utils.sheet_to_json(articleSheet, {header: 1, defval: ''});
+                        console.log(`    讀取到 ${articleRows.length} 列資料`);
                         
                         // 解析章節結構
                         const sections = [];
@@ -1294,7 +1296,10 @@ async function init() {
                             sections.push({title: currentSection, items: currentContent});
                         }
                         
+                        console.log(`    解析到 ${sections.length} 個章節`);
                         META.articleContent[articleId] = sections;
+                    } else {
+                        console.log(`    ⚠️ 找不到文章工作表`);
                     }
                 }
             });
@@ -3609,12 +3614,19 @@ window.openNews = id => {
 
 // 開啟文章
 window.openArticle = id => {
+    console.log('開啟文章:', id);
     const a = DB.article.find(i => i._id === id);
-    if(!a) return;
+    if(!a) {
+        console.log('找不到文章資料');
+        return;
+    }
+    console.log('文章基本資料:', a);
     
     const sections = META.articleContent[id] || [];
+    console.log('文章章節數:', sections.length);
     if(sections.length === 0) {
-        alert('文章內容載入失敗');
+        console.log('⚠️ 文章內容載入失敗,META.articleContent:', META.articleContent);
+        alert('文章內容載入失敗,請重新整理頁面');
         return;
     }
 
