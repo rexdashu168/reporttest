@@ -329,7 +329,7 @@ const META = {
     cbBalanceStats: { total: 0, totalBalance: 0 },
     cbCBASStats: { total: 0 },
     stockStats: { total: 0, conceptTotal: 0, markets: {}, industries: {}, conceptCategories: {} },
-    memoStats: { total: 0, stockTotal: 0, industryTotal: 0, brokers: {}, types: {} }
+    memoStats: { total: 0, stockTotal: 0, industryTotal: 0, brokers: {}, types: {} }, articleContent: {}
 };
 
 let CURR_DB = 'news';
@@ -1240,6 +1240,7 @@ async function init() {
     // 7. Article
     wb = await fetchXlsx(FILES.ARTICLE);
     if(wb) {
+        // 讀取文章索引
         const sheet = wb.Sheets['文章索引'];
         if(sheet) {
             const rows = XLSX.utils.sheet_to_json(sheet, {range: 3});
@@ -1256,6 +1257,44 @@ async function init() {
                         '_prereq': safe(r['先備知識'] || ''),
                         '_related': safe(r['關聯文章'] || '')
                     });
+                    
+                    // 讀取文章詳細內容
+                    const articleNum = articleId.replace('CB-', '');
+                    const sheetNames = wb.SheetNames.filter(n => n.startsWith(`CB${articleNum}_`));
+                    if(sheetNames.length > 0) {
+                        const articleSheet = wb.Sheets[sheetNames[0]];
+                        const articleRows = XLSX.utils.sheet_to_json(articleSheet, {header: [0,1], defval: ''});
+                        
+                        // 解析章節結構
+                        const sections = [];
+                        let currentSection = null;
+                        let currentContent = [];
+                        
+                        articleRows.forEach(row => {
+                            const key = safe(row['0']);
+                            const val = safe(row['1']);
+                            
+                            if(key && key.includes('【') && key.includes('】')) {
+                                // 保存前一個章節
+                                if(currentSection) {
+                                    sections.push({title: currentSection, items: currentContent});
+                                }
+                                // 開始新章節
+                                currentSection = key;
+                                currentContent = [];
+                            } else if(currentSection && key) {
+                                // 收集章節內容
+                                currentContent.push({label: key, value: val});
+                            }
+                        });
+                        
+                        // 保存最後一個章節
+                        if(currentSection) {
+                            sections.push({title: currentSection, items: currentContent});
+                        }
+                        
+                        META.articleContent[articleId] = sections;
+                    }
                 }
             });
             console.log('文章載入:', DB.article.length, '篇');
@@ -3504,11 +3543,22 @@ window.openNews = id => {
     showModal(infoHtml, []);
 };
 
+
 // 開啟文章
 window.openArticle = id => {
     const a = DB.article.find(i => i._id === id);
     if(!a) return;
+    
+    const sections = META.articleContent[id] || [];
+    if(sections.length === 0) {
+        alert('文章內容載入失敗');
+        return;
+    }
 
+    // 提取總覽資訊
+    const overview = sections.find(s => s.title.includes('總覽'));
+    const coreIdea = overview ? overview.items.find(i => i.label === '核心觀點') : null;
+    
     const infoHtml = `
         <div style="font-size:18px;font-weight:700;margin-bottom:5px">${a._title}</div>
         <div class="card-meta">
@@ -3516,26 +3566,31 @@ window.openArticle = id => {
             <span class="tag dt">${a._date || ''}</span>
             ${a._pages ? `<span class="tag">${a._pages}</span>` : ''}
         </div>
+        ${coreIdea ? `<div style="margin-top:15px;padding:15px;background:#fff8f0;border-left:4px solid var(--primary);border-radius:8px"><div style="font-weight:600;color:#666;margin-bottom:5px">📌 核心觀點</div><div style="color:#333;line-height:1.6">${coreIdea.value}</div></div>` : ''}
     `;
 
-    let content = '';
-    
-    if(a._tags) {
-        content += `<div class="info-row"><span class="info-label">主題標籤</span><span class="info-val">${a._tags}</span></div>`;
-    }
-    
-    if(a._prereq && a._prereq !== 'NaN' && a._prereq !== 'nan') {
-        content += `<div class="info-row"><span class="info-label">先備知識</span><span class="info-val">${a._prereq}</span></div>`;
-    }
-    
-    if(a._related && a._related !== 'NaN' && a._related !== 'nan') {
-        content += `<div class="info-row"><span class="info-label">關聯文章</span><span class="info-val">${a._related}</span></div>`;
-    }
-    
-    content += `<div class="info-row"><span class="info-label">文章編號</span><span class="info-val">${a._id}</span></div>`;
+    // 創建導航標籤
+    const navItems = sections.map((sec, idx) => {
+        const label = sec.title.replace(/【|】/g, '').split(' ')[0];
+        return {id: `sec-${idx}`, label: label};
+    });
 
-    $('m-body').innerHTML = `<div id="tab-main" class="tab-pane active">${content}</div>`;
-    showModal(infoHtml, []);
+    // 創建內容
+    let tabPanes = '';
+    sections.forEach((sec, idx) => {
+        let content = `<div class="section-head">${sec.title}</div>`;
+        sec.items.forEach(item => {
+            if(item.value && item.value.length > 100) {
+                content += `<div class="hl-block"><b>${item.label}</b><br>${fmtTxt(item.value)}</div>`;
+            } else {
+                content += `<div class="info-row"><span class="info-label">${item.label}</span><span class="info-val">${item.value || ''}</span></div>`;
+            }
+        });
+        tabPanes += `<div id="sec-${idx}" class="tab-pane ${idx===0?'active':''}">${content}</div>`;
+    });
+
+    $('m-body').innerHTML = tabPanes;
+    showModal(infoHtml, navItems);
 };
 
 window.onload = init;
