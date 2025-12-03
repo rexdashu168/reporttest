@@ -1240,21 +1240,21 @@ async function init() {
     // 7. Article
     wb = await fetchXlsx(FILES.ARTICLE);
     if(wb) {
-        const sheet = wb.Sheets['【文章清單】'] || wb.Sheets[wb.SheetNames[0]];
+        const sheet = wb.Sheets['文章索引'];
         if(sheet) {
-            const rows = XLSX.utils.sheet_to_json(sheet, {range: 2});
+            const rows = XLSX.utils.sheet_to_json(sheet, {range: 3});
             rows.forEach(r => {
-                const articleId = safe(r['【文章清單】'] || r['文章編號']);
+                const articleId = safe(r['文章編號']);
                 if(articleId && articleId.startsWith('CB-')) {
                     DB.article.push({
                         '_id': articleId,
-                        '_title': safe(r['Unnamed: 1'] || r['文章主題'] || ''),
-                        '_date': safe(r['Unnamed: 2'] || r['發布日期'] || ''),
-                        '_difficulty': safe(r['Unnamed: 3'] || r['難度'] || ''),
-                        '_tags': safe(r['Unnamed: 4'] || r['主題標籤'] || ''),
-                        '_pages': safe(r['Unnamed: 5'] || r['頁數'] || ''),
-                        '_prereq': safe(r['Unnamed: 6'] || r['先備知識'] || ''),
-                        '_related': safe(r['Unnamed: 7'] || r['關聯文章'] || '')
+                        '_title': safe(r['文章主題'] || ''),
+                        '_date': safe(r['發布日期'] || ''),
+                        '_difficulty': safe(r['難度'] || ''),
+                        '_tags': safe(r['主題標籤'] || ''),
+                        '_pages': safe(r['頁數'] || ''),
+                        '_prereq': safe(r['先備知識'] || ''),
+                        '_related': safe(r['關聯文章'] || '')
                     });
                 }
             });
