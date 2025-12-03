@@ -2180,7 +2180,14 @@ function filterTableRows(keyword) {
     let visibleCount = 0;
     
     rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
+        // 取得所有 td 的文字內容組合
+        const cells = row.querySelectorAll('td');
+        let text = '';
+        cells.forEach(cell => {
+            text += ' ' + cell.textContent.trim();
+        });
+        text = text.toLowerCase();
+        
         if(kw === '' || text.includes(kw)) {
             row.style.display = '';
             visibleCount++;
