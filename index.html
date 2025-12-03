@@ -2180,12 +2180,12 @@ function filterTableRows(keyword) {
     let visibleCount = 0;
     
     rows.forEach(row => {
-        // 取得所有 td 的文字內容組合
+        // 只搜尋前3個欄位（通常是代號、名稱、股票）
         const cells = row.querySelectorAll('td');
         let text = '';
-        cells.forEach(cell => {
-            text += ' ' + cell.textContent.trim();
-        });
+        for(let i = 0; i < Math.min(3, cells.length); i++) {
+            text += ' ' + cells[i].textContent.trim();
+        }
         text = text.toLowerCase();
         
         if(kw === '' || text.includes(kw)) {
@@ -2321,7 +2321,7 @@ function renderList() {
         if(needListFilter && validFiltered.length > 20) {
             listFilterHtml = `
                 <div class="list-filter-bar">
-                    <input type="text" class="list-filter-input" id="listFilter" placeholder="🔍 快速篩選當前列表..." oninput="filterTableRows(this.value)">
+                    <input type="text" class="list-filter-input" id="listFilter" placeholder="🔍 輸入代號或名稱篩選..." oninput="filterTableRows(this.value)">
                     <span class="list-filter-count">共 <b id="visibleCount">${validFiltered.length}</b> 筆</span>
                 </div>
             `;
