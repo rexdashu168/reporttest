@@ -3655,7 +3655,7 @@ window.openArticle = id => {
                 label = label.split(' ')[0];
             }
         }
-        return {id: `sec-${idx}`, label: label};
+        return {id: `sec-${idx}`, label: label, icon: ''};
     });
 
     // 創建內容
@@ -3669,7 +3669,7 @@ window.openArticle = id => {
                 content += `<div class="info-row"><span class="info-label">${item.label}</span><span class="info-val">${item.value || ''}</span></div>`;
             }
         });
-        tabPanes += `<div id="sec-${idx}" class="tab-pane ${idx===0?'active':''}">${content}</div>`;
+        tabPanes += `<div id="tab-sec-${idx}" class="tab-pane ${idx===0?'active':''}">${content}</div>`;
     });
 
     $('m-body').innerHTML = tabPanes;
