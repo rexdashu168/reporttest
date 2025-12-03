@@ -1263,7 +1263,7 @@ async function init() {
                     const sheetNames = wb.SheetNames.filter(n => n.startsWith(`CB${articleNum}_`));
                     if(sheetNames.length > 0) {
                         const articleSheet = wb.Sheets[sheetNames[0]];
-                        const articleRows = XLSX.utils.sheet_to_json(articleSheet, {header: [0,1], defval: ''});
+                        const articleRows = XLSX.utils.sheet_to_json(articleSheet, {header: 1, defval: ''});
                         
                         // 解析章節結構
                         const sections = [];
@@ -1271,8 +1271,8 @@ async function init() {
                         let currentContent = [];
                         
                         articleRows.forEach(row => {
-                            const key = safe(row['0']);
-                            const val = safe(row['1']);
+                            const key = safe(row[0]);
+                            const val = safe(row[1]);
                             
                             if(key && key.includes('【') && key.includes('】')) {
                                 // 保存前一個章節
@@ -1282,7 +1282,7 @@ async function init() {
                                 // 開始新章節
                                 currentSection = key;
                                 currentContent = [];
-                            } else if(currentSection && key) {
+                            } else if(currentSection && key && key !== 'nan') {
                                 // 收集章節內容
                                 currentContent.push({label: key, value: val});
                             }
@@ -3571,7 +3571,15 @@ window.openArticle = id => {
 
     // 創建導航標籤
     const navItems = sections.map((sec, idx) => {
-        const label = sec.title.replace(/【|】/g, '').split(' ')[0];
+        let label = '未命名';
+        if(sec && sec.title) {
+            // 移除【】符號
+            label = sec.title.replace(/【|】/g, '');
+            // 如果有空格,取第一部分
+            if(label.includes(' ')) {
+                label = label.split(' ')[0];
+            }
+        }
         return {id: `sec-${idx}`, label: label};
     });
 
