@@ -2175,8 +2175,8 @@ function filterTableRows(keyword) {
     const tbody = table.querySelector('tbody');
     if(!tbody) return;
     
-    const rows = tbody.querySelectorAll('tr');
-    const kw = keyword.toLowerCase().trim();
+    const rows = tbody.querySelectorAll('tr:not(.summary-row):not(.stat-row)');
+    const kw = keyword.trim().toLowerCase();
     let visibleCount = 0;
     
     rows.forEach(row => {
@@ -2186,23 +2186,28 @@ function filterTableRows(keyword) {
         if(kw === '') {
             matched = true;
         } else {
-            // 檢查前3個欄位（代號、名稱、股票）
-            for(let i = 0; i < Math.min(3, cells.length); i++) {
+            // 檢查前4個欄位（代號、名稱、股票等）
+            for(let i = 0; i < Math.min(4, cells.length); i++) {
                 const cellText = cells[i].textContent.trim().toLowerCase();
-                // 數字用前綴比對，文字用包含比對
+                // 數字用前綴比對
                 if(/^\d+$/.test(kw)) {
-                    // 純數字：前綴比對
-                    if(cellText.startsWith(kw)) {
-                        matched = true;
-                        break;
+                    // 從 cellText 中提取數字部分比對
+                    const numbers = cellText.match(/\d+/g);
+                    if(numbers) {
+                        for(const num of numbers) {
+                            if(num.startsWith(kw)) {
+                                matched = true;
+                                break;
+                            }
+                        }
                     }
                 } else {
                     // 含文字：包含比對
                     if(cellText.includes(kw)) {
                         matched = true;
-                        break;
                     }
                 }
+                if(matched) break;
             }
         }
         
