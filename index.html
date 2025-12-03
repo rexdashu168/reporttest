@@ -2180,15 +2180,33 @@ function filterTableRows(keyword) {
     let visibleCount = 0;
     
     rows.forEach(row => {
-        // 只搜尋前3個欄位（通常是代號、名稱、股票）
         const cells = row.querySelectorAll('td');
-        let text = '';
-        for(let i = 0; i < Math.min(3, cells.length); i++) {
-            text += ' ' + cells[i].textContent.trim();
-        }
-        text = text.toLowerCase();
+        let matched = false;
         
-        if(kw === '' || text.includes(kw)) {
+        if(kw === '') {
+            matched = true;
+        } else {
+            // 檢查前3個欄位（代號、名稱、股票）
+            for(let i = 0; i < Math.min(3, cells.length); i++) {
+                const cellText = cells[i].textContent.trim().toLowerCase();
+                // 數字用前綴比對，文字用包含比對
+                if(/^\d+$/.test(kw)) {
+                    // 純數字：前綴比對
+                    if(cellText.startsWith(kw)) {
+                        matched = true;
+                        break;
+                    }
+                } else {
+                    // 含文字：包含比對
+                    if(cellText.includes(kw)) {
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if(matched) {
             row.style.display = '';
             visibleCount++;
         } else {
