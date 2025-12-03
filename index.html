@@ -318,6 +318,7 @@ let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'pu
 let PRIMARY_MODE = 'underwriting'; // 'underwriting' 承銷中, 'board' 董事會公告
 let STOCK_MODE = 'all'; // 'all' 全部個股, 'concept' 概念股
 let MEMO_MODE = 'all'; // 'all' 全部, 'stock' 個股, 'industry' 產業
+let ARTICLE_FILTER = 'all'; // 'all' 全部, 'beginner' 入門級, 'advanced' 進階級, 'expert' 高階級
 const META = { 
     memoDetail:{}, tracking:{}, finance:{}, products:{}, 
     concepts:{}, cbMap:{}, relatedNews:{}, relatedMemo:{},
@@ -2098,6 +2099,52 @@ function setCbInfoTab(tab) {
     renderList();
 }
 
+
+// 文章統計區塊
+function renderArticleStats() {
+    // 統計難度分布
+    const diffCnt = {};
+    DB.article.forEach(a => {
+        const diff = a._difficulty || '未分類';
+        diffCnt[diff] = (diffCnt[diff] || 0) + 1;
+    });
+    
+    // 統計主題標籤
+    const tagCnt = {};
+    DB.article.forEach(a => {
+        const tags = a._tags || '';
+        tags.split(/[#\s]+/).filter(t => t).forEach(tag => {
+            const cleanTag = '#' + tag.replace('#', '');
+            tagCnt[cleanTag] = (tagCnt[cleanTag] || 0) + 1;
+        });
+    });
+    const sortedTags = Object.entries(tagCnt).sort((a,b) => b[1]-a[1]).slice(0, 15);
+    
+    // 難度篩選標籤
+    const filterHtml = `
+        <div class="cb-mode-switcher">
+            <span class="cb-mode-tab ${ARTICLE_FILTER==='all'?'active':''}" onclick="setArticleFilter('all')">📚 全部文章 <span class="count">${DB.article.length}</span></span>
+            <span class="cb-mode-tab ${ARTICLE_FILTER==='beginner'?'active':''}" onclick="setArticleFilter('beginner')">🌱 入門級 <span class="count">${diffCnt['#入門級'] || 0}</span></span>
+            <span class="cb-mode-tab ${ARTICLE_FILTER==='advanced'?'active':''}" onclick="setArticleFilter('advanced')">📖 進階級 <span class="count">${diffCnt['#進階級'] || 0}</span></span>
+            <span class="cb-mode-tab ${ARTICLE_FILTER==='expert'?'active':''}" onclick="setArticleFilter('expert')">⭐ 經典案例 <span class="count">${diffCnt['#進階級（★★★重要案例）'] || 0 + diffCnt['#進階級（★★★★★經典案例）'] || 0}</span></span>
+        </div>
+    `;
+    
+    // 主題標籤
+    let tagsHtml = '<div class="cb-ind-title">💡 熱門主題標籤</div><div class="cb-ind-grid">';
+    sortedTags.forEach(([tag, cnt]) => {
+        tagsHtml += `<div class="cb-ind-tag" onclick="setSearch('${tag}')">${tag}<span class="num">${cnt}</span></div>`;
+    });
+    tagsHtml += '</div>';
+    
+    return `<div class="cb-stats">${filterHtml}${tagsHtml}</div>`;
+}
+
+// 設定文章篩選
+window.setArticleFilter = mode => {
+    ARTICLE_FILTER = mode;
+    renderList();
+};
 function renderList() {
     const q = $('search').value.toLowerCase().trim();
     const qOriginal = $('search').value.trim(); // 保留原始大小寫
@@ -2122,6 +2169,12 @@ function renderList() {
         $('cbStatsArea').style.display = 'none';
         $('stockStatsArea').style.display = 'none';
         $('cbFilterTags').style.display = 'none';
+    } else if(CURR_DB === 'article') {
+        $('cbStatsArea').innerHTML = renderArticleStats();
+        $('cbStatsArea').style.display = 'block';
+        $('stockStatsArea').style.display = 'none';
+        $('memoStatsArea').style.display = 'none';
+        $('cbFilterTags').style.display = 'none';
     } else {
         $('cbStatsArea').style.display = 'none';
         $('stockStatsArea').style.display = 'none';
@@ -2142,7 +2195,17 @@ function renderList() {
         else if(STOCK_MODE === 'concept') list = DB.conceptStocks;
     }
     else if(CURR_DB==='trends') list = DB.trends;
-    else if(CURR_DB==='article') list = DB.article;
+    else if(CURR_DB==='article') {
+        if(ARTICLE_FILTER === 'all') {
+            list = DB.article;
+        } else if(ARTICLE_FILTER === 'beginner') {
+            list = DB.article.filter(a => a._difficulty && a._difficulty.includes('入門級'));
+        } else if(ARTICLE_FILTER === 'advanced') {
+            list = DB.article.filter(a => a._difficulty && a._difficulty.includes('進階級') && !a._difficulty.includes('★'));
+        } else if(ARTICLE_FILTER === 'expert') {
+            list = DB.article.filter(a => a._difficulty && a._difficulty.includes('★'));
+        }
+    }
     else if(CURR_DB==='cb') {
         if(CB_MODE === 'info') list = DB.cbAll;
         else if(CB_MODE === 'active') list = DB.cb;
