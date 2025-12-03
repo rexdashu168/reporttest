@@ -2168,19 +2168,28 @@ function setCbInfoSub(sub) {
 }
 
 // 列表內即時篩選
-let isFiltering = false;
+let filterTimer = null;
 function filterTableRows(keyword) {
-    if(isFiltering) return;
-    isFiltering = true;
+    // 清除之前的計時器
+    if(filterTimer) clearTimeout(filterTimer);
     
-    // 同步到主搜尋框並重新渲染
-    const mainSearch = document.getElementById('search');
-    if(mainSearch && mainSearch.value !== keyword) {
-        mainSearch.value = keyword;
-        renderList();
-    }
-    
-    isFiltering = false;
+    // 延遲 300ms 後才執行搜尋，避免每輸入一個字就重新渲染
+    filterTimer = setTimeout(() => {
+        const mainSearch = document.getElementById('search');
+        if(mainSearch && mainSearch.value !== keyword) {
+            mainSearch.value = keyword;
+            renderList();
+            
+            // 重新聚焦到篩選框並將游標放到最後
+            setTimeout(() => {
+                const listFilter = document.getElementById('listFilter');
+                if(listFilter) {
+                    listFilter.focus();
+                    listFilter.setSelectionRange(listFilter.value.length, listFilter.value.length);
+                }
+            }, 10);
+        }
+    }, 300);
 }
 
 function renderList() {
