@@ -2186,28 +2186,22 @@ function filterTableRows(keyword) {
         if(kw === '') {
             matched = true;
         } else {
-            // 檢查前4個欄位（代號、名稱、股票等）
-            for(let i = 0; i < Math.min(4, cells.length); i++) {
+            // 只檢查前2個欄位（CB代號、CB簡稱）
+            for(let i = 0; i < Math.min(2, cells.length); i++) {
                 const cellText = cells[i].textContent.trim().toLowerCase();
                 // 數字用前綴比對
                 if(/^\d+$/.test(kw)) {
-                    // 從 cellText 中提取數字部分比對
-                    const numbers = cellText.match(/\d+/g);
-                    if(numbers) {
-                        for(const num of numbers) {
-                            if(num.startsWith(kw)) {
-                                matched = true;
-                                break;
-                            }
-                        }
+                    if(cellText.startsWith(kw)) {
+                        matched = true;
+                        break;
                     }
                 } else {
                     // 含文字：包含比對
                     if(cellText.includes(kw)) {
                         matched = true;
+                        break;
                     }
                 }
-                if(matched) break;
             }
         }
         
