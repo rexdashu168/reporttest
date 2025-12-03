@@ -2184,8 +2184,16 @@ function filterTableRows(keyword) {
         const col1 = (cells[0].textContent || '').trim().toLowerCase();
         const col2 = (cells[1] ? cells[1].textContent : '').trim().toLowerCase();
         
-        // 簡單的包含比對，就像Google搜尋
-        const show = kw === '' || col1.indexOf(kw) >= 0 || col2.indexOf(kw) >= 0;
+        let show = false;
+        if(kw === '') {
+            show = true;
+        } else if(/^\d+$/.test(kw)) {
+            // 純數字：從開頭比對 CB代號
+            show = col1.indexOf(kw) === 0;
+        } else {
+            // 含文字：包含比對（名稱）
+            show = col1.indexOf(kw) >= 0 || col2.indexOf(kw) >= 0;
+        }
         
         row.style.display = show ? '' : 'none';
         if(show) visibleCount++;
