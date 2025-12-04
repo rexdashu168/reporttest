@@ -1823,102 +1823,182 @@ function calcAuctionStats(list) {
 }
 
 // 計算投標建議價格
-// 計算近三個月競拍市況趨勢
-function calcRecentAuctionTrend() {
+// 計算近三個月競拍市況趨勢（區分有擔保/無擔保）
+function calcRecentAuctionTrend(isGuaranteed) {
     const now = new Date();
     const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
     
-    // 篩選近三個月的競拍資料
-    const recentAuctions = DB.cbAuction.filter(c => {
+    // 根據擔保類型篩選
+    const filterByGuarantee = (list) => {
+        return list.filter(c => {
+            const guar = c._guarantee || '';
+            if(isGuaranteed) return guar === '有擔保';
+            return guar === '無擔保' || guar === '0' || guar === '';
+        });
+    };
+    
+    // 篩選近三個月的競拍資料（依擔保類型）
+    const recentAuctions = filterByGuarantee(DB.cbAuction).filter(c => {
         const bidDate = getDateVal(c['開標日期']);
         return bidDate >= threeMonthsAgo.getTime();
     });
     
+    // 全部歷史資料（依擔保類型）
+    const allAuctions = filterByGuarantee(DB.cbAuction);
+    
     if(recentAuctions.length === 0) {
-        return { count: 0, avgLowestPrem: 0, avgAvgPrem: 0, avgMultiple: 0, trend: 'neutral', adjustment: 0 };
+        // 如果近三個月沒有同類型資料，計算整體市況作為參考
+        return calcOverallRecentTrend(isGuaranteed);
     }
     
     // 計算近三個月平均值
-    let sumLowestPrem = 0, sumAvgPrem = 0, sumMultiple = 0;
-    let lowestPremCnt = 0, avgPremCnt = 0, multipleCnt = 0;
+    let sumLowestPrem = 0, sumAvgPrem = 0, sumMultiple = 0, sumLowest = 0, sumAvg = 0;
+    let lowestPremCnt = 0, avgPremCnt = 0, multipleCnt = 0, lowestCnt = 0, avgCnt = 0;
     
     recentAuctions.forEach(c => {
         const lowestPrem = parseFloat(c['最低溢價']) || 0;
         const avgPrem = parseFloat(c['平均溢價']) || 0;
         const multiple = parseFloat(c['投標倍數']) || 0;
+        const lowest = parseFloat(c['最低得標']) || 0;
+        const avg = parseFloat(c['平均得標']) || 0;
         
         if(lowestPrem !== 0 || c['最低溢價'] !== undefined) { sumLowestPrem += lowestPrem; lowestPremCnt++; }
         if(avgPrem !== 0 || c['平均溢價'] !== undefined) { sumAvgPrem += avgPrem; avgPremCnt++; }
         if(multiple > 0) { sumMultiple += multiple; multipleCnt++; }
+        if(lowest > 0) { sumLowest += lowest; lowestCnt++; }
+        if(avg > 0) { sumAvg += avg; avgCnt++; }
     });
     
     const recentLowestPrem = lowestPremCnt > 0 ? sumLowestPrem / lowestPremCnt : 0;
     const recentAvgPrem = avgPremCnt > 0 ? sumAvgPrem / avgPremCnt : 0;
     const recentMultiple = multipleCnt > 0 ? sumMultiple / multipleCnt : 0;
+    const recentLowest = lowestCnt > 0 ? sumLowest / lowestCnt : 0;
+    const recentAvg = avgCnt > 0 ? sumAvg / avgCnt : 0;
     
-    // 計算全部歷史平均值作為比較基準
-    let histLowestPrem = 0, histAvgPrem = 0, histMultiple = 0;
-    let histLowestCnt = 0, histAvgCnt = 0, histMultiCnt = 0;
+    // 計算全部歷史平均值作為比較基準（同類型）
+    let histLowestPrem = 0, histAvgPrem = 0, histMultiple = 0, histLowest = 0, histAvg = 0;
+    let histLowestPremCnt = 0, histAvgPremCnt = 0, histMultiCnt = 0, histLowestCnt = 0, histAvgCnt = 0;
     
-    DB.cbAuction.forEach(c => {
+    allAuctions.forEach(c => {
         const lowestPrem = parseFloat(c['最低溢價']) || 0;
         const avgPrem = parseFloat(c['平均溢價']) || 0;
         const multiple = parseFloat(c['投標倍數']) || 0;
+        const lowest = parseFloat(c['最低得標']) || 0;
+        const avg = parseFloat(c['平均得標']) || 0;
         
-        if(lowestPrem !== 0 || c['最低溢價'] !== undefined) { histLowestPrem += lowestPrem; histLowestCnt++; }
-        if(avgPrem !== 0 || c['平均溢價'] !== undefined) { histAvgPrem += avgPrem; histAvgCnt++; }
+        if(lowestPrem !== 0 || c['最低溢價'] !== undefined) { histLowestPrem += lowestPrem; histLowestPremCnt++; }
+        if(avgPrem !== 0 || c['平均溢價'] !== undefined) { histAvgPrem += avgPrem; histAvgPremCnt++; }
         if(multiple > 0) { histMultiple += multiple; histMultiCnt++; }
+        if(lowest > 0) { histLowest += lowest; histLowestCnt++; }
+        if(avg > 0) { histAvg += avg; histAvgCnt++; }
     });
     
-    histLowestPrem = histLowestCnt > 0 ? histLowestPrem / histLowestCnt : 0;
-    histAvgPrem = histAvgCnt > 0 ? histAvgPrem / histAvgCnt : 0;
+    histLowestPrem = histLowestPremCnt > 0 ? histLowestPrem / histLowestPremCnt : 0;
+    histAvgPrem = histAvgPremCnt > 0 ? histAvgPrem / histAvgPremCnt : 0;
     histMultiple = histMultiCnt > 0 ? histMultiple / histMultiCnt : 0;
+    histLowest = histLowestCnt > 0 ? histLowest / histLowestCnt : 0;
+    histAvg = histAvgCnt > 0 ? histAvg / histAvgCnt : 0;
     
     // 判斷市況趨勢和調整幅度
-    // 比較近三個月與歷史平均的差異
     const premDiff = recentAvgPrem - histAvgPrem;       // 溢價率差異
     const multipleDiff = recentMultiple - histMultiple; // 投標倍數差異
+    const guaranteeType = isGuaranteed ? '有擔保' : '無擔保';
     
     let trend = 'neutral';
     let adjustment = 0;
     let reason = '';
     
     if(premDiff > 0.02 && multipleDiff > 0.5) {
-        // 近期溢價率高 + 投標倍數高 → 市場熱絡
         trend = 'hot';
-        adjustment = Math.min(0.02, premDiff * 0.5); // 最多調高2%
-        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 高於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，投標倍數 ${fmtNum(recentMultiple, 1)}x 高於歷史 ${fmtNum(histMultiple, 1)}x，市場熱絡`;
+        adjustment = Math.min(0.025, premDiff * 0.5); // 最多調高2.5%
+        reason = `${guaranteeType}近3月溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 高於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，投標倍數 ${fmtNum(recentMultiple, 1)}x 高於 ${fmtNum(histMultiple, 1)}x，市場熱絡`;
     } else if(premDiff < -0.02 && multipleDiff < -0.3) {
-        // 近期溢價率低 + 投標倍數低 → 市場冷清
         trend = 'cold';
-        adjustment = Math.max(-0.02, premDiff * 0.5); // 最多調低2%
-        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 低於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，投標倍數 ${fmtNum(recentMultiple, 1)}x 低於歷史 ${fmtNum(histMultiple, 1)}x，市場冷清`;
+        adjustment = Math.max(-0.025, premDiff * 0.5); // 最多調低2.5%
+        reason = `${guaranteeType}近3月溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 低於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，投標倍數 ${fmtNum(recentMultiple, 1)}x 低於 ${fmtNum(histMultiple, 1)}x，市場冷清`;
     } else if(premDiff > 0.01) {
         trend = 'warm';
-        adjustment = premDiff * 0.3;
-        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 略高於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，市場偏熱`;
+        adjustment = premDiff * 0.4;
+        reason = `${guaranteeType}近3月溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 略高於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，市場偏熱`;
     } else if(premDiff < -0.01) {
         trend = 'cool';
-        adjustment = premDiff * 0.3;
-        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 略低於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，市場偏冷`;
+        adjustment = premDiff * 0.4;
+        reason = `${guaranteeType}近3月溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 略低於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，市場偏冷`;
     } else {
-        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 與歷史 ${fmtNum(histAvgPrem * 100, 1)}% 相近，市場持平`;
+        reason = `${guaranteeType}近3月溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 與歷史 ${fmtNum(histAvgPrem * 100, 1)}% 相近，市場持平`;
     }
     
     return {
+        guaranteeType: guaranteeType,
         count: recentAuctions.length,
+        totalCount: allAuctions.length,
         avgLowestPrem: recentLowestPrem,
         avgAvgPrem: recentAvgPrem,
         avgMultiple: recentMultiple,
+        avgLowest: recentLowest,
+        avgAvg: recentAvg,
+        histLowestPrem: histLowestPrem,
         histAvgPrem: histAvgPrem,
         histMultiple: histMultiple,
+        histLowest: histLowest,
+        histAvg: histAvg,
         trend: trend,
         adjustment: adjustment,
         reason: reason
     };
 }
 
-function calcBidSuggestion(primary, analysis) {
+// 整體市況（當特定擔保類型近期資料不足時使用）
+function calcOverallRecentTrend(isGuaranteed) {
+    const now = new Date();
+    const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const guaranteeType = isGuaranteed ? '有擔保' : '無擔保';
+    
+    const recentAll = DB.cbAuction.filter(c => {
+        const bidDate = getDateVal(c['開標日期']);
+        return bidDate >= threeMonthsAgo.getTime();
+    });
+    
+    if(recentAll.length === 0) {
+        return {
+            guaranteeType: guaranteeType,
+            count: 0,
+            totalCount: 0,
+            avgLowestPrem: 0,
+            avgAvgPrem: 0,
+            avgMultiple: 0,
+            histAvgPrem: 0,
+            histMultiple: 0,
+            trend: 'neutral',
+            adjustment: 0,
+            reason: `近3個月無${guaranteeType}競拍資料，無法計算市況調整`
+        };
+    }
+    
+    // 簡化計算整體平均
+    let sumPrem = 0, sumMulti = 0, cnt = 0;
+    recentAll.forEach(c => {
+        const prem = parseFloat(c['平均溢價']) || 0;
+        const multi = parseFloat(c['投標倍數']) || 0;
+        if(prem !== 0) { sumPrem += prem; cnt++; }
+        if(multi > 0) sumMulti += multi;
+    });
+    
+    return {
+        guaranteeType: guaranteeType,
+        count: 0,
+        totalCount: 0,
+        avgAvgPrem: cnt > 0 ? sumPrem / cnt : 0,
+        avgMultiple: recentAll.length > 0 ? sumMulti / recentAll.length : 0,
+        histAvgPrem: 0,
+        histMultiple: 0,
+        trend: 'neutral',
+        adjustment: 0,
+        reason: `近3個月無${guaranteeType}競拍資料，參考整體市況但不做調整`
+    };
+}
+
+function calcBidSuggestion(primary, analysis, isGuaranteed) {
     const convPrice = parseFloat(primary._convPrice) || 0;
     const stockPrice = parseFloat(primary._stockPrice) || 0;
     const premium = parseFloat(primary._premium) || 0;
@@ -1931,13 +2011,14 @@ function calcBidSuggestion(primary, analysis) {
     const guaranteeStats = calcAuctionStats(analysis.byGuarantee);
     const stats = combinedStats.count >= 5 ? combinedStats : guaranteeStats;
     
-    // 歷史平均溢價率
-    const histAvgPrem = stats.avgAvgPrem || 0.05; // 預設5%
-    const histAvgBid = stats.avgAvg || 105;
-    const histLowestBid = stats.avgLowest || 103;
+    // 歷史平均溢價率（依擔保類型區分）
+    // 有擔保通常溢價較高，無擔保較低
+    const histAvgPrem = stats.avgAvgPrem || (isGuaranteed ? 0.08 : 0.04); // 有擔保預設8%，無擔保4%
+    const histAvgBid = stats.avgAvg || (isGuaranteed ? 108 : 104);
+    const histLowestBid = stats.avgLowest || (isGuaranteed ? 105 : 102);
     
-    // 取得近期市況調整
-    const recentTrend = calcRecentAuctionTrend();
+    // 取得近期市況調整（依擔保類型區分）
+    const recentTrend = calcRecentAuctionTrend(isGuaranteed);
     const marketAdj = recentTrend.adjustment; // 市況調整比例
     
     let suggestion = {
@@ -2028,13 +2109,13 @@ function renderUpcomingAuctions() {
     let html = '';
     auctions.forEach(p => {
         const analysis = analyzeAuctionConditions(p);
-        const suggestion = calcBidSuggestion(p, analysis);
+        const tcri = (p._tcri || '').toString();
+        const isGuaranteed = tcri.includes('擔保') || /銀行|商銀|合庫/.test(tcri);
+        const suggestion = calcBidSuggestion(p, analysis, isGuaranteed);
         const combinedStats = calcAuctionStats(analysis.combined);
         const guaranteeStats = calcAuctionStats(analysis.byGuarantee);
         const stats = combinedStats.count >= 5 ? combinedStats : guaranteeStats;
         
-        const tcri = (p._tcri || '').toString();
-        const isGuaranteed = tcri.includes('擔保') || /銀行|商銀|合庫/.test(tcri);
         const guaranteeText = isGuaranteed ? '有擔保' : '無擔保';
         const guaranteeClass = isGuaranteed ? 'guar-yes' : '';
         
@@ -2111,17 +2192,17 @@ window.openAuctionAnalysis = (stockCode, cbCode) => {
         if(!primary) { alert('找不到案件資料'); return; }
     }
     
+    const tcri = (primary._tcri || '').toString();
+    const isGuaranteed = tcri.includes('擔保') || /銀行|商銀|合庫/.test(tcri);
+    const guaranteeText = isGuaranteed ? '有擔保' : '無擔保';
+    
     const analysis = analyzeAuctionConditions(primary);
-    const suggestion = calcBidSuggestion(primary, analysis);
+    const suggestion = calcBidSuggestion(primary, analysis, isGuaranteed);
     
     const combinedStats = calcAuctionStats(analysis.combined);
     const guaranteeStats = calcAuctionStats(analysis.byGuarantee);
     const industryStats = calcAuctionStats(analysis.byIndustry);
     const brokerStats = calcAuctionStats(analysis.byBroker);
-    
-    const tcri = (primary._tcri || '').toString();
-    const isGuaranteed = tcri.includes('擔保') || /銀行|商銀|合庫/.test(tcri);
-    const guaranteeText = isGuaranteed ? '有擔保' : '無擔保';
     
     const stockInfo = DB.stocks[stockCode] || {};
     const industry = stockInfo['產業分類'] || '未分類';
@@ -2197,45 +2278,49 @@ window.openAuctionAnalysis = (stockCode, cbCode) => {
             </div>
         </div>
         
-        <div class="section-head">📐 計算方法說明</div>
+        <div class="section-head">📐 計算方法說明 <span style="font-size:12px;color:#666;font-weight:400">【${guaranteeText}】</span></div>
         <div class="hl-block" style="border-left-color:#1565c0;background:#f5f9ff">
             <b>🔹 採用方法：${suggestion.method}</b><br>
-            <span style="color:#666">${suggestion.methodDetail || ''}</span><br><br>
+            <span style="color:#666">${suggestion.methodDetail || ''}</span><br>
+            <span style="color:#888;font-size:11px">※ 以下計算皆使用【${guaranteeText}】歷史數據</span><br><br>
             
             <b>📌 理論價計算</b><br>
             理論價 = 現股股價 ÷ 轉換價格 × 100<br>
             = ${fmtNum(primary._stockPrice, 2)} ÷ ${fmtNum(primary._convPrice, 2)} × 100 = <b style="color:var(--primary)">${fmtNum(suggestion.theoryPrice, 2)}</b><br><br>
             
-            <b>📌 三種策略說明</b><br>
+            <b>📌 三種策略說明</b> <span style="color:#888;font-size:11px">(${guaranteeText}歷史溢價率：${fmtNum((guaranteeStats.avgAvgPrem || (isGuaranteed ? 0.08 : 0.04)) * 100, 1)}%)</span><br>
             ${suggestion.method === '理論價法' ? `
-            • <b style="color:#2e7d32">保守</b> = 理論價 × (1 + 歷史溢價率 × 0.5) = ${fmtNum(suggestion.theoryPrice, 2)} × ${fmtNum(1 + (combinedStats.avgAvgPrem || 0.05) * 0.5, 4)}<br>
-            • <b style="color:#e65100">穩健</b> = 理論價 × (1 + 歷史溢價率) = ${fmtNum(suggestion.theoryPrice, 2)} × ${fmtNum(1 + (combinedStats.avgAvgPrem || 0.05), 4)}<br>
-            • <b style="color:#c62828">積極</b> = 理論價 × (1 + 歷史溢價率 × 1.5) = ${fmtNum(suggestion.theoryPrice, 2)} × ${fmtNum(1 + (combinedStats.avgAvgPrem || 0.05) * 1.5, 4)}
+            • <b style="color:#2e7d32">保守</b> = 理論價 × (1 + 歷史溢價率 × 0.5) = ${fmtNum(suggestion.theoryPrice, 2)} × ${fmtNum(1 + (guaranteeStats.avgAvgPrem || (isGuaranteed ? 0.08 : 0.04)) * 0.5, 4)}<br>
+            • <b style="color:#e65100">穩健</b> = 理論價 × (1 + 歷史溢價率) = ${fmtNum(suggestion.theoryPrice, 2)} × ${fmtNum(1 + (guaranteeStats.avgAvgPrem || (isGuaranteed ? 0.08 : 0.04)), 4)}<br>
+            • <b style="color:#c62828">積極</b> = 理論價 × (1 + 歷史溢價率 × 1.5) = ${fmtNum(suggestion.theoryPrice, 2)} × ${fmtNum(1 + (guaranteeStats.avgAvgPrem || (isGuaranteed ? 0.08 : 0.04)) * 1.5, 4)}
             ` : suggestion.method === '混合計算法' ? `
             • <b style="color:#2e7d32">保守</b> = 100 + (歷史最低均價 - 100) × 混合係數<br>
             • <b style="color:#e65100">穩健</b> = 100 + (歷史平均均價 - 100) × 混合係數<br>
             • <b style="color:#c62828">積極</b> = 穩健價 × 1.03
             ` : `
-            • <b style="color:#2e7d32">保守</b> = 歷史最低得標均價 = ${fmtNum(combinedStats.avgLowest || guaranteeStats.avgLowest || 103, 2)}<br>
-            • <b style="color:#e65100">穩健</b> = 歷史平均得標均價 = ${fmtNum(combinedStats.avgAvg || guaranteeStats.avgAvg || 105, 2)}<br>
+            • <b style="color:#2e7d32">保守</b> = ${guaranteeText}歷史最低得標均價 = ${fmtNum(guaranteeStats.avgLowest || (isGuaranteed ? 105 : 102), 2)}<br>
+            • <b style="color:#e65100">穩健</b> = ${guaranteeText}歷史平均得標均價 = ${fmtNum(guaranteeStats.avgAvg || (isGuaranteed ? 108 : 104), 2)}<br>
             • <b style="color:#c62828">積極</b> = 平均價 + (平均價 - 最低價) × 0.5
             `}
         </div>
         
-        <div class="section-head">${trendIcon} 近3個月市況調整</div>
+        <div class="section-head">${trendIcon} 近3個月【${guaranteeText}】市況調整</div>
         <div class="hl-block" style="border-left-color:${trendColor}">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div>
                     <b>市場氛圍：</b><span style="color:${trendColor};font-weight:700">${trendText}</span>
+                    <span style="font-size:11px;color:#888;margin-left:8px">(${guaranteeText}類型)</span>
                 </div>
                 <div style="background:${trendColor};color:#fff;padding:4px 12px;border-radius:12px;font-weight:700">
                     調整幅度：${adjText}
                 </div>
             </div>
-            <b>📊 近3個月競拍統計 (${recentTrend.count || 0}筆)</b><br>
-            • 平均溢價率：${fmtNum((recentTrend.avgAvgPrem || 0) * 100, 1)}% (歷史平均 ${fmtNum((recentTrend.histAvgPrem || 0) * 100, 1)}%)<br>
-            • 投標倍數：${fmtNum(recentTrend.avgMultiple || 0, 1)}x (歷史平均 ${fmtNum(recentTrend.histMultiple || 0, 1)}x)<br><br>
-            <span style="color:#666;font-size:12px">${recentTrend.reason || ''}</span>
+            <b>📊 近3個月【${guaranteeText}】競拍統計 (${recentTrend.count || 0}筆 / 歷史共${recentTrend.totalCount || 0}筆)</b><br>
+            • 平均溢價率：${fmtNum((recentTrend.avgAvgPrem || 0) * 100, 1)}% <span style="color:#888">(${guaranteeText}歷史平均 ${fmtNum((recentTrend.histAvgPrem || 0) * 100, 1)}%)</span><br>
+            • 投標倍數：${fmtNum(recentTrend.avgMultiple || 0, 1)}x <span style="color:#888">(${guaranteeText}歷史平均 ${fmtNum(recentTrend.histMultiple || 0, 1)}x)</span><br>
+            ${recentTrend.avgLowest ? `• 最低得標均價：${fmtNum(recentTrend.avgLowest, 2)} <span style="color:#888">(歷史 ${fmtNum(recentTrend.histLowest || 0, 2)})</span><br>` : ''}
+            ${recentTrend.avgAvg ? `• 平均得標均價：${fmtNum(recentTrend.avgAvg, 2)} <span style="color:#888">(歷史 ${fmtNum(recentTrend.histAvg || 0, 2)})</span><br>` : ''}
+            <br><span style="color:#666;font-size:12px">${recentTrend.reason || ''}</span>
         </div>
         
         <div class="section-head">📊 調整前後對比</div>
