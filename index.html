@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -69,6 +71,8 @@
     .cb-top10-btn-line:hover { border-color: var(--primary); background: var(--clickable-hover); }
     .cb-top10-btn-line.active { background: #27ae60; color: #fff; border-color: #27ae60; }
     .cb-top10-btn-line .top10-icon { font-size: 16px; }
+    .cb-top10-btn-line .ind-num { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px; min-width: 24px; text-align: center; }
+    .cb-top10-btn-line.active .ind-num { background: rgba(255,255,255,0.3); }
     
     /* 表格上方篩選狀態列 */
     .cb-filter-status { background: linear-gradient(90deg, #fff3e0, #fff8e1); padding: 10px 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #ffe0b2; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
@@ -204,28 +208,28 @@
     .cb-info-title .text { font-size: 15px; font-weight: 700; color: var(--primary); }
     .cb-info-title .count { font-size: 12px; color: #888; margin-left: auto; }
     
-    /* 手機版鎖定前三欄 */
+    /* 表格鎖定前三欄 - 所有裝置 */
+    .cb-table.sticky-cols th.sticky-col,
+    .cb-table.sticky-cols td.sticky-col { position: sticky; z-index: 2; }
+    .cb-table.sticky-cols th.sticky-col { z-index: 3; }
+    .cb-table.sticky-cols .sticky-col-1 { left: 0; background: #f8f9fa; min-width: 65px; }
+    .cb-table.sticky-cols td.sticky-col-1 { background: #fff; }
+    .cb-table.sticky-cols tr:hover td.sticky-col-1 { background: #fffaf8; }
+    .cb-table.sticky-cols tr.active-cb td.sticky-col-1 { background: #e8f5e9; }
+    .cb-table.sticky-cols .sticky-col-2 { left: 65px; background: #f8f9fa; min-width: 70px; max-width: 80px; white-space: normal; line-height: 1.2; }
+    .cb-table.sticky-cols td.sticky-col-2 { background: #fff; }
+    .cb-table.sticky-cols tr:hover td.sticky-col-2 { background: #fffaf8; }
+    .cb-table.sticky-cols tr.active-cb td.sticky-col-2 { background: #e8f5e9; }
+    .cb-table.sticky-cols .sticky-col-3 { left: 135px; background: #f8f9fa; min-width: 50px; border-right: 2px solid #ddd; }
+    .cb-table.sticky-cols td.sticky-col-3 { background: #fff; border-right: 2px solid #eee; }
+    .cb-table.sticky-cols tr:hover td.sticky-col-3 { background: #fffaf8; }
+    .cb-table.sticky-cols tr.active-cb td.sticky-col-3 { background: #e8f5e9; }
+    
+    /* 手機版 */
     @media(max-width: 768px) {
         .cb-table { font-size: 12px; }
         .cb-table th, .cb-table td { padding: 8px 5px; }
         .cb-table .hide-mobile { display: none; }
-        
-        /* 基本資料表格鎖定欄位 */
-        .cb-table.sticky-cols th.sticky-col,
-        .cb-table.sticky-cols td.sticky-col { position: sticky; z-index: 2; }
-        .cb-table.sticky-cols th.sticky-col { z-index: 3; }
-        .cb-table.sticky-cols .sticky-col-1 { left: 0; background: #f8f9fa; min-width: 65px; }
-        .cb-table.sticky-cols td.sticky-col-1 { background: #fff; }
-        .cb-table.sticky-cols tr:hover td.sticky-col-1 { background: #fffaf8; }
-        .cb-table.sticky-cols tr.active-cb td.sticky-col-1 { background: #e8f5e9; }
-        .cb-table.sticky-cols .sticky-col-2 { left: 65px; background: #f8f9fa; min-width: 70px; max-width: 80px; white-space: normal; line-height: 1.2; }
-        .cb-table.sticky-cols td.sticky-col-2 { background: #fff; }
-        .cb-table.sticky-cols tr:hover td.sticky-col-2 { background: #fffaf8; }
-        .cb-table.sticky-cols tr.active-cb td.sticky-col-2 { background: #e8f5e9; }
-        .cb-table.sticky-cols .sticky-col-3 { left: 135px; background: #f8f9fa; min-width: 50px; border-right: 2px solid #ddd; }
-        .cb-table.sticky-cols td.sticky-col-3 { background: #fff; border-right: 2px solid #eee; }
-        .cb-table.sticky-cols tr:hover td.sticky-col-3 { background: #fffaf8; }
-        .cb-table.sticky-cols tr.active-cb td.sticky-col-3 { background: #e8f5e9; }
     }
     
     /* 桌機版滿版 */
@@ -324,6 +328,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -340,6 +345,7 @@
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
 
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -369,6 +375,7 @@
     <div style="font-size:15px;color:#333;font-weight:600;">找到 <b id="resCount" style="color:var(--primary);font-size:18px;">0</b> 筆資料 <span id="filterHint" style="font-size:13px;color:#e65100;margin-left:8px;"></span></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -1807,7 +1814,7 @@ function renderCBStats() {
     
     // 模式切換 - 小方格排列，手機版兩列顯示（歷史高低在第一列）
     const modeTabsHtml = `
-        <div class="cb-section-title">📌 常用功能</div>
+        <div class="cb-section-title">🔀 分類查詢</div>
         <div class="cb-mode-switcher cb-mode-row1">
             <span class="cb-mode-tab ${CB_MODE==='info'?'active':''}" onclick="setCbMode('info')">基本<span class="cnt">${padNum(DB.cbAll.length)}</span></span>
             <span class="cb-mode-tab ${CB_MODE==='active'?'active':''}" onclick="setCbMode('active')">掛牌<span class="cnt">${padNum(DB.cb.length)}</span></span>
@@ -1847,10 +1854,10 @@ function renderCBStats() {
     const renderIndustryTags = (indList, title) => {
         if(!indList || indList.length === 0) return '';
         return `
-            <div class="cb-ind-title">${title}</div>
-            <div class="cb-ind-grid">
+            <div class="cb-section-title">${title}</div>
+            <div class="cb-top10-btns">
                 ${indList.map(([ind, cnt]) => `
-                    <span class="cb-ind-tag ${CB_FILTER.industry === ind ? 'active' : ''}" onclick="setCbFilter('industry', '${ind}')">${ind}<span class="num">${padNum(cnt)}</span></span>
+                    <div class="cb-top10-btn-line ${CB_FILTER.industry === ind ? 'active' : ''}" onclick="setCbFilter('industry', '${ind}')"><span class="top10-icon">🏭</span>${ind}<span class="ind-num">${cnt}</span></div>
                 `).join('')}
             </div>
         `;
@@ -1893,7 +1900,7 @@ function renderCBStats() {
                     <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${padNum(allGuar['無擔保'])}</div><div class="cb-stat-label">無擔保</div></div>
                 </div>
                 ${renderIndustryTags(sortedAllInd, '📊 各產業CB分佈')}
-                <div class="cb-section-title">🔧 常用功能</div>
+                <div class="cb-section-title">📋 資料分類</div>
                 <div class="cb-top10-btns">
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='issue'?'active':''}" onclick="setCbInfoTab('issue')"><span class="top10-icon">📝</span>發行條件</div>
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='timeline'?'active':''}" onclick="setCbInfoTab('timeline')"><span class="top10-icon">📅</span>時程資訊</div>
