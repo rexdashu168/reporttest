@@ -1075,6 +1075,10 @@ async function init() {
             // 最新收盤從 09 工作表取得
             const latestPrice = cbLatestPrice[cbCode] || 0;
             
+            const bidLots = parseFloat(r['競拍張數']) || 0;
+            const bidMultiple = parseFloat(r['投標倍數']) || 0;
+            const totalBidLots = Math.round(bidLots * bidMultiple); // 投標張數 = 競拍張數 × 投標倍數
+            
             DB.cbAuction.push({
                 '_cbCode': cbCode,
                 '_stockCode': normalizeCode(r['股票代號']),
@@ -1089,8 +1093,11 @@ async function init() {
                 '截標日': r['截標日'],
                 '發行規模': r['發行規模'],
                 '競拍張數': r['競拍張數'],
+                '投標張數': totalBidLots,
                 '底標價': r['底標價'],
-                '理論價': r['理論價'],
+                '截標收盤': r['截標收盤'] || r['截標日收盤'] || r['截標日股價'],
+                '轉換價': r['轉換價'],
+                '截標理論': r['理論價'],
                 '最低得標': r['最低得標'],
                 '最低溢價': r['最低溢價'],
                 '平均得標': r['平均得標'],
@@ -1098,7 +1105,6 @@ async function init() {
                 '投標倍數': r['投標倍數'],
                 '合格件數': r['合格件數'],
                 '發行券商': safe(r['發行券商']),
-                '轉換價': r['轉換價'],
                 '訂價溢價率': r['訂價溢價率']
             });
         });
@@ -1519,28 +1525,70 @@ function renderAuctionTop10() {
         .sort((a, b) => parseFloat(b['平均得標']) - parseFloat(a['平均得標']))
         .slice(0, 10);
     
-    const renderTable = (list, title, valueField) => {
+    // 掛牌最高價 TOP10 (全部，由高到低)
+    const highPrice = DB.cbAuction
+        .filter(c => c._high > 0)
+        .sort((a, b) => b._high - a._high)
+        .slice(0, 10);
+    
+    // 有擔保 - 投標倍數由高到低前十
+    const guarMultiple = DB.cbAuction
+        .filter(c => c._guarantee === '有擔保' && parseFloat(c['投標倍數']) > 0)
+        .sort((a, b) => parseFloat(b['投標倍數']) - parseFloat(a['投標倍數']))
+        .slice(0, 10);
+    
+    // 無擔保 - 投標倍數由高到低前十
+    const noGuarMultiple = DB.cbAuction
+        .filter(c => c._guarantee === '無擔保' && parseFloat(c['投標倍數']) > 0)
+        .sort((a, b) => parseFloat(b['投標倍數']) - parseFloat(a['投標倍數']))
+        .slice(0, 10);
+    
+    const renderTable = (list, title, highlightField) => {
         if(list.length === 0) return '';
         return `<div class="cb-ind-title" style="margin-top:15px">${title}</div>
         <div class="auction-top10-table">
             <table>
-                <thead><tr><th>排名</th><th>CB代號</th><th>名稱</th><th>開標日</th><th>競拍張數</th><th>最低得標</th><th>平均得標</th><th>最新收盤</th><th>掛牌最高</th><th>掛牌最低</th><th>投標倍數</th><th>底標價</th><th>振幅%</th></tr></thead>
+                <thead><tr>
+                    <th>排名</th>
+                    <th>CB代號</th>
+                    <th>名稱</th>
+                    <th>開標日</th>
+                    <th>競拍張</th>
+                    <th>投標張</th>
+                    <th>底標價</th>
+                    <th>截標收盤</th>
+                    <th>轉換價</th>
+                    <th>截標理論</th>
+                    <th>最低得標</th>
+                    <th>平均得標</th>
+                    <th>投標倍數</th>
+                    <th>掛牌最高</th>
+                    <th>掛牌最低</th>
+                    <th>振幅%</th>
+                </tr></thead>
                 <tbody>
                 ${list.map((c, i) => {
                     const range = (c._high > 0 && c._low > 0) ? ((c._high - c._low) / c._low * 100) : 0;
+                    const isHighlightLow = highlightField === '最低得標';
+                    const isHighlightAvg = highlightField === '平均得標';
+                    const isHighlightHigh = highlightField === '_high';
+                    const isHighlightMultiple = highlightField === '投標倍數';
                     return `<tr>
                     <td>${i+1}</td>
                     <td class="code">${c._cbCode}</td>
                     <td>${c._name}</td>
                     <td>${fmtDate(c['開標日期'])}</td>
                     <td>${fmtNum(c['競拍張數'], 0)}</td>
-                    <td class="${valueField === '最低得標' ? 'highlight' : ''}">${fmtNum(c['最低得標'], 2)}</td>
-                    <td class="${valueField === '平均得標' ? 'highlight' : ''}">${fmtNum(c['平均得標'], 2)}</td>
-                    <td>${c._latestPrice > 0 ? fmtNum(c._latestPrice, 2) : '-'}</td>
-                    <td>${c._high > 0 ? fmtNum(c._high, 2) : '-'}</td>
-                    <td>${c._low > 0 ? fmtNum(c._low, 2) : '-'}</td>
-                    <td>${fmtNum(c['投標倍數'], 2)}x</td>
+                    <td>${fmtNum(c['投標張數'], 0)}</td>
                     <td>${fmtNum(c['底標價'], 2)}</td>
+                    <td>${c['截標收盤'] ? fmtNum(c['截標收盤'], 2) : '-'}</td>
+                    <td>${fmtNum(c['轉換價'], 2)}</td>
+                    <td>${fmtNum(c['截標理論'], 2)}</td>
+                    <td class="${isHighlightLow ? 'highlight' : ''}">${fmtNum(c['最低得標'], 2)}</td>
+                    <td class="${isHighlightAvg ? 'highlight' : ''}">${fmtNum(c['平均得標'], 2)}</td>
+                    <td class="${isHighlightMultiple ? 'highlight' : ''}">${fmtNum(c['投標倍數'], 2)}x</td>
+                    <td class="${isHighlightHigh ? 'highlight' : ''}">${c._high > 0 ? fmtNum(c._high, 2) : '-'}</td>
+                    <td>${c._low > 0 ? fmtNum(c._low, 2) : '-'}</td>
                     <td class="${colorClass(range)}">${fmtNum(range, 1)}%</td>
                 </tr>`}).join('')}
                 </tbody>
@@ -1553,6 +1601,9 @@ function renderAuctionTop10() {
     if(AUCTION_TOP10 === 'no_guar_low') return renderTable(noGuarLowest, '🏆 無擔保｜最低得標 Top 10（由高到低）', '最低得標');
     if(AUCTION_TOP10 === 'guar_avg') return renderTable(guarAvg, '🏆 有擔保｜平均得標 Top 10（由高到低）', '平均得標');
     if(AUCTION_TOP10 === 'no_guar_avg') return renderTable(noGuarAvg, '🏆 無擔保｜平均得標 Top 10（由高到低）', '平均得標');
+    if(AUCTION_TOP10 === 'high_price') return renderTable(highPrice, '🏆 掛牌最高價 Top 10（由高到低）', '_high');
+    if(AUCTION_TOP10 === 'guar_multiple') return renderTable(guarMultiple, '🏆 有擔保｜投標倍數 Top 10（由高到低）', '投標倍數');
+    if(AUCTION_TOP10 === 'no_guar_multiple') return renderTable(noGuarMultiple, '🏆 無擔保｜投標倍數 Top 10（由高到低）', '投標倍數');
     
     return '';
 }
@@ -1790,6 +1841,8 @@ function renderCBStats() {
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
                     <div class="cb-stat-item"><div class="cb-stat-num">${displayCnt}</div><div class="cb-stat-label">${hasFilter ? '符合條件' : '競拍總檔數'}</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['有擔保'] : auctionGuar['有擔保']}</div><div class="cb-stat-label">有擔保檔數</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['無擔保'] : auctionGuar['無擔保']}</div><div class="cb-stat-label">無擔保檔數</div></div>
                     <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgHigh, 1)}</div><div class="cb-stat-label">掛牌均高價</div></div>
                     <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgLow, 1)}</div><div class="cb-stat-label">掛牌均低價</div></div>
                     <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgLowestBid, 1)}</div><div class="cb-stat-label">最低得標價</div></div>
@@ -1797,17 +1850,16 @@ function renderCBStats() {
                     <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgAvgBid, 1)}</div><div class="cb-stat-label">平均得標價</div></div>
                     <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgAvgPrem * 100, 1)}%</div><div class="cb-stat-label">平均溢價率</div></div>
                     <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgMultiple, 1)}x</div><div class="cb-stat-label">均投標倍數</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['有擔保'] : auctionGuar['有擔保']}</div><div class="cb-stat-label">有擔保檔數</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(guarAvgHigh, 1)}</div><div class="cb-stat-label">有擔保均高</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['無擔保'] : auctionGuar['無擔保']}</div><div class="cb-stat-label">無擔保檔數</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(noGuarAvgHigh, 1)}</div><div class="cb-stat-label">無擔保均高</div></div>
                 </div>
                 <div class="cb-section-title">🏆 排行榜 TOP10</div>
                 <div class="cb-top10-btns">
-                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='guar_low'?'active':''}" onclick="setAuctionTop10('guar_low')"><span class="top10-icon">🥇</span>有擔保最低得標</div>
-                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='no_guar_low'?'active':''}" onclick="setAuctionTop10('no_guar_low')"><span class="top10-icon">🥈</span>無擔保最低得標</div>
-                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='guar_avg'?'active':''}" onclick="setAuctionTop10('guar_avg')"><span class="top10-icon">🏅</span>有擔保平均得標</div>
-                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='no_guar_avg'?'active':''}" onclick="setAuctionTop10('no_guar_avg')"><span class="top10-icon">🎖️</span>無擔保平均得標</div>
+                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='guar_low'?'active':''}" onclick="setAuctionTop10('guar_low')"><span class="top10-icon">🥇</span>有擔最低得標</div>
+                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='no_guar_low'?'active':''}" onclick="setAuctionTop10('no_guar_low')"><span class="top10-icon">🥈</span>無擔最低得標</div>
+                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='guar_avg'?'active':''}" onclick="setAuctionTop10('guar_avg')"><span class="top10-icon">🏅</span>有擔平均得標</div>
+                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='no_guar_avg'?'active':''}" onclick="setAuctionTop10('no_guar_avg')"><span class="top10-icon">🎖️</span>無擔平均得標</div>
+                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='high_price'?'active':''}" onclick="setAuctionTop10('high_price')"><span class="top10-icon">📈</span>掛牌最高價</div>
+                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='guar_multiple'?'active':''}" onclick="setAuctionTop10('guar_multiple')"><span class="top10-icon">🔥</span>有擔投標倍數</div>
+                    <div class="cb-top10-btn-line ${AUCTION_TOP10==='no_guar_multiple'?'active':''}" onclick="setAuctionTop10('no_guar_multiple')"><span class="top10-icon">💥</span>無擔投標倍數</div>
                 </div>
                 ${renderAuctionTop10()}
                 ${renderIndustryTags(sortedAuctionInd, '📊 各產業競拍CB分佈')}
@@ -2219,10 +2271,10 @@ function renderList() {
             }
             html += `</tbody></table></div>`;
         } else if(CB_MODE === 'auction') {
-            // 競拍模式專屬表格
+            // 競拍模式專屬表格 - 完整欄位版
             // 計算平均值
             const avgMultiple = validFiltered.reduce((s, r) => s + (parseFloat(r['投標倍數']) || 0), 0) / (validFiltered.length || 1);
-            const avgTheory = validFiltered.reduce((s, r) => s + (parseFloat(r['理論價']) || 0), 0) / (validFiltered.length || 1);
+            const avgTheory = validFiltered.reduce((s, r) => s + (parseFloat(r['截標理論']) || 0), 0) / (validFiltered.length || 1);
             const avgLowestBid = validFiltered.reduce((s, r) => s + (parseFloat(r['最低得標']) || 0), 0) / (validFiltered.length || 1);
             const avgLowestPrem = validFiltered.reduce((s, r) => s + (parseFloat(r['最低溢價']) || 0), 0) / (validFiltered.length || 1);
             const avgAvgBid = validFiltered.reduce((s, r) => s + (parseFloat(r['平均得標']) || 0), 0) / (validFiltered.length || 1);
@@ -2230,6 +2282,11 @@ function renderList() {
             const avgHigh = validFiltered.reduce((s, r) => s + (parseFloat(r['_high']) || 0), 0) / (validFiltered.length || 1);
             const avgLow = validFiltered.reduce((s, r) => s + (parseFloat(r['_low']) || 0), 0) / (validFiltered.length || 1);
             const avgRange = validFiltered.reduce((s, r) => s + (parseFloat(r['_range']) || 0), 0) / (validFiltered.length || 1);
+            const avgBidLots = validFiltered.reduce((s, r) => s + (parseFloat(r['競拍張數']) || 0), 0) / (validFiltered.length || 1);
+            const avgTotalBidLots = validFiltered.reduce((s, r) => s + (parseFloat(r['投標張數']) || 0), 0) / (validFiltered.length || 1);
+            const avgBasePrice = validFiltered.reduce((s, r) => s + (parseFloat(r['底標價']) || 0), 0) / (validFiltered.length || 1);
+            const avgClosePrice = validFiltered.filter(r => r['截標收盤']).reduce((s, r) => s + (parseFloat(r['截標收盤']) || 0), 0) / (validFiltered.filter(r => r['截標收盤']).length || 1);
+            const avgConvPrice = validFiltered.reduce((s, r) => s + (parseFloat(r['轉換價']) || 0), 0) / (validFiltered.length || 1);
             
             // 篩選條件顯示 - 放在表格上方
             let filterHeader = '';
@@ -2253,8 +2310,13 @@ function renderList() {
                     <th class="sortable" data-col="_cbCode" data-type="string">CB代號</th>
                     <th>CB簡稱</th>
                     <th class="sortable hide-mobile" data-col="開標日期" data-type="date">開標日</th>
-                    <th class="sortable" data-col="投標倍數" data-type="num">投標倍數</th>
-                    <th class="sortable hide-mobile" data-col="理論價" data-type="num">理論價</th>
+                    <th class="sortable hide-mobile" data-col="競拍張數" data-type="num">競拍張</th>
+                    <th class="sortable hide-mobile" data-col="投標張數" data-type="num">投標張</th>
+                    <th class="sortable" data-col="投標倍數" data-type="num">倍數</th>
+                    <th class="sortable hide-mobile" data-col="底標價" data-type="num">底標價</th>
+                    <th class="sortable hide-mobile" data-col="截標收盤" data-type="num">截標收盤</th>
+                    <th class="sortable hide-mobile" data-col="轉換價" data-type="num">轉換價</th>
+                    <th class="sortable hide-mobile" data-col="截標理論" data-type="num">截標理論</th>
                     <th class="sortable" data-col="最低得標" data-type="num">最低得標</th>
                     <th class="sortable hide-mobile" data-col="最低溢價" data-type="num">最低溢價</th>
                     <th class="sortable" data-col="平均得標" data-type="num">平均得標</th>
@@ -2268,8 +2330,13 @@ function renderList() {
                 const cbCode = r['_cbCode'];
                 const cbName = r['_name'];
                 const openDate = fmtDate(r['開標日期']);
+                const bidLots = r['競拍張數'];
+                const totalBidLots = r['投標張數'];
                 const multiple = r['投標倍數'];
-                const theory = r['理論價'];
+                const basePrice = r['底標價'];
+                const closePrice = r['截標收盤'];
+                const convPrice = r['轉換價'];
+                const theory = r['截標理論'];
                 const lowestBid = r['最低得標'];
                 const lowestPrem = parseFloat(r['最低溢價']) || 0;
                 const avgBid = r['平均得標'];
@@ -2282,7 +2349,12 @@ function renderList() {
                     <td class="code">${cbCode}</td>
                     <td>${cbName}</td>
                     <td class="hide-mobile">${openDate}</td>
+                    <td class="hide-mobile">${fmtNum(bidLots, 0)}</td>
+                    <td class="hide-mobile">${fmtNum(totalBidLots, 0)}</td>
                     <td>${fmtNum(multiple, 2)}x</td>
+                    <td class="hide-mobile">${fmtNum(basePrice, 2)}</td>
+                    <td class="hide-mobile">${closePrice ? fmtNum(closePrice, 2) : '-'}</td>
+                    <td class="hide-mobile">${fmtNum(convPrice, 2)}</td>
                     <td class="hide-mobile">${fmtNum(theory, 2)}</td>
                     <td>${fmtNum(lowestBid, 2)}</td>
                     <td class="hide-mobile ${colorClass(lowestPrem * 100)}">${fmtNum(lowestPrem * 100, 1)}%</td>
@@ -2297,7 +2369,12 @@ function renderList() {
             html += `</tbody><tfoot><tr class="summary-row">
                 <td colspan="2"><b>平均值 (${validFiltered.length} 筆)</b></td>
                 <td class="hide-mobile"></td>
+                <td class="hide-mobile"><b>${fmtNum(avgBidLots, 0)}</b></td>
+                <td class="hide-mobile"><b>${fmtNum(avgTotalBidLots, 0)}</b></td>
                 <td><b>${fmtNum(avgMultiple, 2)}x</b></td>
+                <td class="hide-mobile"><b>${fmtNum(avgBasePrice, 2)}</b></td>
+                <td class="hide-mobile"><b>${fmtNum(avgClosePrice, 2)}</b></td>
+                <td class="hide-mobile"><b>${fmtNum(avgConvPrice, 2)}</b></td>
                 <td class="hide-mobile"><b>${fmtNum(avgTheory, 2)}</b></td>
                 <td><b>${fmtNum(avgLowestBid, 2)}</b></td>
                 <td class="hide-mobile"><b>${fmtNum(avgLowestPrem * 100, 1)}%</b></td>
