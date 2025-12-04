@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -326,6 +328,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -341,6 +344,8 @@
         <h1>📊 Rex大叔投資研究室</h1>
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
+
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -370,6 +375,7 @@
     <div style="font-size:15px;color:#333;font-weight:600;">找到 <b id="resCount" style="color:var(--primary);font-size:18px;">0</b> 筆資料 <span id="filterHint" style="font-size:13px;color:#e65100;margin-left:8px;"></span></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -1806,23 +1812,21 @@ function renderCBStats() {
     // 競拍數量從 cbAll 中 _method === '競拍' 計算（與01工作表一致）
     const auctionCnt = DB.cbAll.filter(c => c._method === '競拍').length;
     
-    // 模式切換 - 小方格排列，手機版兩列顯示（歷史高低在第一列）
+    // 模式切換 - 使用矩形按鈕樣式
     const modeTabsHtml = `
         <div class="cb-section-title">🔀 分類查詢</div>
-        <div class="cb-mode-switcher cb-mode-row1">
-            <span class="cb-mode-tab ${CB_MODE==='info'?'active':''}" onclick="setCbMode('info')">基本<span class="cnt">${padNum(DB.cbAll.length)}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='active'?'active':''}" onclick="setCbMode('active')">掛牌<span class="cnt">${padNum(DB.cb.length)}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='history'?'active':''}" onclick="setCbMode('history')">歷史<span class="cnt">${padNum(DB.cbHistory.length)}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='auction'?'active':''}" onclick="setCbMode('auction')">競拍<span class="cnt">${padNum(auctionCnt)}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='primary'?'active':''}" onclick="setCbMode('primary')">初級<span class="cnt">${padNum(DB.cbPrimary.length + DB.cbBoard.length)}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='balance'?'active':''}" onclick="setCbMode('balance')">餘額<span class="cnt">${padNum(DB.cbBalance.length)}</span></span>
-        </div>
-        <div class="cb-mode-switcher cb-mode-row2">
-            <span class="cb-mode-tab ${CB_MODE==='cbas'?'active':''}" onclick="setCbMode('cbas')">CBAS<span class="cnt">${padNum(DB.cbCBAS.length)}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='redeem'?'active':''}" onclick="setCbMode('redeem')">贖回<span class="cnt">${padNum(DB.cbRedeem.length)}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='stopconv'?'active':''}" onclick="setCbMode('stopconv')">停轉<span class="cnt">${padNum(DB.cbStopConv.length)}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='priceadj'?'active':''}" onclick="setCbMode('priceadj')">調價<span class="cnt">${padNum(DB.cbPriceAdj.length)}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='concept'?'active':''}" onclick="setCbMode('concept')">題材<span class="cnt">${padNum(DB.cb.length)}</span></span>
+        <div class="cb-top10-btns">
+            <div class="cb-top10-btn-line ${CB_MODE==='info'?'active':''}" onclick="setCbMode('info')"><span class="top10-icon">📋</span>基本資料<span class="ind-num">${padNum(DB.cbAll.length)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='active'?'active':''}" onclick="setCbMode('active')"><span class="top10-icon">🎫</span>掛牌交易<span class="ind-num">${padNum(DB.cb.length)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='history'?'active':''}" onclick="setCbMode('history')"><span class="top10-icon">📜</span>歷史資料<span class="ind-num">${padNum(DB.cbHistory.length)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='auction'?'active':''}" onclick="setCbMode('auction')"><span class="top10-icon">🔨</span>競拍資料<span class="ind-num">${padNum(auctionCnt)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='primary'?'active':''}" onclick="setCbMode('primary')"><span class="top10-icon">📝</span>初級市場<span class="ind-num">${padNum(DB.cbPrimary.length + DB.cbBoard.length)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='balance'?'active':''}" onclick="setCbMode('balance')"><span class="top10-icon">📊</span>流通餘額<span class="ind-num">${padNum(DB.cbBalance.length)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='cbas'?'active':''}" onclick="setCbMode('cbas')"><span class="top10-icon">💹</span>CBAS報價<span class="ind-num">${padNum(DB.cbCBAS.length)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='redeem'?'active':''}" onclick="setCbMode('redeem')"><span class="top10-icon">🔔</span>強制贖回<span class="ind-num">${padNum(DB.cbRedeem.length)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='stopconv'?'active':''}" onclick="setCbMode('stopconv')"><span class="top10-icon">⏸️</span>停止轉換<span class="ind-num">${padNum(DB.cbStopConv.length)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='priceadj'?'active':''}" onclick="setCbMode('priceadj')"><span class="top10-icon">💰</span>價格調整<span class="ind-num">${padNum(DB.cbPriceAdj.length)}</span></div>
+            <div class="cb-top10-btn-line ${CB_MODE==='concept'?'active':''}" onclick="setCbMode('concept')"><span class="top10-icon">💡</span>題材概念<span class="ind-num">${padNum(DB.cb.length)}</span></div>
         </div>
     `;
     
