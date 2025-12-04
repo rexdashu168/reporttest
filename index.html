@@ -1823,6 +1823,101 @@ function calcAuctionStats(list) {
 }
 
 // 計算投標建議價格
+// 計算近三個月競拍市況趨勢
+function calcRecentAuctionTrend() {
+    const now = new Date();
+    const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    
+    // 篩選近三個月的競拍資料
+    const recentAuctions = DB.cbAuction.filter(c => {
+        const bidDate = getDateVal(c['開標日期']);
+        return bidDate >= threeMonthsAgo.getTime();
+    });
+    
+    if(recentAuctions.length === 0) {
+        return { count: 0, avgLowestPrem: 0, avgAvgPrem: 0, avgMultiple: 0, trend: 'neutral', adjustment: 0 };
+    }
+    
+    // 計算近三個月平均值
+    let sumLowestPrem = 0, sumAvgPrem = 0, sumMultiple = 0;
+    let lowestPremCnt = 0, avgPremCnt = 0, multipleCnt = 0;
+    
+    recentAuctions.forEach(c => {
+        const lowestPrem = parseFloat(c['最低溢價']) || 0;
+        const avgPrem = parseFloat(c['平均溢價']) || 0;
+        const multiple = parseFloat(c['投標倍數']) || 0;
+        
+        if(lowestPrem !== 0 || c['最低溢價'] !== undefined) { sumLowestPrem += lowestPrem; lowestPremCnt++; }
+        if(avgPrem !== 0 || c['平均溢價'] !== undefined) { sumAvgPrem += avgPrem; avgPremCnt++; }
+        if(multiple > 0) { sumMultiple += multiple; multipleCnt++; }
+    });
+    
+    const recentLowestPrem = lowestPremCnt > 0 ? sumLowestPrem / lowestPremCnt : 0;
+    const recentAvgPrem = avgPremCnt > 0 ? sumAvgPrem / avgPremCnt : 0;
+    const recentMultiple = multipleCnt > 0 ? sumMultiple / multipleCnt : 0;
+    
+    // 計算全部歷史平均值作為比較基準
+    let histLowestPrem = 0, histAvgPrem = 0, histMultiple = 0;
+    let histLowestCnt = 0, histAvgCnt = 0, histMultiCnt = 0;
+    
+    DB.cbAuction.forEach(c => {
+        const lowestPrem = parseFloat(c['最低溢價']) || 0;
+        const avgPrem = parseFloat(c['平均溢價']) || 0;
+        const multiple = parseFloat(c['投標倍數']) || 0;
+        
+        if(lowestPrem !== 0 || c['最低溢價'] !== undefined) { histLowestPrem += lowestPrem; histLowestCnt++; }
+        if(avgPrem !== 0 || c['平均溢價'] !== undefined) { histAvgPrem += avgPrem; histAvgCnt++; }
+        if(multiple > 0) { histMultiple += multiple; histMultiCnt++; }
+    });
+    
+    histLowestPrem = histLowestCnt > 0 ? histLowestPrem / histLowestCnt : 0;
+    histAvgPrem = histAvgCnt > 0 ? histAvgPrem / histAvgCnt : 0;
+    histMultiple = histMultiCnt > 0 ? histMultiple / histMultiCnt : 0;
+    
+    // 判斷市況趨勢和調整幅度
+    // 比較近三個月與歷史平均的差異
+    const premDiff = recentAvgPrem - histAvgPrem;       // 溢價率差異
+    const multipleDiff = recentMultiple - histMultiple; // 投標倍數差異
+    
+    let trend = 'neutral';
+    let adjustment = 0;
+    let reason = '';
+    
+    if(premDiff > 0.02 && multipleDiff > 0.5) {
+        // 近期溢價率高 + 投標倍數高 → 市場熱絡
+        trend = 'hot';
+        adjustment = Math.min(0.02, premDiff * 0.5); // 最多調高2%
+        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 高於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，投標倍數 ${fmtNum(recentMultiple, 1)}x 高於歷史 ${fmtNum(histMultiple, 1)}x，市場熱絡`;
+    } else if(premDiff < -0.02 && multipleDiff < -0.3) {
+        // 近期溢價率低 + 投標倍數低 → 市場冷清
+        trend = 'cold';
+        adjustment = Math.max(-0.02, premDiff * 0.5); // 最多調低2%
+        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 低於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，投標倍數 ${fmtNum(recentMultiple, 1)}x 低於歷史 ${fmtNum(histMultiple, 1)}x，市場冷清`;
+    } else if(premDiff > 0.01) {
+        trend = 'warm';
+        adjustment = premDiff * 0.3;
+        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 略高於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，市場偏熱`;
+    } else if(premDiff < -0.01) {
+        trend = 'cool';
+        adjustment = premDiff * 0.3;
+        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 略低於歷史 ${fmtNum(histAvgPrem * 100, 1)}%，市場偏冷`;
+    } else {
+        reason = `近3月平均溢價 ${fmtNum(recentAvgPrem * 100, 1)}% 與歷史 ${fmtNum(histAvgPrem * 100, 1)}% 相近，市場持平`;
+    }
+    
+    return {
+        count: recentAuctions.length,
+        avgLowestPrem: recentLowestPrem,
+        avgAvgPrem: recentAvgPrem,
+        avgMultiple: recentMultiple,
+        histAvgPrem: histAvgPrem,
+        histMultiple: histMultiple,
+        trend: trend,
+        adjustment: adjustment,
+        reason: reason
+    };
+}
+
 function calcBidSuggestion(primary, analysis) {
     const convPrice = parseFloat(primary._convPrice) || 0;
     const stockPrice = parseFloat(primary._stockPrice) || 0;
@@ -1841,37 +1936,80 @@ function calcBidSuggestion(primary, analysis) {
     const histAvgBid = stats.avgAvg || 105;
     const histLowestBid = stats.avgLowest || 103;
     
+    // 取得近期市況調整
+    const recentTrend = calcRecentAuctionTrend();
+    const marketAdj = recentTrend.adjustment; // 市況調整比例
+    
     let suggestion = {
         theoryPrice: theoryPrice,
         method: '',
+        methodDetail: '',
         conservativePrice: 0,    // 保守價（接近最低得標）
         moderatePrice: 0,        // 穩健價（接近平均得標）
         aggressivePrice: 0,      // 積極價（高於平均得標）
-        reason: ''
+        baseConservative: 0,     // 基礎保守價（調整前）
+        baseModerate: 0,         // 基礎穩健價（調整前）
+        baseAggressive: 0,       // 基礎積極價（調整前）
+        reason: '',
+        formula: '',
+        recentTrend: recentTrend
     };
     
     if(theoryPrice >= 100) {
         // 理論價 >= 100：有轉換價值，用理論價 × 溢價率
         suggestion.method = '理論價法';
-        suggestion.conservativePrice = Math.max(100, theoryPrice * (1 + histAvgPrem * 0.5));
-        suggestion.moderatePrice = Math.max(100, theoryPrice * (1 + histAvgPrem));
-        suggestion.aggressivePrice = Math.max(100, theoryPrice * (1 + histAvgPrem * 1.5));
-        suggestion.reason = `理論價 ${fmtNum(theoryPrice, 2)} 元 ≥ 100，具轉換價值，建議採用理論價乘以溢價率`;
+        suggestion.methodDetail = '理論價 ≥ 100，具有轉換價值';
+        
+        // 基礎價格計算
+        suggestion.baseConservative = theoryPrice * (1 + histAvgPrem * 0.5);
+        suggestion.baseModerate = theoryPrice * (1 + histAvgPrem);
+        suggestion.baseAggressive = theoryPrice * (1 + histAvgPrem * 1.5);
+        
+        // 套用市況調整
+        suggestion.conservativePrice = Math.max(100, suggestion.baseConservative * (1 + marketAdj));
+        suggestion.moderatePrice = Math.max(100, suggestion.baseModerate * (1 + marketAdj));
+        suggestion.aggressivePrice = Math.max(100, suggestion.baseAggressive * (1 + marketAdj));
+        
+        suggestion.formula = `理論價 × (1 + 歷史溢價率) × 市況調整`;
+        suggestion.reason = `理論價 ${fmtNum(theoryPrice, 2)} 元 ≥ 100，具轉換價值`;
+        
     } else if(theoryPrice >= 80) {
         // 理論價 80-100：接近轉換價值，混合計算
         suggestion.method = '混合計算法';
+        suggestion.methodDetail = '理論價 80~100，接近轉換價值';
+        
         const blendFactor = (theoryPrice - 80) / 20; // 0~1
-        suggestion.conservativePrice = 100 + (histLowestBid - 100) * (1 - blendFactor * 0.3);
-        suggestion.moderatePrice = 100 + (histAvgBid - 100) * (1 - blendFactor * 0.2);
-        suggestion.aggressivePrice = suggestion.moderatePrice * 1.03;
-        suggestion.reason = `理論價 ${fmtNum(theoryPrice, 2)} 元 接近100，建議參考歷史平均並適度調整`;
+        
+        // 基礎價格計算
+        suggestion.baseConservative = 100 + (histLowestBid - 100) * (1 - blendFactor * 0.3);
+        suggestion.baseModerate = 100 + (histAvgBid - 100) * (1 - blendFactor * 0.2);
+        suggestion.baseAggressive = suggestion.baseModerate * 1.03;
+        
+        // 套用市況調整
+        suggestion.conservativePrice = Math.max(100, suggestion.baseConservative * (1 + marketAdj));
+        suggestion.moderatePrice = Math.max(100, suggestion.baseModerate * (1 + marketAdj));
+        suggestion.aggressivePrice = Math.max(100, suggestion.baseAggressive * (1 + marketAdj));
+        
+        suggestion.formula = `歷史均價 × 混合係數 × 市況調整`;
+        suggestion.reason = `理論價 ${fmtNum(theoryPrice, 2)} 元 接近100，混合參考`;
+        
     } else {
         // 理論價 < 80：底標限制100元，用歷史平均價格
         suggestion.method = '歷史均價法';
-        suggestion.conservativePrice = histLowestBid;
-        suggestion.moderatePrice = histAvgBid;
-        suggestion.aggressivePrice = histAvgBid + (histAvgBid - histLowestBid) * 0.5;
-        suggestion.reason = `理論價 ${fmtNum(theoryPrice, 2)} 元 < 80，因底標100元限制，建議採用歷史平均價格`;
+        suggestion.methodDetail = '理論價 < 80，受底標100元限制';
+        
+        // 基礎價格計算
+        suggestion.baseConservative = histLowestBid;
+        suggestion.baseModerate = histAvgBid;
+        suggestion.baseAggressive = histAvgBid + (histAvgBid - histLowestBid) * 0.5;
+        
+        // 套用市況調整
+        suggestion.conservativePrice = Math.max(100, suggestion.baseConservative * (1 + marketAdj));
+        suggestion.moderatePrice = Math.max(100, suggestion.baseModerate * (1 + marketAdj));
+        suggestion.aggressivePrice = Math.max(100, suggestion.baseAggressive * (1 + marketAdj));
+        
+        suggestion.formula = `歷史平均得標價 × 市況調整`;
+        suggestion.reason = `理論價 ${fmtNum(theoryPrice, 2)} 元 < 80，採歷史均價`;
     }
     
     // 確保價格不低於100
@@ -2018,6 +2156,13 @@ window.openAuctionAnalysis = (stockCode, cbCode) => {
     };
     
     // Tab 1: 投標建議
+    const recentTrend = suggestion.recentTrend || {};
+    const trendIcon = recentTrend.trend === 'hot' ? '🔥' : recentTrend.trend === 'warm' ? '📈' : recentTrend.trend === 'cold' ? '❄️' : recentTrend.trend === 'cool' ? '📉' : '➡️';
+    const trendText = recentTrend.trend === 'hot' ? '熱絡' : recentTrend.trend === 'warm' ? '偏熱' : recentTrend.trend === 'cold' ? '冷清' : recentTrend.trend === 'cool' ? '偏冷' : '持平';
+    const trendColor = recentTrend.trend === 'hot' || recentTrend.trend === 'warm' ? '#e65100' : recentTrend.trend === 'cold' || recentTrend.trend === 'cool' ? '#1565c0' : '#666';
+    const adjPct = (recentTrend.adjustment || 0) * 100;
+    const adjText = adjPct > 0 ? `+${fmtNum(adjPct, 1)}%` : adjPct < 0 ? `${fmtNum(adjPct, 1)}%` : '無調整';
+    
     let tSuggest = `
         <div class="rating-card" style="background:linear-gradient(135deg, #e65100 0%, #ff9800 100%)">
             <div style="font-size:14px;opacity:0.9;margin-bottom:5px">📊 ${suggestion.method}</div>
@@ -2031,10 +2176,6 @@ window.openAuctionAnalysis = (stockCode, cbCode) => {
                     <div class="big-num">${fmtNum(suggestion.moderatePrice, 2)}</div>
                 </div>
             </div>
-        </div>
-        
-        <div class="hl-block" style="border-left-color:#ff9800">
-            <b>📌 計算說明</b><br>${suggestion.reason}
         </div>
         
         <div class="section-head">💰 投標價格建議區間</div>
@@ -2055,6 +2196,77 @@ window.openAuctionAnalysis = (stockCode, cbCode) => {
                 <div class="lbl">高於平均得標</div>
             </div>
         </div>
+        
+        <div class="section-head">📐 計算方法說明</div>
+        <div class="hl-block" style="border-left-color:#1565c0;background:#f5f9ff">
+            <b>🔹 採用方法：${suggestion.method}</b><br>
+            <span style="color:#666">${suggestion.methodDetail || ''}</span><br><br>
+            
+            <b>📌 理論價計算</b><br>
+            理論價 = 現股股價 ÷ 轉換價格 × 100<br>
+            = ${fmtNum(primary._stockPrice, 2)} ÷ ${fmtNum(primary._convPrice, 2)} × 100 = <b style="color:var(--primary)">${fmtNum(suggestion.theoryPrice, 2)}</b><br><br>
+            
+            <b>📌 三種策略說明</b><br>
+            ${suggestion.method === '理論價法' ? `
+            • <b style="color:#2e7d32">保守</b> = 理論價 × (1 + 歷史溢價率 × 0.5) = ${fmtNum(suggestion.theoryPrice, 2)} × ${fmtNum(1 + (combinedStats.avgAvgPrem || 0.05) * 0.5, 4)}<br>
+            • <b style="color:#e65100">穩健</b> = 理論價 × (1 + 歷史溢價率) = ${fmtNum(suggestion.theoryPrice, 2)} × ${fmtNum(1 + (combinedStats.avgAvgPrem || 0.05), 4)}<br>
+            • <b style="color:#c62828">積極</b> = 理論價 × (1 + 歷史溢價率 × 1.5) = ${fmtNum(suggestion.theoryPrice, 2)} × ${fmtNum(1 + (combinedStats.avgAvgPrem || 0.05) * 1.5, 4)}
+            ` : suggestion.method === '混合計算法' ? `
+            • <b style="color:#2e7d32">保守</b> = 100 + (歷史最低均價 - 100) × 混合係數<br>
+            • <b style="color:#e65100">穩健</b> = 100 + (歷史平均均價 - 100) × 混合係數<br>
+            • <b style="color:#c62828">積極</b> = 穩健價 × 1.03
+            ` : `
+            • <b style="color:#2e7d32">保守</b> = 歷史最低得標均價 = ${fmtNum(combinedStats.avgLowest || guaranteeStats.avgLowest || 103, 2)}<br>
+            • <b style="color:#e65100">穩健</b> = 歷史平均得標均價 = ${fmtNum(combinedStats.avgAvg || guaranteeStats.avgAvg || 105, 2)}<br>
+            • <b style="color:#c62828">積極</b> = 平均價 + (平均價 - 最低價) × 0.5
+            `}
+        </div>
+        
+        <div class="section-head">${trendIcon} 近3個月市況調整</div>
+        <div class="hl-block" style="border-left-color:${trendColor}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div>
+                    <b>市場氛圍：</b><span style="color:${trendColor};font-weight:700">${trendText}</span>
+                </div>
+                <div style="background:${trendColor};color:#fff;padding:4px 12px;border-radius:12px;font-weight:700">
+                    調整幅度：${adjText}
+                </div>
+            </div>
+            <b>📊 近3個月競拍統計 (${recentTrend.count || 0}筆)</b><br>
+            • 平均溢價率：${fmtNum((recentTrend.avgAvgPrem || 0) * 100, 1)}% (歷史平均 ${fmtNum((recentTrend.histAvgPrem || 0) * 100, 1)}%)<br>
+            • 投標倍數：${fmtNum(recentTrend.avgMultiple || 0, 1)}x (歷史平均 ${fmtNum(recentTrend.histMultiple || 0, 1)}x)<br><br>
+            <span style="color:#666;font-size:12px">${recentTrend.reason || ''}</span>
+        </div>
+        
+        <div class="section-head">📊 調整前後對比</div>
+        <div class="cb-table-wrap"><table class="cb-table" style="font-size:13px">
+            <thead><tr>
+                <th>策略</th>
+                <th>基礎價格</th>
+                <th>市況調整</th>
+                <th>最終建議</th>
+            </tr></thead>
+            <tbody>
+                <tr>
+                    <td style="color:#2e7d32;font-weight:600">🛡️ 保守</td>
+                    <td>${fmtNum(suggestion.baseConservative, 2)}</td>
+                    <td style="color:${trendColor}">${adjText}</td>
+                    <td style="font-weight:700;color:#2e7d32">${fmtNum(suggestion.conservativePrice, 2)}</td>
+                </tr>
+                <tr style="background:#fff8f0">
+                    <td style="color:#e65100;font-weight:600">⭐ 穩健</td>
+                    <td>${fmtNum(suggestion.baseModerate, 2)}</td>
+                    <td style="color:${trendColor}">${adjText}</td>
+                    <td style="font-weight:700;color:#e65100;font-size:15px">${fmtNum(suggestion.moderatePrice, 2)}</td>
+                </tr>
+                <tr>
+                    <td style="color:#c62828;font-weight:600">🔥 積極</td>
+                    <td>${fmtNum(suggestion.baseAggressive, 2)}</td>
+                    <td style="color:${trendColor}">${adjText}</td>
+                    <td style="font-weight:700;color:#c62828">${fmtNum(suggestion.aggressivePrice, 2)}</td>
+                </tr>
+            </tbody>
+        </table></div>
         
         <div class="section-head">📋 案件基本資料</div>
         <div class="info-row"><span class="info-label">發行規模</span><span class="info-val">${fmtNum(primary._amount, 0)} 億</span></div>
