@@ -71,7 +71,7 @@
     .cb-top10-btn-line:hover { border-color: var(--primary); background: var(--clickable-hover); }
     .cb-top10-btn-line.active { background: #27ae60; color: #fff; border-color: #27ae60; }
     .cb-top10-btn-line .top10-icon { font-size: 16px; }
-    .cb-top10-btn-line .ind-num { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px; min-width: 24px; text-align: center; }
+    .cb-top10-btn-line .ind-num { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px; min-width: 36px; text-align: right; font-family: 'Menlo', 'Monaco', 'Consolas', monospace; white-space: pre; display: inline-block; }
     .cb-top10-btn-line.active .ind-num { background: rgba(255,255,255,0.3); }
     
     /* 表格上方篩選狀態列 */
@@ -104,7 +104,7 @@
     .cb-ind-tag { padding: 5px 10px; background: var(--clickable); border-radius: 12px; font-size: 12px; color: #444; cursor: pointer; transition: all 0.2s; border: 1px solid var(--clickable-border); font-weight: 500; }
     .cb-ind-tag:hover { border-color: var(--primary); background: var(--clickable-hover); color: var(--primary); }
     .cb-ind-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .cb-ind-tag .num { background: rgba(201,100,66,0.15); color: var(--primary); padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-left: 4px; font-weight: 700; min-width: 28px; display: inline-block; text-align: right; font-family: 'Menlo', 'Monaco', 'Consolas', monospace; white-space: pre; }
+    .cb-ind-tag .num { background: rgba(201,100,66,0.15); color: var(--primary); padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-left: 4px; font-weight: 700; min-width: 32px; display: inline-block; text-align: right; font-family: 'Menlo', 'Monaco', 'Consolas', monospace; white-space: pre; }
     .cb-ind-tag.active .num { background: rgba(255,255,255,0.3); color: #fff; }
     
     /* 競拍前十名表格 */
@@ -201,6 +201,24 @@
     .cb-table tfoot { background: #f8f9fa; }
     .cb-table tfoot td { border-top: 2px solid #ddd; padding: 12px 8px; }
     
+    /* CBAS 表格特殊樣式 - 有擔保標記 */
+    .guarantee-yes { 
+        display: inline-block;
+        padding: 2px 8px;
+        background: #fff5f5;
+        border: 1px solid #ffcccc;
+        border-radius: 4px;
+        color: #c96442;
+        font-weight: 600;
+    }
+    /* CBAS 表格特殊樣式 - 競拍整行標記 */
+    .cb-table tr.auction-row td {
+        background: #fff8f5 !important;
+    }
+    .cb-table tr.auction-row:hover td {
+        background: #fff0e8 !important;
+    }
+    
     /* 基本資料表格標題 */
     .cb-info-section { margin-bottom: 20px; }
     .cb-info-title { display: flex; align-items: center; gap: 8px; padding: 12px 15px; background: linear-gradient(135deg, #fff5f0 0%, #fff 100%); border-radius: 10px 10px 0 0; border: 1px solid #ffe0d0; border-bottom: none; }
@@ -224,6 +242,10 @@
     .cb-table.sticky-cols td.sticky-col-3 { background: #fff; border-right: 2px solid #eee; }
     .cb-table.sticky-cols tr:hover td.sticky-col-3 { background: #fffaf8; }
     .cb-table.sticky-cols tr.active-cb td.sticky-col-3 { background: #e8f5e9; }
+    
+    /* CBAS 擔保欄位樣式 */
+    .guarantee-yes { background: #fff5f5; border: 1px solid #ffcccc; border-radius: 4px; padding: 2px 6px; color: #c96442; font-weight: 600; }
+    .guarantee-no { color: #999; }
     
     /* 手機版 */
     @media(max-width: 768px) {
@@ -1302,6 +1324,7 @@ async function init() {
                 '_cbCode': cbCode,
                 '_tcri': tcriVal,
                 '_guarantee': isGuaranteed ? '有' : '無',
+                '_method': basicInfo.method || '',
                 '_premium': r['權利金(佰元報價)'],
                 '_optExpiry': r['選擇權到期日'],
                 '_putPrice': r['賣回價格(A)'],
@@ -1896,7 +1919,7 @@ function renderCBStats() {
             <div class="cb-section-title">${title}</div>
             <div class="cb-top10-btns">
                 ${indList.map(([ind, cnt]) => `
-                    <div class="cb-top10-btn-line ${CB_FILTER.industry === ind ? 'active' : ''}" onclick="setCbFilter('industry', '${ind}')"><span class="top10-icon">${industryEmoji(ind)}</span>${ind}<span class="ind-num">${cnt}</span></div>
+                    <div class="cb-top10-btn-line ${CB_FILTER.industry === ind ? 'active' : ''}" onclick="setCbFilter('industry', '${ind}')"><span class="top10-icon">${industryEmoji(ind)}</span>${ind}<span class="ind-num">${padNum(cnt)}</span></div>
                 `).join('')}
             </div>
         `;
@@ -2807,30 +2830,36 @@ function renderList() {
                     <th class="sortable" data-col="_cbCode" data-type="string">代號</th>
                     <th>名稱</th>
                     <th class="sortable" data-col="_guarantee" data-type="string">擔保</th>
-                    <th class="sortable" data-col="_remainYears" data-type="num">年期</th>
+                    <th class="sortable" data-col="_remainYears" data-type="num">剩餘年</th>
                     <th class="sortable" data-col="_premium" data-type="num">權利金</th>
-                    <th class="sortable" data-col="_convPrice" data-type="num">轉換價</th>
+                    <th class="sortable" data-col="_optExpiry" data-type="date">到期日</th>
+                    <th class="sortable hide-mobile" data-col="_putPrice" data-type="num">賣回價</th>
+                    <th class="sortable hide-mobile" data-col="_putDate" data-type="date">賣回日</th>
                     <th class="sortable" data-col="_stockPrice" data-type="num">股價</th>
-                    <th class="sortable hide-mobile" data-col="_convValue" data-type="num">轉換價值</th>
+                    <th class="sortable" data-col="_convPrice" data-type="num">轉換價</th>
+                    <th class="sortable" data-col="_convValue" data-type="num">理論價</th>
+                    <th class="sortable" data-col="_cbPrice" data-type="num">CB價格</th>
                     <th class="sortable" data-col="_premiumPct" data-type="num">溢折價%</th>
-                    <th class="sortable hide-mobile" data-col="_vol120" data-type="num">波動率</th>
-                    <th class="hide-mobile">產業</th>
                 </tr></thead><tbody>`;
             
             validFiltered.slice(0, 150).forEach(r => {
                 const premPct = parseFloat(r._premiumPct) || 0;
-                html += `<tr>
+                const isAuction = r._method === '競拍';
+                const rowClass = isAuction ? 'auction-row' : '';
+                html += `<tr class="${rowClass}">
                     <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                     <td class="name-col">${r._name}</td>
-                    <td>${r._guarantee}</td>
+                    <td><span class="${r._guarantee === '有' ? 'guarantee-yes' : ''}">${r._guarantee}</span></td>
                     <td>${fmtNum(r._remainYears, 2)}</td>
                     <td>${fmtNum(r._premium, 2)}</td>
-                    <td>${fmtNum(r._convPrice, 2)}</td>
+                    <td>${fmtDate(r._optExpiry)}</td>
+                    <td class="hide-mobile">${fmtNum(r._putPrice, 2)}</td>
+                    <td class="hide-mobile">${fmtDate(r._putDate)}</td>
                     <td>${fmtNum(r._stockPrice, 2)}</td>
-                    <td class="hide-mobile">${fmtNum(r._convValue, 2)}</td>
+                    <td>${fmtNum(r._convPrice, 2)}</td>
+                    <td>${fmtNum(r._convValue, 2)}</td>
+                    <td>${fmtNum(r._cbPrice, 2)}</td>
                     <td class="${colorClass(premPct)}">${fmtNum(premPct, 1)}%</td>
-                    <td class="hide-mobile">${fmtNum(parseFloat(r._vol120)*100, 1)}%</td>
-                    <td class="hide-mobile">${r._industry || ''}</td>
                 </tr>`;
             });
             html += `</tbody></table></div>`;
