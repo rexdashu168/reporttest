@@ -38,12 +38,20 @@
     /* CB 統計區塊 - 淺色配色 */
     .cb-stats { background: #fff5f5; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #ffe0e0; }
     
-    /* CB 模式切換 - 同一列顯示 */
-    .cb-mode-switcher { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-    .cb-mode-tab { padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--clickable-border); background: var(--clickable); color: #444; transition: all 0.2s; white-space: nowrap; }
+    /* CB 模式切換 - 兩列顯示 */
+    .cb-mode-switcher { display: flex; flex-wrap: nowrap; gap: 2px; margin-bottom: 6px; justify-content: space-between; }
+    .cb-mode-row1 { }
+    .cb-mode-row2 { margin-bottom: 12px; }
+    .cb-mode-tab { padding: 4px 2px; border-radius: 8px; font-size: 9px; font-weight: 600; cursor: pointer; border: 1px solid var(--clickable-border); background: var(--clickable); color: #444; transition: all 0.2s; white-space: nowrap; flex: 1; text-align: center; min-width: 0; }
     .cb-mode-tab:hover { border-color: var(--primary); background: var(--clickable-hover); }
     .cb-mode-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .cb-mode-tab .cnt { font-size: 10px; margin-left: 3px; opacity: 0.8; }
+    .cb-mode-tab .cnt { font-size: 7px; margin-left: 1px; opacity: 0.8; font-family: 'Menlo', 'Monaco', 'Consolas', monospace; display: block; line-height: 1.2; }
+    @media(min-width: 400px) { .cb-mode-tab { padding: 4px 4px; font-size: 10px; } .cb-mode-tab .cnt { font-size: 8px; } }
+    @media(min-width: 500px) { .cb-mode-tab { padding: 5px 8px; font-size: 11px; } .cb-mode-tab .cnt { font-size: 9px; display: inline; } }
+    @media(min-width: 768px) { .cb-mode-tab { padding: 5px 12px; font-size: 12px; } .cb-mode-tab .cnt { margin-left: 3px; font-size: 10px; } }
+    
+    /* 有擔保粉紅色背景 */
+    .cb-table .guar-yes { background: #ffe4ec; color: #d63384; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
     
     /* 子標籤（發行條件、時程等） */
     .cb-sub-switcher { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -83,7 +91,7 @@
     .cb-stat-item.clickable { cursor: pointer; transition: all 0.2s; background: var(--clickable); border-color: var(--clickable-border); }
     .cb-stat-item.clickable:hover { border-color: var(--primary); background: var(--clickable-hover); }
     .cb-stat-item.clickable.active { background: var(--primary); border-color: var(--primary); }
-    .cb-stat-num { font-size: 18px; font-weight: 800; color: var(--primary); line-height: 1.2; }
+    .cb-stat-num { font-size: 18px; font-weight: 800; color: var(--primary); line-height: 1.2; font-family: 'Menlo', 'Monaco', 'Consolas', monospace; letter-spacing: -1px; }
     .cb-stat-item.clickable.active .cb-stat-num { color: #fff; }
     .cb-stat-label { font-size: 11px; color: #444; margin-top: 2px; font-weight: 600; }
     .cb-stat-item.clickable.active .cb-stat-label { color: rgba(255,255,255,0.9); }
@@ -397,7 +405,7 @@ const META = {
 let CURR_DB = 'news';
 const $ = id => document.getElementById(id);
 const safe = v => (v==null||v==undefined?'':String(v).trim());
-const padNum = n => String(n).padStart(3, '\u00A0'); // 數字補齊3位對齊（用不間斷空格）
+const padNum = n => String(n).padStart(4, '\u00A0'); // 數字補齊4位對齊（用不間斷空格）
 
 // 統一代碼處理函數
 const normalizeCode = v => {
@@ -438,6 +446,40 @@ const fmtTxt = t => {
     let html = safe(t).replace(/\n/g, '<br>');
     html = html.replace(/#(\S+)/g, '<span class="tag-link" onclick="setSearch(\'#$1\');closeModal()">#$1</span>');
     return html;
+};
+
+// 解析賣回條件並計算賣回價格
+// 格式範例: ytp(2,3)=(1.75%) 表示第2年和第3年可賣回，年利率1.75%
+const parsePutbackCondition = condition => {
+    if(!condition) return { rate: null, years: [], prices: [] };
+    
+    const result = { rate: null, years: [], prices: [] };
+    
+    // 解析利率，支援多種格式：(1.75%)、=1.75%、1.75%
+    const rateMatch = condition.match(/[=\(]?\s*([\d.]+)\s*%\s*\)?/);
+    if(rateMatch) {
+        result.rate = parseFloat(rateMatch[1]);
+    }
+    
+    // 解析年期，格式：(2,3) 或 (2、3) 或 (2.3)
+    const yearsMatch = condition.match(/\((\d+)[,、.](\d+)\)/);
+    if(yearsMatch) {
+        result.years = [parseInt(yearsMatch[1]), parseInt(yearsMatch[2])];
+    } else {
+        // 嘗試解析單一年期 (3)
+        const singleYearMatch = condition.match(/\((\d+)\)/);
+        if(singleYearMatch && result.rate) {
+            result.years = [parseInt(singleYearMatch[1])];
+        }
+    }
+    
+    // 計算賣回價格：100 * (1 + rate/100)^year
+    if(result.rate !== null && result.years.length > 0) {
+        const r = 1 + result.rate / 100;
+        result.prices = result.years.map(y => 100 * Math.pow(r, y));
+    }
+    
+    return result;
 };
 
 function handleInput(el) { 
@@ -1701,21 +1743,26 @@ function renderCBStats() {
     const stats = META.cbStats;
     const industries = Object.entries(stats.industries).sort((a,b) => b[1]-a[1]);
     
-    // 模式切換 - 小方格排列
+    // 競拍數量從 cbAll 中 _method === '競拍' 計算（與01工作表一致）
+    const auctionCnt = DB.cbAll.filter(c => c._method === '競拍').length;
+    
+    // 模式切換 - 小方格排列，手機版兩列顯示（歷史高低在第一列）
     const modeTabsHtml = `
         <div class="cb-section-title">📌 常用功能</div>
-        <div class="cb-mode-switcher">
-            <span class="cb-mode-tab ${CB_MODE==='info'?'active':''}" onclick="setCbMode('info')">📋 基本資料 <span class="cnt">${DB.cbAll.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='active'?'active':''}" onclick="setCbMode('active')">🎫 掛牌交易 <span class="cnt">${DB.cb.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='history'?'active':''}" onclick="setCbMode('history')">📜 歷史高低 <span class="cnt">${DB.cbHistory.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='auction'?'active':''}" onclick="setCbMode('auction')">🔨 競拍專區 <span class="cnt">${DB.cbAuction.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='primary'?'active':''}" onclick="setCbMode('primary')">📝 初級市場 <span class="cnt">${DB.cbPrimary.length + DB.cbBoard.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='balance'?'active':''}" onclick="setCbMode('balance')">📊 流通餘額 <span class="cnt">${DB.cbBalance.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='cbas'?'active':''}" onclick="setCbMode('cbas')">💹 CBAS <span class="cnt">${DB.cbCBAS.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='redeem'?'active':''}" onclick="setCbMode('redeem')">🔔 強制贖回 <span class="cnt">${DB.cbRedeem.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='stopconv'?'active':''}" onclick="setCbMode('stopconv')">⏸️ 停止轉換 <span class="cnt">${DB.cbStopConv.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='priceadj'?'active':''}" onclick="setCbMode('priceadj')">💰 轉價調整 <span class="cnt">${DB.cbPriceAdj.length}</span></span>
-            <span class="cb-mode-tab ${CB_MODE==='concept'?'active':''}" onclick="setCbMode('concept')">💡 題材概念 <span class="cnt">${DB.cb.length}</span></span>
+        <div class="cb-mode-switcher cb-mode-row1">
+            <span class="cb-mode-tab ${CB_MODE==='info'?'active':''}" onclick="setCbMode('info')">基本<span class="cnt">${padNum(DB.cbAll.length)}</span></span>
+            <span class="cb-mode-tab ${CB_MODE==='active'?'active':''}" onclick="setCbMode('active')">掛牌<span class="cnt">${padNum(DB.cb.length)}</span></span>
+            <span class="cb-mode-tab ${CB_MODE==='history'?'active':''}" onclick="setCbMode('history')">歷史<span class="cnt">${padNum(DB.cbHistory.length)}</span></span>
+            <span class="cb-mode-tab ${CB_MODE==='auction'?'active':''}" onclick="setCbMode('auction')">競拍<span class="cnt">${padNum(auctionCnt)}</span></span>
+            <span class="cb-mode-tab ${CB_MODE==='primary'?'active':''}" onclick="setCbMode('primary')">初級<span class="cnt">${padNum(DB.cbPrimary.length + DB.cbBoard.length)}</span></span>
+            <span class="cb-mode-tab ${CB_MODE==='balance'?'active':''}" onclick="setCbMode('balance')">餘額<span class="cnt">${padNum(DB.cbBalance.length)}</span></span>
+        </div>
+        <div class="cb-mode-switcher cb-mode-row2">
+            <span class="cb-mode-tab ${CB_MODE==='cbas'?'active':''}" onclick="setCbMode('cbas')">CBAS<span class="cnt">${padNum(DB.cbCBAS.length)}</span></span>
+            <span class="cb-mode-tab ${CB_MODE==='redeem'?'active':''}" onclick="setCbMode('redeem')">贖回<span class="cnt">${padNum(DB.cbRedeem.length)}</span></span>
+            <span class="cb-mode-tab ${CB_MODE==='stopconv'?'active':''}" onclick="setCbMode('stopconv')">停轉<span class="cnt">${padNum(DB.cbStopConv.length)}</span></span>
+            <span class="cb-mode-tab ${CB_MODE==='priceadj'?'active':''}" onclick="setCbMode('priceadj')">調價<span class="cnt">${padNum(DB.cbPriceAdj.length)}</span></span>
+            <span class="cb-mode-tab ${CB_MODE==='concept'?'active':''}" onclick="setCbMode('concept')">題材<span class="cnt">${padNum(DB.cb.length)}</span></span>
         </div>
     `;
     
@@ -1778,13 +1825,13 @@ function renderCBStats() {
                 ${modeTabsHtml}
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
-                    <div class="cb-stat-item"><div class="cb-stat-num">${DB.cbAll.length}</div><div class="cb-stat-label">全部CB</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${activeCnt}</div><div class="cb-stat-label">掛牌中</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${historyCnt}</div><div class="cb-stat-label">已下市</div></div>
-                    <div class="cb-stat-item clickable" onclick="setCbFilter('guarantee', '詢圈')"><div class="cb-stat-num">${allMethod['詢圈']}</div><div class="cb-stat-label">詢圈</div></div>
-                    <div class="cb-stat-item clickable" onclick="setCbFilter('guarantee', '競拍')"><div class="cb-stat-num">${allMethod['競拍']}</div><div class="cb-stat-label">競拍</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${allGuar['有擔保']}</div><div class="cb-stat-label">有擔保</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${allGuar['無擔保']}</div><div class="cb-stat-label">無擔保</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(DB.cbAll.length)}</div><div class="cb-stat-label">全部CB</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(activeCnt)}</div><div class="cb-stat-label">掛牌中</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(historyCnt)}</div><div class="cb-stat-label">已下市</div></div>
+                    <div class="cb-stat-item clickable" onclick="setCbFilter('guarantee', '詢圈')"><div class="cb-stat-num">${padNum(allMethod['詢圈'])}</div><div class="cb-stat-label">詢圈</div></div>
+                    <div class="cb-stat-item clickable" onclick="setCbFilter('guarantee', '競拍')"><div class="cb-stat-num">${padNum(allMethod['競拍'])}</div><div class="cb-stat-label">競拍</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${padNum(allGuar['有擔保'])}</div><div class="cb-stat-label">有擔保</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${padNum(allGuar['無擔保'])}</div><div class="cb-stat-label">無擔保</div></div>
                 </div>
                 ${renderIndustryTags(sortedAllInd, '📊 各產業CB分佈')}
                 <div class="cb-sub-switcher" style="margin-top:15px">
@@ -1801,11 +1848,11 @@ function renderCBStats() {
                 ${modeTabsHtml}
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
-                    <div class="cb-stat-item"><div class="cb-stat-num">${stats.total}</div><div class="cb-stat-label">掛牌中CB</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${stats.companies}</div><div class="cb-stat-label">發行公司</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(stats.totalBalance/100, 0)}</div><div class="cb-stat-label">總餘額(億)</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${guarCnt['有擔保']}</div><div class="cb-stat-label">有擔保</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${guarCnt['無擔保']}</div><div class="cb-stat-label">無擔保</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(stats.total)}</div><div class="cb-stat-label">掛牌中</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(stats.companies)}</div><div class="cb-stat-label">公司數</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(Math.round(stats.totalBalance/100))}</div><div class="cb-stat-label">餘額億</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${padNum(guarCnt['有擔保'])}</div><div class="cb-stat-label">有擔保</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${padNum(guarCnt['無擔保'])}</div><div class="cb-stat-label">無擔保</div></div>
                 </div>
                 ${renderIndustryTags(industries, '📊 各產業CB分佈')}
             </div>
@@ -1824,27 +1871,33 @@ function renderCBStats() {
                 ${modeTabsHtml}
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
-                    <div class="cb-stat-item"><div class="cb-stat-num">${DB.cbHistory.length}</div><div class="cb-stat-label">歷史CB</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${guarCnt['有擔保']}</div><div class="cb-stat-label">有擔保</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${guarCnt['無擔保']}</div><div class="cb-stat-label">無擔保</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(DB.cbHistory.length)}</div><div class="cb-stat-label">歷史CB</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${padNum(guarCnt['有擔保'])}</div><div class="cb-stat-label">有擔保</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${padNum(guarCnt['無擔保'])}</div><div class="cb-stat-label">無擔保</div></div>
                 </div>
                 ${renderIndustryTags(sortedHistInd, '📊 各產業歷史CB分佈')}
             </div>
         `;
     } else if(CB_MODE === 'auction') {
-        // 競拍專區
+        // 競拍專區 - 統計數據從 cbAll 中 _method === '競拍' 計算
+        const cbAllAuction = DB.cbAll.filter(c => c._method === '競拍');
         const auctionInd = {};
         const auctionGuar = { '有擔保': 0, '無擔保': 0 };
+        
+        cbAllAuction.forEach(c => {
+            const ind = c._industry || '其他';
+            auctionInd[ind] = (auctionInd[ind] || 0) + 1;
+            if(c._guarantee === '有擔保') auctionGuar['有擔保']++;
+            else if(c._guarantee === '無擔保' || c._guarantee === '0') auctionGuar['無擔保']++;
+        });
+        
+        // 從 cbAuction 計算競拍詳細統計（掛牌高低、得標價等）
         let guarHighSum = 0, guarHighCnt = 0, noGuarHighSum = 0, noGuarHighCnt = 0;
         
         DB.cbAuction.forEach(c => {
-            const ind = c._industry || '其他';
-            auctionInd[ind] = (auctionInd[ind] || 0) + 1;
             if(c._guarantee === '有擔保') {
-                auctionGuar['有擔保']++;
                 if(c._high > 0) { guarHighSum += c._high; guarHighCnt++; }
             } else if(c._guarantee === '無擔保') {
-                auctionGuar['無擔保']++;
                 if(c._high > 0) { noGuarHighSum += c._high; noGuarHighCnt++; }
             }
         });
@@ -1906,7 +1959,7 @@ function renderCBStats() {
             }
         });
         
-        const displayCnt = hasFilter ? filteredAuction.length : DB.cbAuction.length;
+        const displayCnt = hasFilter ? filteredAuction.length : cbAllAuction.length;
         const avgHigh = fValidCnt > 0 ? fHigh / fValidCnt : 0;
         const avgLow = fValidCnt > 0 ? fLow / fValidCnt : 0;
         const avgLowestBid = fLowestBidCnt > 0 ? fLowestBid / fLowestBidCnt : 0;
@@ -1923,9 +1976,9 @@ function renderCBStats() {
                 ${modeTabsHtml}
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
-                    <div class="cb-stat-item"><div class="cb-stat-num">${displayCnt}</div><div class="cb-stat-label">${hasFilter ? '符合條件' : '競拍總檔數'}</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['有擔保'] : auctionGuar['有擔保']}</div><div class="cb-stat-label">有擔保檔數</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['無擔保'] : auctionGuar['無擔保']}</div><div class="cb-stat-label">無擔保檔數</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(displayCnt)}</div><div class="cb-stat-label">${hasFilter ? '符合條件' : '競拍總檔數'}</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${padNum(hasFilter ? fGuar['有擔保'] : auctionGuar['有擔保'])}</div><div class="cb-stat-label">有擔保檔數</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${padNum(hasFilter ? fGuar['無擔保'] : auctionGuar['無擔保'])}</div><div class="cb-stat-label">無擔保檔數</div></div>
                     <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgHigh, 1)}</div><div class="cb-stat-label">掛牌均高價</div></div>
                     <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgLow, 1)}</div><div class="cb-stat-label">掛牌均低價</div></div>
                     <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgLowestBid, 1)}</div><div class="cb-stat-label">最低得標價</div></div>
@@ -1968,9 +2021,9 @@ function renderCBStats() {
                 </div>
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
-                    <div class="cb-stat-item"><div class="cb-stat-num">${dataList.length}</div><div class="cb-stat-label">${PRIMARY_MODE === 'underwriting' ? '承銷中' : '董事會公告'}</div></div>
-                    <div class="cb-stat-item clickable" onclick="setSearch('競拍')"><div class="cb-stat-num">${dataList.filter(c => c._method === '競拍' || c._method === '競價').length}</div><div class="cb-stat-label">競拍</div></div>
-                    <div class="cb-stat-item clickable" onclick="setSearch('詢圈')"><div class="cb-stat-num">${dataList.filter(c => c._method === '詢圈').length}</div><div class="cb-stat-label">詢圈</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(dataList.length)}</div><div class="cb-stat-label">${PRIMARY_MODE === 'underwriting' ? '承銷中' : '董事會'}</div></div>
+                    <div class="cb-stat-item clickable" onclick="setSearch('競拍')"><div class="cb-stat-num">${padNum(dataList.filter(c => c._method === '競拍' || c._method === '競價').length)}</div><div class="cb-stat-label">競拍</div></div>
+                    <div class="cb-stat-item clickable" onclick="setSearch('詢圈')"><div class="cb-stat-num">${padNum(dataList.filter(c => c._method === '詢圈').length)}</div><div class="cb-stat-label">詢圈</div></div>
                 </div>
                 <div class="cb-ind-title">🏦 ${PRIMARY_MODE === 'underwriting' ? '發行' : '主辦'}券商分佈</div>
                 <div class="cb-ind-grid">
@@ -2005,7 +2058,7 @@ function renderCBStats() {
                 ${modeTabsHtml}
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
-                    <div class="cb-stat-item"><div class="cb-stat-num">${META.cbBalanceStats.total}</div><div class="cb-stat-label">CB檔數</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(META.cbBalanceStats.total)}</div><div class="cb-stat-label">CB檔數</div></div>
                 </div>
                 ${renderBalanceTop10(topDecreaseRate, '📉 本週減幅前10名', '_changeRate')}
                 ${renderBalanceTop10(topDecreaseAmount, '📉 減少數額前10名', '_change')}
@@ -2030,7 +2083,7 @@ function renderCBStats() {
                 ${modeTabsHtml}
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
-                    <div class="cb-stat-item"><div class="cb-stat-num">${META.cbCBASStats.total}</div><div class="cb-stat-label">CBAS報價檔數</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(META.cbCBASStats.total)}</div><div class="cb-stat-label">CBAS檔數</div></div>
                 </div>
                 <div class="cb-ind-title">🔍 條件篩選</div>
                 <div class="cb-ind-grid">
@@ -2045,17 +2098,17 @@ function renderCBStats() {
     } else if(CB_MODE === 'redeem') {
         return `<div class="cb-stats">${modeTabsHtml}
             <div class="cb-section-title">📈 統計數據</div>
-            <div class="cb-stats-grid"><div class="cb-stat-item"><div class="cb-stat-num">${DB.cbRedeem.length}</div><div class="cb-stat-label">強制贖回公告</div></div></div>
+            <div class="cb-stats-grid"><div class="cb-stat-item"><div class="cb-stat-num">${padNum(DB.cbRedeem.length)}</div><div class="cb-stat-label">強制贖回</div></div></div>
         </div>`;
     } else if(CB_MODE === 'stopconv') {
         return `<div class="cb-stats">${modeTabsHtml}
             <div class="cb-section-title">📈 統計數據</div>
-            <div class="cb-stats-grid"><div class="cb-stat-item"><div class="cb-stat-num">${DB.cbStopConv.length}</div><div class="cb-stat-label">停止轉換中</div></div></div>
+            <div class="cb-stats-grid"><div class="cb-stat-item"><div class="cb-stat-num">${padNum(DB.cbStopConv.length)}</div><div class="cb-stat-label">停止轉換</div></div></div>
         </div>`;
     } else if(CB_MODE === 'priceadj') {
         return `<div class="cb-stats">${modeTabsHtml}
             <div class="cb-section-title">📈 統計數據</div>
-            <div class="cb-stats-grid"><div class="cb-stat-item"><div class="cb-stat-num">${DB.cbPriceAdj.length}</div><div class="cb-stat-label">價格調整公告</div></div></div>
+            <div class="cb-stats-grid"><div class="cb-stat-item"><div class="cb-stat-num">${padNum(DB.cbPriceAdj.length)}</div><div class="cb-stat-label">價格調整</div></div></div>
         </div>`;
     } else if(CB_MODE === 'concept') {
         const conceptCbCounts = {};
@@ -2071,7 +2124,7 @@ function renderCBStats() {
                 ${modeTabsHtml}
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
-                    <div class="cb-stat-item"><div class="cb-stat-num">${DB.cb.length}</div><div class="cb-stat-label">掛牌中CB</div></div>
+                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(DB.cb.length)}</div><div class="cb-stat-label">掛牌中</div></div>
                 </div>
                 <div class="cb-ind-title">💡 概念股分類</div>
                 <div class="cb-ind-grid">
@@ -2301,30 +2354,37 @@ function renderList() {
                         <th class="sortable" data-col="_cbCode" data-type="string">CB代號</th>
                         <th>CB簡稱</th>
                         <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
-                        <th class="sortable hide-mobile" data-col="_industry" data-type="string">產業</th>
                         <th class="sortable" data-col="_method" data-type="string">詢/競</th>
                         <th class="sortable" data-col="_guarantee" data-type="string">擔保</th>
-                        <th class="sortable" data-col="_rating" data-type="num">信評</th>
-                        <th class="sortable hide-mobile" data-col="_scale" data-type="num">規模</th>
+                        <th class="sortable" data-col="_years" data-type="num">年期</th>
+                        <th class="sortable" data-col="_scale" data-type="num">規模</th>
                         <th class="sortable" data-col="_convPrice" data-type="num">轉換價</th>
-                        <th class="sortable hide-mobile" data-col="_years" data-type="num">年期</th>
+                        <th class="sortable hide-mobile" data-col="_issuePrice" data-type="num">發行價</th>
+                        <th class="sortable hide-mobile" data-col="_expPrice" data-type="num">到期價</th>
+                        <th class="sortable hide-mobile" data-col="_putTiming" data-type="string">賣回條件</th>
                         <th class="sortable hide-mobile" data-col="_issuer" data-type="string">發行券商</th>
                     </tr></thead><tbody>`;
                 
                 validFiltered.slice(0, 150).forEach(r => {
                     const isActive = DB.cb.find(c => c._cbCode === r._cbCode);
                     const statusClass = isActive ? 'active-cb' : '';
+                    const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
+                    const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
+                    // 簡化賣回條件顯示
+                    let putbackShort = r._putTiming || '';
+                    if(putbackShort.length > 15) putbackShort = putbackShort.substring(0, 15) + '...';
                     html += `<tr class="${statusClass}">
                         <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                         <td>${r._name || ''}</td>
                         <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
-                        <td class="hide-mobile">${r._industry || ''}</td>
                         <td>${r._method || ''}</td>
-                        <td>${r._guarantee || ''}</td>
-                        <td>${r._rating || ''}</td>
-                        <td class="hide-mobile">${r._scale || ''}</td>
+                        <td class="${guarClass}">${guarText}</td>
+                        <td>${r._years || ''}</td>
+                        <td>${r._scale || ''}</td>
                         <td>${fmtNum(r._convPrice, 2)}</td>
-                        <td class="hide-mobile">${r._years || ''}</td>
+                        <td class="hide-mobile">${fmtNum(r._issuePrice, 2)}</td>
+                        <td class="hide-mobile">${fmtNum(r._expPrice, 2)}</td>
+                        <td class="hide-mobile" title="${r._putTiming || ''}">${putbackShort}</td>
                         <td class="hide-mobile">${r._issuer || ''}</td>
                     </tr>`;
                 });
@@ -2336,12 +2396,13 @@ function renderList() {
                         <th>CB簡稱</th>
                         <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
                         <th class="sortable" data-col="_boardDate" data-type="date">董事會</th>
-                        <th class="sortable hide-mobile" data-col="_sendDate" data-type="date">送件日</th>
-                        <th class="sortable hide-mobile" data-col="_effectDate" data-type="date">生效日</th>
-                        <th class="sortable" data-col="_bidDate" data-type="string">詢/競日期</th>
+                        <th class="sortable" data-col="_sendDate" data-type="date">送件日</th>
+                        <th class="sortable" data-col="_effectDate" data-type="date">生效日</th>
+                        <th class="sortable" data-col="_payDate" data-type="date">代收日</th>
+                        <th class="sortable" data-col="_bidDate" data-type="string">競/詢日期</th>
                         <th class="sortable" data-col="_listDate" data-type="date">掛牌日</th>
+                        <th class="sortable" data-col="_cbasDate" data-type="date">拆解日</th>
                         <th class="sortable" data-col="_expDate" data-type="date">到期日</th>
-                        <th class="sortable hide-mobile" data-col="_cbasDate" data-type="date">CBAS拆解</th>
                     </tr></thead><tbody>`;
                 
                 validFiltered.slice(0, 150).forEach(r => {
@@ -2352,12 +2413,13 @@ function renderList() {
                         <td>${r._name || ''}</td>
                         <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
                         <td>${fmtDate(r._boardDate)}</td>
-                        <td class="hide-mobile">${fmtDate(r._sendDate)}</td>
-                        <td class="hide-mobile">${fmtDate(r._effectDate)}</td>
+                        <td>${fmtDate(r._sendDate)}</td>
+                        <td>${fmtDate(r._effectDate)}</td>
+                        <td>${fmtDate(r._payDate)}</td>
                         <td>${r._bidDate || ''}</td>
                         <td>${fmtDate(r._listDate)}</td>
+                        <td>${fmtDate(r._cbasDate)}</td>
                         <td>${fmtDate(r._expDate)}</td>
-                        <td class="hide-mobile">${fmtDate(r._cbasDate)}</td>
                     </tr>`;
                 });
             } else if(CB_INFO_TAB === 'putback') {
@@ -2367,10 +2429,12 @@ function renderList() {
                         <th class="sortable" data-col="_cbCode" data-type="string">CB代號</th>
                         <th>CB簡稱</th>
                         <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
-                        <th class="sortable" data-col="_listDate" data-type="date">掛牌日</th>
-                        <th class="sortable" data-col="_expDate" data-type="date">到期日</th>
                         <th class="sortable" data-col="_putDate1" data-type="date">賣回日1</th>
+                        <th class="sortable" data-col="_putPrice1" data-type="num">賣回價1</th>
+                        <th>賣回率1</th>
                         <th class="sortable" data-col="_putDate2" data-type="date">賣回日2</th>
+                        <th class="sortable" data-col="_putPrice2" data-type="num">賣回價2</th>
+                        <th>賣回率2</th>
                         <th class="sortable" data-col="_putTiming" data-type="string">賣回時機</th>
                         <th>賣回條件</th>
                     </tr></thead><tbody>`;
@@ -2378,14 +2442,23 @@ function renderList() {
                 validFiltered.slice(0, 150).forEach(r => {
                     const isActive = DB.cb.find(c => c._cbCode === r._cbCode);
                     const statusClass = isActive ? 'active-cb' : '';
+                    
+                    // 解析賣回條件計算賣回價
+                    const putInfo = parsePutbackCondition(r._putCondition);
+                    const putPrice1 = putInfo.prices[0] ? fmtNum(putInfo.prices[0], 2) : '-';
+                    const putPrice2 = putInfo.prices[1] ? fmtNum(putInfo.prices[1], 2) : '-';
+                    const putRate = putInfo.rate !== null ? fmtNum(putInfo.rate, 2) + '%' : '-';
+                    
                     html += `<tr class="${statusClass}">
                         <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                         <td>${r._name || ''}</td>
                         <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
-                        <td>${fmtDate(r._listDate)}</td>
-                        <td>${fmtDate(r._expDate)}</td>
                         <td>${fmtDate(r._putDate1)}</td>
+                        <td>${putPrice1}</td>
+                        <td>${putRate}</td>
                         <td>${fmtDate(r._putDate2)}</td>
+                        <td>${putPrice2}</td>
+                        <td>${putRate}</td>
                         <td>${r._putTiming || ''}</td>
                         <td style="max-width:150px;white-space:normal;text-align:left">${r._putCondition || ''}</td>
                     </tr>`;
@@ -2428,6 +2501,8 @@ function renderList() {
                 <thead><tr>
                     <th class="sortable" data-col="_cbCode" data-type="string">CB代號</th>
                     <th>CB簡稱</th>
+                    <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
+                    <th class="sortable" data-col="_guarantee" data-type="string">擔保</th>
                     <th class="sortable hide-mobile" data-col="開標日期" data-type="date">開標日</th>
                     <th class="sortable hide-mobile" data-col="競拍張數" data-type="num">競拍張</th>
                     <th class="sortable hide-mobile" data-col="投標張數" data-type="num">投標張</th>
@@ -2448,6 +2523,9 @@ function renderList() {
             validFiltered.slice(0, 100).forEach(r => {
                 const cbCode = r['_cbCode'];
                 const cbName = r['_name'];
+                const stockCode = r['_stockCode'] || '';
+                const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
+                const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
                 const openDate = fmtDate(r['開標日期']);
                 const bidLots = r['競拍張數'];
                 const totalBidLots = r['投標張數'];
@@ -2467,6 +2545,8 @@ function renderList() {
                 html += `<tr>
                     <td class="code">${cbCode}</td>
                     <td>${cbName}</td>
+                    <td class="stock" onclick="openStock('${stockCode}')">${stockCode}</td>
+                    <td class="${guarClass}">${guarText}</td>
                     <td class="hide-mobile">${openDate}</td>
                     <td class="hide-mobile">${fmtNum(bidLots, 0)}</td>
                     <td class="hide-mobile">${fmtNum(totalBidLots, 0)}</td>
@@ -2486,7 +2566,7 @@ function renderList() {
             });
             
             html += `</tbody><tfoot><tr class="summary-row">
-                <td colspan="2"><b>平均值 (${validFiltered.length} 筆)</b></td>
+                <td colspan="4"><b>平均值 (${validFiltered.length} 筆)</b></td>
                 <td class="hide-mobile"></td>
                 <td class="hide-mobile"><b>${fmtNum(avgBidLots, 0)}</b></td>
                 <td class="hide-mobile"><b>${fmtNum(avgTotalBidLots, 0)}</b></td>
