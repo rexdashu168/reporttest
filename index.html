@@ -94,14 +94,17 @@
     .cb-ind-tag { padding: 5px 10px; background: var(--clickable); border-radius: 12px; font-size: 12px; color: #444; cursor: pointer; transition: all 0.2s; border: 1px solid var(--clickable-border); font-weight: 500; }
     .cb-ind-tag:hover { border-color: var(--primary); background: var(--clickable-hover); color: var(--primary); }
     .cb-ind-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .cb-ind-tag .num { background: rgba(201,100,66,0.15); color: var(--primary); padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-left: 4px; font-weight: 700; min-width: 28px; display: inline-block; text-align: center; }
+    .cb-ind-tag .num { background: rgba(201,100,66,0.15); color: var(--primary); padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-left: 4px; font-weight: 700; min-width: 28px; display: inline-block; text-align: right; font-family: 'Menlo', 'Monaco', 'Consolas', monospace; white-space: pre; }
     .cb-ind-tag.active .num { background: rgba(255,255,255,0.3); color: #fff; }
     
     /* 競拍前十名表格 */
     .auction-top10-table { overflow-x: auto; margin-bottom: 10px; }
     .auction-top10-table table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 8px; overflow: hidden; }
-    .auction-top10-table th { background: #f8f8f8; padding: 8px 6px; text-align: center; font-weight: 600; color: #555; border-bottom: 1px solid #eee; white-space: nowrap; }
-    .auction-top10-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #f5f5f5; }
+    .auction-top10-table th { background: #f8f8f8; padding: 8px 6px; text-align: right; font-weight: 600; color: #555; border-bottom: 1px solid #eee; white-space: nowrap; }
+    .auction-top10-table td { padding: 8px 6px; text-align: right; border-bottom: 1px solid #f5f5f5; }
+    .auction-top10-table th:nth-child(1), .auction-top10-table td:nth-child(1) { text-align: center; } /* 排名置中 */
+    .auction-top10-table th:nth-child(2), .auction-top10-table td:nth-child(2) { text-align: left; } /* CB代號靠左 */
+    .auction-top10-table th:nth-child(3), .auction-top10-table td:nth-child(3) { text-align: left; } /* 名稱靠左 */
     .auction-top10-table tr:hover { background: #fff8f0; }
     .auction-top10-table .code { color: var(--primary); font-weight: 600; cursor: pointer; background: var(--clickable); padding: 2px 6px; border-radius: 4px; }
     .auction-top10-table .code:hover { background: var(--clickable-hover); }
@@ -394,6 +397,7 @@ const META = {
 let CURR_DB = 'news';
 const $ = id => document.getElementById(id);
 const safe = v => (v==null||v==undefined?'':String(v).trim());
+const padNum = n => String(n).padStart(3, '\u00A0'); // 數字補齊3位對齊（用不間斷空格）
 
 // 統一代碼處理函數
 const normalizeCode = v => {
@@ -852,6 +856,7 @@ async function init() {
         // 讀取 05_CB競拍篩選條件區間 - 建立產業簡稱對照表
         const industrySimpleMap = {
             '光電業': '光電產業', '其他業': '其他傳產', '其他業電子業': '其他電子',
+            '其他電子業': '其他電子',
             '化學工業': '化工產業', '半導體業': '半導體業', '塑膠工業': '塑膠產業',
             '居家生活': '居家生活', '建材營造業': '建材營造', '數位雲端': '數位雲端',
             '文化創意業': '文化創意', '橡膠工業': '其他傳產', '水泥工業': '水泥產業',
@@ -1369,7 +1374,7 @@ function renderStockStats() {
                 <div class="cb-ind-title">📊 各產業分佈</div>
                 <div class="cb-ind-grid">
                     ${industries.slice(0, 25).map(([ind, cnt]) => 
-                        `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${ind}<span class="num">${cnt}</span></div>`
+                        `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${ind}<span class="num">${padNum(cnt)}</span></div>`
                     ).join('')}
                 </div>
             </div>
@@ -1392,7 +1397,7 @@ function renderStockStats() {
                 <div class="cb-ind-title">💡 熱門概念分類</div>
                 <div class="cb-ind-grid">
                     ${concepts.slice(0, 30).map(([c, cnt]) => 
-                        `<div class="cb-ind-tag" onclick="setSearch('${c}')">${c}<span class="num">${cnt}</span></div>`
+                        `<div class="cb-ind-tag" onclick="setSearch('${c}')">${c}<span class="num">${padNum(cnt)}</span></div>`
                     ).join('')}
                 </div>
             </div>
@@ -1444,7 +1449,7 @@ function renderMemoStats() {
                 <div class="cb-ind-title">📊 報告類型分佈</div>
                 <div class="cb-ind-grid">
                     ${types.slice(0, 15).map(([t, cnt]) => 
-                        `<div class="cb-ind-tag" onclick="setSearch('${t}')">${t}<span class="num">${cnt}</span></div>`
+                        `<div class="cb-ind-tag" onclick="setSearch('${t}')">${t}<span class="num">${padNum(cnt)}</span></div>`
                     ).join('')}
                 </div>
             </div>
@@ -1466,7 +1471,7 @@ function renderMemoStats() {
                 <div class="cb-ind-title">🏦 各券商報告數</div>
                 <div class="cb-ind-grid">
                     ${brokers.slice(0, 15).map(([b, cnt]) => 
-                        `<div class="cb-ind-tag" onclick="setSearch('${b}')">${b}<span class="num">${cnt}</span></div>`
+                        `<div class="cb-ind-tag" onclick="setSearch('${b}')">${b}<span class="num">${padNum(cnt)}</span></div>`
                     ).join('')}
                 </div>
             </div>
@@ -1484,7 +1489,7 @@ function renderMemoStats() {
                 <div class="cb-ind-title">📊 產業報告類型</div>
                 <div class="cb-ind-grid">
                     ${types.filter(([t]) => t.includes('產業') || t.includes('TPCA')).map(([t, cnt]) => 
-                        `<div class="cb-ind-tag" onclick="setSearch('${t}')">${t}<span class="num">${cnt}</span></div>`
+                        `<div class="cb-ind-tag" onclick="setSearch('${t}')">${t}<span class="num">${padNum(cnt)}</span></div>`
                     ).join('')}
                 </div>
             </div>
@@ -1735,7 +1740,7 @@ function renderCBStats() {
             <div class="cb-ind-title">${title}</div>
             <div class="cb-ind-grid">
                 ${indList.map(([ind, cnt]) => `
-                    <span class="cb-ind-tag ${CB_FILTER.industry === ind ? 'active' : ''}" onclick="setCbFilter('industry', '${ind}')">${ind}<span class="num">${cnt}</span></span>
+                    <span class="cb-ind-tag ${CB_FILTER.industry === ind ? 'active' : ''}" onclick="setCbFilter('industry', '${ind}')">${ind}<span class="num">${padNum(cnt)}</span></span>
                 `).join('')}
             </div>
         `;
@@ -1966,7 +1971,7 @@ function renderCBStats() {
                 <div class="cb-ind-title">🏦 ${PRIMARY_MODE === 'underwriting' ? '發行' : '主辦'}券商分佈</div>
                 <div class="cb-ind-grid">
                     ${sortedBrokers.slice(0, 15).map(([b, cnt]) => `
-                        <span class="cb-ind-tag" onclick="setSearch('${b}')">${b}<span class="num">${cnt}</span></span>
+                        <span class="cb-ind-tag" onclick="setSearch('${b}')">${b}<span class="num">${padNum(cnt)}</span></span>
                     `).join('')}
                 </div>
             </div>
@@ -2054,7 +2059,7 @@ function renderCBStats() {
                 <div class="cb-ind-title">💡 概念股分類</div>
                 <div class="cb-ind-grid">
                     ${conceptNames.map(cName => `
-                        <span class="cb-ind-tag ${searchVal === cName ? 'active' : ''}" onclick="setSearch('${cName}')">${cName.replace('成份股','').replace('概念股','')}<span class="num">${conceptCbCounts[cName]}</span></span>
+                        <span class="cb-ind-tag ${searchVal === cName ? 'active' : ''}" onclick="setSearch('${cName}')">${cName.replace('成份股','').replace('概念股','')}<span class="num">${padNum(conceptCbCounts[cName])}</span></span>
                     `).join('')}
                 </div>
             </div>
