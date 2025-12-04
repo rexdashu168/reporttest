@@ -469,7 +469,8 @@ let MEMO_MODE = 'all'; // 'all' 全部, 'stock' 個股, 'industry' 產業
 // CB 交集篩選狀態
 let CB_FILTER = {
     industry: '',   // 產業篩選
-    guarantee: ''   // 擔保篩選 ('有擔保' / '無擔保')
+    guarantee: '',  // 擔保篩選 ('有擔保' / '無擔保')
+    status: ''      // 掛牌狀態 ('active' / 'delisted')
 };
 const META = { 
     memoDetail:{}, tracking:{}, finance:{}, products:{}, 
@@ -2005,8 +2006,8 @@ function renderCBStats() {
                 <div class="cb-section-title">📈 統計數據</div>
                 <div class="cb-stats-grid">
                     <div class="cb-stat-item"><div class="cb-stat-num">${padNum(DB.cbAll.length)}</div><div class="cb-stat-label">全部CB</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(activeCnt)}</div><div class="cb-stat-label">掛牌中</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${padNum(historyCnt)}</div><div class="cb-stat-label">已下市</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.status === 'active' ? 'active' : ''}" onclick="setCbFilter('status', 'active')"><div class="cb-stat-num">${padNum(activeCnt)}</div><div class="cb-stat-label">掛牌中</div></div>
+                    <div class="cb-stat-item clickable ${CB_FILTER.status === 'delisted' ? 'active' : ''}" onclick="setCbFilter('status', 'delisted')"><div class="cb-stat-num">${padNum(historyCnt)}</div><div class="cb-stat-label">已下市</div></div>
                     <div class="cb-stat-item clickable" onclick="setCbFilter('guarantee', '詢圈')"><div class="cb-stat-num">${padNum(allMethod['詢圈'])}</div><div class="cb-stat-label">詢圈</div></div>
                     <div class="cb-stat-item clickable" onclick="setCbFilter('guarantee', '競拍')"><div class="cb-stat-num">${padNum(allMethod['競拍'])}</div><div class="cb-stat-label">競拍</div></div>
                     <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${padNum(allGuar['有擔保'])}</div><div class="cb-stat-label">有擔保</div></div>
@@ -2323,7 +2324,7 @@ function renderCBStats() {
 function setPrimaryMode(mode) {
     PRIMARY_MODE = mode;
     $('search').value = '';
-    CB_FILTER = { industry: '', guarantee: '' }; // 清除篩選
+    CB_FILTER = { industry: '', guarantee: '', status: '' }; // 清除篩選
     renderList();
 }
 
@@ -2331,7 +2332,7 @@ function setPrimaryMode(mode) {
 function setCbMode(mode) {
     CB_MODE = mode;
     $('search').value = '';
-    CB_FILTER = { industry: '', guarantee: '' }; // 切換模式時清除篩選
+    CB_FILTER = { industry: '', guarantee: '', status: '' }; // 切換模式時清除篩選
     renderList();
 }
 
@@ -2343,13 +2344,16 @@ function setCbFilter(type, value) {
     } else if(type === 'guarantee') {
         // 如果已選中相同擔保，則取消選擇
         CB_FILTER.guarantee = (CB_FILTER.guarantee === value) ? '' : value;
+    } else if(type === 'status') {
+        // 如果已選中相同狀態，則取消選擇
+        CB_FILTER.status = (CB_FILTER.status === value) ? '' : value;
     }
     renderList();
 }
 
 // 清除所有CB篩選
 function clearCbFilter() {
-    CB_FILTER = { industry: '', guarantee: '' };
+    CB_FILTER = { industry: '', guarantee: '', status: '' };
     $('search').value = '';
     $('clearBtn').style.display = 'none';
     renderList();
@@ -2422,10 +2426,11 @@ function renderList() {
     const filtered = list.filter(i => {
         const str = JSON.stringify(i).toLowerCase();
         
-        // CB 交集篩選（產業 + 擔保）
-        if(CURR_DB === 'cb' && (CB_FILTER.industry || CB_FILTER.guarantee)) {
+        // CB 交集篩選（產業 + 擔保 + 狀態）
+        if(CURR_DB === 'cb' && (CB_FILTER.industry || CB_FILTER.guarantee || CB_FILTER.status)) {
             let matchIndustry = true;
             let matchGuarantee = true;
+            let matchStatus = true;
             
             // 產業篩選
             if(CB_FILTER.industry) {
@@ -2443,8 +2448,18 @@ function renderList() {
                 }
             }
             
-            // 交集：必須同時符合兩個條件
-            if(!matchIndustry || !matchGuarantee) return false;
+            // 狀態篩選（掛牌中/已下市）
+            if(CB_FILTER.status) {
+                const isActive = DB.cb.some(c => c._cbCode === i._cbCode);
+                if(CB_FILTER.status === 'active') {
+                    matchStatus = isActive;
+                } else if(CB_FILTER.status === 'delisted') {
+                    matchStatus = !isActive;
+                }
+            }
+            
+            // 交集：必須同時符合所有條件
+            if(!matchIndustry || !matchGuarantee || !matchStatus) return false;
             
             // 如果有額外的搜尋字串，也要符合
             if(q && !str.includes(q)) return false;
@@ -2499,8 +2514,9 @@ function renderList() {
     
     // 更新篩選條件提示
     let filterHintText = '';
-    if(CURR_DB === 'cb' && (CB_FILTER.industry || CB_FILTER.guarantee)) {
+    if(CURR_DB === 'cb' && (CB_FILTER.industry || CB_FILTER.guarantee || CB_FILTER.status)) {
         const parts = [];
+        if(CB_FILTER.status) parts.push(CB_FILTER.status === 'active' ? '掛牌中' : '已下市');
         if(CB_FILTER.industry) parts.push(CB_FILTER.industry);
         if(CB_FILTER.guarantee) parts.push(CB_FILTER.guarantee);
         filterHintText = `｜篩選：${parts.join(' + ')}`;
@@ -3803,11 +3819,409 @@ window.openCbInfo = cbCode => {
         </div>
     `;
 
+    // Tab 6: 價值分析
+    // 從掛牌 CB 或 CBAS 取得即時價格資訊
+    const activeCb = DB.cb.find(c => c._cbCode === cb._cbCode);
+    const cbasData = DB.cbCBAS.find(c => c._cbCode === cb._cbCode);
+    
+    // 取得價格資訊（優先使用掛牌 CB 資料）
+    const stockPriceVal = parseFloat(activeCb?._stockPrice || cbasData?._stockPrice) || 0;
+    const cbPriceVal = parseFloat(activeCb?._cbPrice || cbasData?._cbPrice) || 0;
+    const convPriceVal = parseFloat(cb._convPrice) || 0;
+    
+    // 計算轉換價值（理論價值）= 100 × (股價 ÷ 轉換價)
+    const convValueCalc = convPriceVal > 0 ? (100 * stockPriceVal / convPriceVal) : 0;
+    
+    // 計算溢價率 = (CB價格 - 轉換價值) ÷ 轉換價值 × 100%
+    const premiumRateCalc = convValueCalc > 0 ? ((cbPriceVal - convValueCalc) / convValueCalc * 100) : 0;
+    
+    // 票面持股成本 = 轉換價 × CB價格 ÷ 100
+    const stockCostCalc = cbPriceVal > 0 ? (convPriceVal * cbPriceVal / 100) : 0;
+    
+    // 判斷是否有轉換價值
+    const hasConvValue = convValueCalc >= 100;
+    const valueStatus = hasConvValue ? '有轉換價值' : '還沒有轉換的價值';
+    const valueStatusColor = hasConvValue ? '#27ae60' : '#e74c3c';
+    const valueStatusBg = hasConvValue ? '#e8f5e9' : '#ffebee';
+    
+    let tValue = `
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #1a237e 0%, #283593 100%);color:#fff;padding:20px;border-radius:12px">
+            <div style="text-align:center;margin-bottom:15px">
+                <div style="font-size:14px;opacity:0.8">${cb._name}</div>
+                <div style="font-size:28px;font-weight:800;margin:5px 0">可轉換公司債價值分析</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px;background:rgba(255,255,255,0.1);border-radius:8px">
+                <div>
+                    <div style="font-size:12px;opacity:0.7">轉換價為</div>
+                    <div style="font-size:24px;font-weight:700">${fmtNum(convPriceVal, 1)} 元</div>
+                </div>
+                <div style="font-size:12px;opacity:0.7">${fmtDate(new Date())}</div>
+                <div>
+                    <div style="font-size:12px;opacity:0.7">${cb._stockCode} 的收盤為</div>
+                    <div style="font-size:24px;font-weight:700;color:#ffeb3b">${fmtNum(stockPriceVal, 2)}</div>
+                </div>
+                <div style="padding:8px 16px;background:${valueStatusBg};color:${valueStatusColor};border-radius:20px;font-weight:600;font-size:13px">
+                    ${valueStatus}
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#fff3e0;border:1px solid #ffe0b2;margin-top:15px">
+            <div style="font-size:13px;color:#e65100;line-height:1.8">
+                📌 可轉債的漲跌將不與標的股票同步，更多是<b>債券的抗跌性</b>及<b>到期的保本特性</b>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="margin-top:15px">
+            <div class="title" style="color:#1565c0">📊 理論價值與溢價分析</div>
+            <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr)">
+                <div class="modal-card">
+                    <div class="val">${fmtNum(convValueCalc, 1)}</div>
+                    <div class="lbl">理論價值</div>
+                    <div style="font-size:10px;color:#888;margin-top:4px">市場上的</div>
+                </div>
+                <div class="modal-card highlight" style="background:linear-gradient(135deg, #fff8e1 0%, #fff 100%)">
+                    <div class="val" style="color:#f57c00">${fmtNum(cbPriceVal, 2)}</div>
+                    <div class="lbl">可轉債收盤價格</div>
+                    <div style="font-size:10px;color:#888;margin-top:4px">代表買進的CB</div>
+                </div>
+                <div class="modal-card" style="background:${premiumRateCalc > 0 ? '#fff3e0' : '#e8f5e9'}">
+                    <div class="val" style="color:${premiumRateCalc > 0 ? '#e65100' : '#27ae60'}">${fmtNum(Math.abs(premiumRateCalc), 2)}%</div>
+                    <div class="lbl">${premiumRateCalc > 0 ? '溢價(貴了?)' : '折價(便宜?)'}</div>
+                </div>
+            </div>
+            <div style="margin-top:12px;padding:12px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#666">
+                📐 理論價值 = 100 × (股價 ${fmtNum(stockPriceVal, 2)} ÷ 轉換價 ${fmtNum(convPriceVal, 1)}) = <b>${fmtNum(convValueCalc, 2)}</b><br>
+                📐 溢價率 = (CB價 ${fmtNum(cbPriceVal, 2)} - 理論價值 ${fmtNum(convValueCalc, 2)}) ÷ ${fmtNum(convValueCalc, 2)} × 100% = <b>${fmtNum(premiumRateCalc, 2)}%</b>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#e8f5e9;border:1px solid #c8e6c9;margin-top:15px">
+            <div style="font-size:13px;color:#2e7d32;line-height:1.8">
+                💡 <b>溢價</b>通常是指買可轉債要貴多少%，通常越看好該標的未來的<b>爆發性</b>，越能接受越高的溢價率。<br>
+                💡 換句話說，通常越沒有轉換價值的標的溢價率就越高，相對的<b>選擇權的權利金的損失也是最小的</b>。
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #e3f2fd 0%, #fff 100%);margin-top:15px">
+            <div class="title" style="color:#1565c0">💰 票面持股成本分析</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:15px;padding:20px;flex-wrap:wrap">
+                <div style="text-align:center">
+                    <div style="font-size:12px;color:#666">如果買進</div>
+                    <div style="font-size:11px;color:#888">溢價率</div>
+                    <div style="font-size:22px;font-weight:700;color:#e65100">${fmtNum(premiumRateCalc, 2)}%</div>
+                </div>
+                <div style="text-align:center">
+                    <div style="font-size:12px;color:#666">的可轉債</div>
+                    <div style="font-size:22px;font-weight:700;color:#1565c0">${fmtNum(cbPriceVal, 1)} 元</div>
+                </div>
+                <div style="font-size:24px;color:#999">→</div>
+                <div style="text-align:center">
+                    <div style="font-size:12px;color:#666">等於票面持股成本</div>
+                    <div style="font-size:11px;color:#888">轉換價</div>
+                    <div style="font-size:18px;font-weight:600;color:#666">${fmtNum(convPriceVal, 1)} 元</div>
+                </div>
+                <div style="font-size:24px;color:#999">→</div>
+                <div style="text-align:center;padding:15px 20px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+                    <div style="font-size:12px;color:#666">會變成了</div>
+                    <div style="font-size:28px;font-weight:800;color:#e74c3c">${fmtNum(stockCostCalc, 1)} 元</div>
+                </div>
+            </div>
+            <div style="margin-top:12px;padding:12px;background:#fff;border-radius:8px;font-size:12px;color:#666">
+                📐 票面持股成本 = 轉換價 ${fmtNum(convPriceVal, 1)} × CB價格 ${fmtNum(cbPriceVal, 2)} ÷ 100 = <b>${fmtNum(stockCostCalc, 2)} 元</b>
+            </div>
+        </div>
+    `;
+    
+    // 如果沒有即時價格資訊，顯示提示
+    if(!stockPriceVal || !cbPriceVal) {
+        tValue = `
+            <div class="modal-info-block" style="background:#fff3e0;text-align:center;padding:40px">
+                <div style="font-size:48px;margin-bottom:15px">📊</div>
+                <div style="font-size:16px;font-weight:600;color:#e65100;margin-bottom:10px">暫無即時價格資訊</div>
+                <div style="font-size:13px;color:#666">
+                    此CB目前沒有即時股價或CB價格資訊，<br>
+                    可能是已下市或尚未開始交易。
+                </div>
+            </div>
+        `;
+    }
+    
+    // ========== 情境分析共用計算 ==========
+    // 交割金額 = CB價格 × 1000
+    const settlementAmt = cbPriceVal * 1000;
+    // 到期還本價格（預設100，若有資料則用實際值）
+    const maturityPrice = parseFloat(cb._expPrice) || 100;
+    // 最大損失 = (CB價格 - 到期還本價格) × 1000
+    const maxLoss = (cbPriceVal - maturityPrice) * 1000;
+    // 剩餘天數和年數
+    const expDateVal = getDateVal(cb._expDate);
+    const today = new Date().getTime();
+    const remainDays = Math.max(0, Math.ceil((expDateVal - today) / (1000 * 60 * 60 * 24)));
+    const remainYears = (remainDays / 365).toFixed(2);
+    
+    // CBAS 資料
+    const cbasPremium = parseFloat(cbasData?._premium) || 0; // 權利金(百元報價)
+    const cbasOptExpiry = cbasData?._optExpiry || cb._expDate; // 選擇權到期日
+    const cbasRemainYears = parseFloat(cbasData?._remainYears) || parseFloat(remainYears);
+    // 選擇權價值 = CB價格 - 100 (債券面額)
+    const optionValue = Math.max(0, cbPriceVal - 100);
+    // CBAS交割金額 = (權利金 + 選擇權價值) × 1000
+    const cbasSettlement = (cbasPremium + optionValue) * 1000;
+    
+    // ========== 情境分析(一) - 上漲情境 ==========
+    // 計算不同漲幅下的預期價格
+    const calcUpScenario = (pct) => {
+        const targetPrice = stockCostCalc * (1 + pct/100);
+        const cbReturn = pct; // 超過轉換價後，CB報酬率與股票同步
+        const cbTargetPrice = cbPriceVal * (1 + cbReturn/100);
+        return { stockPrice: targetPrice, cbPrice: cbTargetPrice, returnPct: pct };
+    };
+    const up20 = calcUpScenario(20);
+    const up50 = calcUpScenario(50);
+    const up100 = calcUpScenario(100);
+    
+    let tScenario1 = `
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #1565c0 0%, #1976d2 100%);color:#fff;padding:20px;border-radius:12px">
+            <div style="text-align:center;margin-bottom:15px">
+                <div style="font-size:14px;opacity:0.8">${cb._name}</div>
+                <div style="font-size:24px;font-weight:800;margin:5px 0">情境分析(一) 上漲情境</div>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#e3f2fd;border:1px solid #90caf9;margin-top:15px">
+            <div style="font-size:14px;font-weight:600;color:#1565c0;margin-bottom:12px">📈 如果買進</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px">
+                <span style="background:#fff;padding:6px 12px;border-radius:6px">溢價率 <b style="color:#e74c3c">${fmtNum(premiumRateCalc, 2)}%</b></span>
+                <span>的可轉債</span>
+                <span style="background:#fff3e0;padding:6px 12px;border-radius:6px;font-weight:700;color:#e65100">${fmtNum(cbPriceVal, 1)} 元</span>
+                <span>等於票面持股成本</span>
+                <span style="background:#fff;padding:6px 12px;border-radius:6px"><b>${fmtNum(convPriceVal, 1)}</b> 元</span>
+                <span>會變成了</span>
+                <span style="background:#ffeb3b;padding:6px 12px;border-radius:6px;font-weight:700">${fmtNum(stockCostCalc, 1)} 元</span>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#f5f5f5;margin-top:12px">
+            <div style="font-size:13px;color:#666">
+                💡 買進可轉債的交割方式與一般買賣股票一樣，T+2全額交割：
+                <span style="background:#fff;padding:4px 8px;border-radius:4px;margin:0 4px">${fmtNum(cbPriceVal, 1)} 元</span> ×
+                <span style="background:#fff;padding:4px 8px;border-radius:4px;margin:0 4px">1,000 股</span> =
+                <span style="background:#e8f5e9;padding:4px 8px;border-radius:4px;font-weight:600">交割 ${fmtNum(settlementAmt, 0)} 元</span>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#e8f5e9;border:1px solid #a5d6a7;margin-top:15px">
+            <div style="font-size:14px;font-weight:600;color:#2e7d32;margin-bottom:10px">📊 獲利情境分析</div>
+            <div style="font-size:12px;color:#666;margin-bottom:12px">當現股收盤價格超過轉換價格 <b>${fmtNum(convPriceVal, 1)}</b> 元，可轉債與現股股價將會同步，具有<span style="color:#2e7d32;font-weight:600">股票特性</span></div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden">
+                <thead>
+                    <tr style="background:#2e7d32;color:#fff">
+                        <th style="padding:10px;text-align:center">情境</th>
+                        <th style="padding:10px;text-align:right">預期股價</th>
+                        <th style="padding:10px;text-align:right">可轉債價格</th>
+                        <th style="padding:10px;text-align:right">可轉債報酬%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td style="padding:10px;text-align:center;background:#f1f8e9">預計上漲 20%</td><td style="padding:10px;text-align:right">${fmtNum(up20.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(up20.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#2e7d32;font-weight:600">+${fmtNum(up20.returnPct, 2)}%</td></tr>
+                    <tr style="background:#f5f5f5"><td style="padding:10px;text-align:center;background:#c8e6c9">預計上漲 50%</td><td style="padding:10px;text-align:right">${fmtNum(up50.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(up50.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#2e7d32;font-weight:600">+${fmtNum(up50.returnPct, 2)}%</td></tr>
+                    <tr><td style="padding:10px;text-align:center;background:#a5d6a7">預計上漲 100%</td><td style="padding:10px;text-align:right">${fmtNum(up100.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(up100.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#2e7d32;font-weight:600">+${fmtNum(up100.returnPct, 2)}%</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="modal-info-block" style="background:linear-gradient(90deg, #4caf50, #81c784);color:#fff;margin-top:15px;padding:15px;border-radius:8px">
+            <div style="font-size:14px;font-weight:700">📌 結論</div>
+            <div style="font-size:13px;margin-top:8px;line-height:1.8">
+                當股價超過轉換價，可轉債將會發揮<b>股票的特性</b>，漲越多獲利越多。
+            </div>
+        </div>
+    `;
+    
+    // ========== 情境分析(二) - 下跌情境 ==========
+    // 下跌時CB最多跌到到期還本價(約100元)
+    const calcDownScenario = (pct) => {
+        const targetPrice = stockCostCalc * (1 - pct/100);
+        const cbFloor = maturityPrice; // CB價格底部為到期還本價
+        const cbLoss = (cbPriceVal - cbFloor) / cbPriceVal * 100;
+        return { stockPrice: targetPrice, cbPrice: cbFloor, returnPct: -cbLoss };
+    };
+    const down20 = calcDownScenario(20);
+    const down40 = calcDownScenario(40);
+    const down80 = calcDownScenario(80);
+    const maxLossDisplay = Math.max(0, maxLoss);
+    
+    let tScenario2 = `
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #c62828 0%, #d32f2f 100%);color:#fff;padding:20px;border-radius:12px">
+            <div style="text-align:center;margin-bottom:15px">
+                <div style="font-size:14px;opacity:0.8">${cb._name}</div>
+                <div style="font-size:24px;font-weight:800;margin:5px 0">情境分析(二) 下跌情境</div>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#ffebee;border:1px solid #ef9a9a;margin-top:15px">
+            <div style="font-size:14px;font-weight:600;color:#c62828;margin-bottom:10px">📉 虧損情境分析</div>
+            <div style="font-size:12px;color:#666;margin-bottom:12px">當現股收盤價格低於轉換價格 <b>${fmtNum(convPriceVal, 1)}</b> 元，可轉債與現股股價將<b>不會同步</b>，具有<span style="color:#1565c0;font-weight:600">債券特性</span></div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden">
+                <thead>
+                    <tr style="background:#c62828;color:#fff">
+                        <th style="padding:10px;text-align:center">情境</th>
+                        <th style="padding:10px;text-align:right">預期股價</th>
+                        <th style="padding:10px;text-align:right">可轉債價格</th>
+                        <th style="padding:10px;text-align:right">可轉債報酬%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td style="padding:10px;text-align:center;background:#ffcdd2">預計下跌 20%</td><td style="padding:10px;text-align:right">${fmtNum(down20.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(down20.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#c62828;font-weight:600">${fmtNum(down20.returnPct, 2)}%</td></tr>
+                    <tr style="background:#f5f5f5"><td style="padding:10px;text-align:center;background:#ef9a9a">預計下跌 40%</td><td style="padding:10px;text-align:right">${fmtNum(down40.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(down40.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#c62828;font-weight:600">${fmtNum(down40.returnPct, 2)}%</td></tr>
+                    <tr><td style="padding:10px;text-align:center;background:#e57373">預計下跌 80%</td><td style="padding:10px;text-align:right">${fmtNum(down80.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(down80.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#c62828;font-weight:600">${fmtNum(down80.returnPct, 2)}%</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="modal-info-block" style="background:#e3f2fd;border:1px solid #90caf9;margin-top:15px">
+            <div style="font-size:14px;font-weight:600;color:#1565c0;margin-bottom:10px">💡 債券保護特性</div>
+            <div style="font-size:13px;color:#444;line-height:1.8">
+                在公司沒有倒閉的前提下，當股價跌破轉換價時，可轉債就會充分的發揮<b>債券到期還本特性</b>，將本金還給債權人。<br>
+                <span style="color:#666">• 無擔保時：為第一順位求償人</span><br>
+                <span style="color:#666">• 有擔保時：有公司實體資產當做抵押擔保</span>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#fff3e0;border:2px solid #ffb74d;margin-top:15px">
+            <div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:10px">⚠️ 風險控制</div>
+            <div style="font-size:15px;color:#333;line-height:1.8">
+                在最多損失 <span style="font-size:20px;font-weight:800;color:#c62828">${fmtNum(maxLossDisplay, 0)}</span> 元的情況下......<br>
+                <span style="color:#666;font-size:13px">(把風險控制在可以接受的範圍內，先求少輸)</span>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:linear-gradient(90deg, #1565c0, #42a5f5);color:#fff;margin-top:15px;padding:15px;border-radius:8px">
+            <div style="font-size:14px;font-weight:700">📌 結論</div>
+            <div style="font-size:13px;margin-top:8px;line-height:1.8">
+                ~再買一個未來股價上漲的夢想，只要未來的<br>
+                <span style="font-size:18px;font-weight:700">${fmtNum(remainDays, 0)} 天 / ${remainYears} 年</span>內
+                股價大於 <span style="font-size:18px;font-weight:700">${fmtNum(convPriceVal, 1)}</span> 元
+            </div>
+        </div>
+    `;
+    
+    // ========== 情境分析(三) - CBAS拆解 ==========
+    let tScenario3 = '';
+    
+    if(cbasData || cbasPremium > 0) {
+        tScenario3 = `
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #6a1b9a 0%, #8e24aa 100%);color:#fff;padding:20px;border-radius:12px">
+            <div style="text-align:center;margin-bottom:15px">
+                <div style="font-size:14px;opacity:0.8">${cb._name}</div>
+                <div style="font-size:24px;font-weight:800;margin:5px 0">情境分析(三) CBAS拆解</div>
+                <div style="font-size:13px;opacity:0.8">透過拆解買進可轉債選擇權 CBAS 1張</div>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#f3e5f5;border:1px solid #ce93d8;margin-top:15px">
+            <div style="font-size:14px;font-weight:600;color:#6a1b9a;margin-bottom:12px">📈 如果買進</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px">
+                <span style="background:#fff;padding:6px 12px;border-radius:6px">折價率 <b style="color:#6a1b9a">${fmtNum(Math.abs(premiumRateCalc), 2)}%</b></span>
+                <span>的可轉債</span>
+                <span style="background:#fff3e0;padding:6px 12px;border-radius:6px;font-weight:700;color:#e65100">${fmtNum(cbPriceVal, 1)} 元</span>
+                <span>等於票面持股成本</span>
+                <span style="background:#fff;padding:6px 12px;border-radius:6px"><b>${fmtNum(convPriceVal, 1)}</b> 元</span>
+                <span>會變成了</span>
+                <span style="background:#ffeb3b;padding:6px 12px;border-radius:6px;font-weight:700">${fmtNum(stockCostCalc, 1)} 元</span>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#e8f5e9;border:1px solid #a5d6a7;margin-top:12px">
+            <div style="font-size:13px;color:#2e7d32;line-height:1.8">
+                💡 首先會先將可轉債成交價拆解成 <b>債券 + 選擇權</b>：<br>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+                    <span style="background:#fff;padding:6px 12px;border-radius:6px;font-weight:700">${fmtNum(cbPriceVal, 1)} 元</span>
+                    <span>=</span>
+                    <span style="background:#e3f2fd;padding:6px 12px;border-radius:6px">債券 <b>100</b> 元</span>
+                    <span>+</span>
+                    <span style="background:#fff3e0;padding:6px 12px;border-radius:6px">選擇權 <b>${fmtNum(optionValue, 1)}</b> 元</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#f5f5f5;margin-top:15px">
+            <div style="font-size:14px;font-weight:600;color:#333;margin-bottom:10px">📚 拆解說明</div>
+            <div style="font-size:13px;color:#555;line-height:1.8">
+                會拆解的主要用意在於，<b style="color:#6a1b9a">積極看好的客戶只想參與股票上漲機會</b>，所以會選擇只付出權利金，只持有股票上漲選擇權部位。<br><br>
+                而債券本金將由券商尋找願意提供債券本金當取得穩當利息的客戶進行拆解交割。實務上以折現率計算出權利金百元報價，簡單說就是<b>持有到可轉債選擇權到期日的利息成本</b>。
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#fff;border:2px solid #6a1b9a;margin-top:15px">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <tr style="background:#f3e5f5">
+                    <td style="padding:12px;font-weight:600">${cb._name}</td>
+                    <td style="padding:12px;text-align:center">權利金(佰元報價)</td>
+                    <td style="padding:12px;text-align:center;font-weight:700;color:#6a1b9a">${fmtNum(cbasPremium, 2)} 元</td>
+                    <td style="padding:12px;text-align:center">選擇權到期日</td>
+                    <td style="padding:12px;text-align:center">${fmtDate(cbasOptExpiry)}</td>
+                    <td style="padding:12px;text-align:center">剩餘年期</td>
+                    <td style="padding:12px;text-align:center;font-weight:600">${fmtNum(cbasRemainYears, 2)} 年</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="modal-info-block" style="background:#e8f5e9;margin-top:12px">
+            <div style="font-size:13px;color:#2e7d32">
+                💰 買進1張 <b>${cb._name}</b> 可轉債選擇權的交割金額計算 = 權利金(利息) <b>${fmtNum(cbasPremium, 2)}</b> 元 + 選擇權 <b>${fmtNum(optionValue, 1)}</b> 元
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#f5f5f5;margin-top:12px">
+            <div style="font-size:13px;color:#666">
+                📋 交割金額：
+                <span style="background:#fff;padding:4px 8px;border-radius:4px;margin:0 4px">${fmtNum(cbasPremium + optionValue, 2)} 元</span> ×
+                <span style="background:#fff;padding:4px 8px;border-radius:4px;margin:0 4px">1,000 股</span> =
+                <span style="background:#ffeb3b;padding:4px 8px;border-radius:4px;font-weight:600">交割 ${fmtNum(cbasSettlement, 0)} 元</span>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:#fff3e0;border:2px solid #ffb74d;margin-top:15px">
+            <div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:10px">⚠️ 風險控制</div>
+            <div style="font-size:15px;color:#333;line-height:1.8">
+                在最多損失 <span style="font-size:20px;font-weight:800;color:#c62828">${fmtNum(cbasSettlement, 0)}</span> 元的情況下......<br>
+                <span style="color:#666;font-size:13px">(把風險控制在可以接受的範圍內，先求少輸)</span>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:linear-gradient(90deg, #6a1b9a, #ab47bc);color:#fff;margin-top:15px;padding:15px;border-radius:8px">
+            <div style="font-size:14px;font-weight:700">📌 結論</div>
+            <div style="font-size:13px;margin-top:8px;line-height:1.8">
+                ~再買一個未來股價上漲的夢想，只要未來的<br>
+                <span style="font-size:18px;font-weight:700">${fmtNum(remainDays, 0)} 天 / ${remainYears} 年</span>內
+                股價大於 <span style="font-size:18px;font-weight:700">${fmtNum(convPriceVal, 1)}</span> 元
+            </div>
+        </div>
+        `;
+    } else {
+        tScenario3 = `
+            <div class="modal-info-block" style="background:#f5f5f5;text-align:center;padding:40px">
+                <div style="font-size:48px;margin-bottom:15px">🔒</div>
+                <div style="font-size:16px;font-weight:600;color:#666;margin-bottom:10px">暫無 CBAS 資訊</div>
+                <div style="font-size:13px;color:#999">
+                    此CB目前沒有 CBAS 拆解報價資訊，<br>
+                    可能尚未開放拆解交易或已下市。
+                </div>
+            </div>
+        `;
+    }
+
     const navItems = [
         {id:'issue', icon:'📝', label:'發行條件'},
         {id:'timeline', icon:'📅', label:'時程'},
         {id:'putback', icon:'💰', label:'賣回'},
         {id:'conversion', icon:'🔄', label:'轉換分析'},
+        {id:'value', icon:'📊', label:'價值分析'},
+        {id:'up', icon:'📈', label:'上漲情境'},
+        {id:'down', icon:'📉', label:'下跌情境'},
+        {id:'cbas', icon:'🔀', label:'CBAS拆解'},
         {id:'stock', icon:'🏢', label:'公司'}
     ];
 
@@ -3816,6 +4230,10 @@ window.openCbInfo = cbCode => {
         <div id="tab-timeline" class="tab-pane">${tTimeline}</div>
         <div id="tab-putback" class="tab-pane">${tPutback}</div>
         <div id="tab-conversion" class="tab-pane">${tConversion}</div>
+        <div id="tab-value" class="tab-pane">${tValue}</div>
+        <div id="tab-up" class="tab-pane">${tScenario1}</div>
+        <div id="tab-down" class="tab-pane">${tScenario2}</div>
+        <div id="tab-cbas" class="tab-pane">${tScenario3}</div>
         <div id="tab-stock" class="tab-pane">${tStock}</div>
     `;
     showModal(infoHtml, navItems);
