@@ -94,7 +94,7 @@
     .cb-ind-tag { padding: 5px 10px; background: var(--clickable); border-radius: 12px; font-size: 12px; color: #444; cursor: pointer; transition: all 0.2s; border: 1px solid var(--clickable-border); font-weight: 500; }
     .cb-ind-tag:hover { border-color: var(--primary); background: var(--clickable-hover); color: var(--primary); }
     .cb-ind-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .cb-ind-tag .num { background: rgba(201,100,66,0.15); color: var(--primary); padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-left: 4px; font-weight: 700; }
+    .cb-ind-tag .num { background: rgba(201,100,66,0.15); color: var(--primary); padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-left: 4px; font-weight: 700; min-width: 28px; display: inline-block; text-align: center; }
     .cb-ind-tag.active .num { background: rgba(255,255,255,0.3); color: #fff; }
     
     /* 競拍前十名表格 */
@@ -861,8 +861,8 @@ async function init() {
             '貿易百貨業': '貿易百貨', '資訊服務業': '資訊服務', '農業科技業': '農業科技',
             '通信網路業': '通信網路', '造紙工業': '造紙產業', '運動休閒': '運動休閒',
             '金控業': '金融保險', '銀行業': '金融保險', '鋼鐵工業': '鋼鐵產業',
-            '電器電纜': '電器電纜', '電子通路業': '電子通路', '電子零組件業': '電子零組件',
-            '電機機械': '電機機械', '電腦及週邊設備業': '電腦及週邊', '食品工業': '食品產業'
+            '電器電纜': '電器電纜', '電子通路業': '電子通路', '電子零組件業': '零組件業',
+            '電機機械': '電機機械', '電腦及週邊設備業': '電腦週邊', '食品工業': '食品產業'
         };
         const getSimpleIndustry = (ind) => industrySimpleMap[ind] || ind || '其他傳產';
         
@@ -1594,13 +1594,13 @@ function renderAuctionTop10() {
                     <th>開標日</th>
                     <th>競拍張</th>
                     <th>投標張</th>
+                    <th>投標倍數</th>
                     <th>底標價</th>
                     <th>截標收盤</th>
                     <th>轉換價</th>
                     <th>截標理論</th>
                     <th>最低得標</th>
                     <th>平均得標</th>
-                    <th>投標倍數</th>
                     <th>掛牌最高</th>
                     <th>掛牌最低</th>
                     ${showDropRate ? '<th>跌幅%</th>' : '<th>振幅%</th>'}
@@ -1649,13 +1649,13 @@ function renderAuctionTop10() {
                     <td>${fmtDate(c['開標日期'])}</td>
                     <td>${fmtNum(c['競拍張數'], 0)}</td>
                     <td>${fmtNum(c['投標張數'], 0)}</td>
+                    <td>${fmtNum(c['投標倍數'], 2)}x</td>
                     <td>${fmtNum(c['底標價'], 2)}</td>
                     <td>${c['截標收盤'] ? fmtNum(c['截標收盤'], 2) : '-'}</td>
                     <td>${fmtNum(c['轉換價'], 2)}</td>
                     <td>${fmtNum(c['截標理論'], 2)}</td>
                     <td class="${isHighlightLow ? 'highlight' : ''}">${fmtNum(c['最低得標'], 2)}</td>
                     <td class="${isHighlightAvg ? 'highlight' : ''}">${fmtNum(c['平均得標'], 2)}</td>
-                    <td>${fmtNum(c['投標倍數'], 2)}x</td>
                     <td class="${isHighlightHigh ? 'highlight' : ''}">${c._high > 0 ? fmtNum(c._high, 2) : '-'}</td>
                     <td>${c._low > 0 ? fmtNum(c._low, 2) : '-'}</td>
                     ${showDropRate 
