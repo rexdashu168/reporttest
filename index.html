@@ -64,14 +64,14 @@
     .cb-top10-btn-line.active { background: #27ae60; color: #fff; border-color: #27ae60; }
     .cb-top10-btn-line .top10-icon { font-size: 16px; }
     
-    /* 篩選條件列 - 表格上方 */
-    .cb-filter-header { background: linear-gradient(90deg, #fff3e0, #fff8e1); padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #ffe0b2; }
-    .cb-filter-header .filter-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .cb-filter-header .filter-tag { background: var(--primary); color: #fff; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: 600; }
-    .cb-filter-header .filter-count { font-size: 13px; color: #444; }
-    .cb-filter-header .filter-count b { color: var(--primary); font-size: 16px; }
-    .cb-filter-header .filter-clear-btn { background: var(--clickable); border: 1px solid var(--clickable-border); color: #444; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
-    .cb-filter-header .filter-clear-btn:hover { background: #e74c3c; color: #fff; border-color: #e74c3c; }
+    /* 表格上方篩選狀態列 */
+    .cb-filter-status { background: linear-gradient(90deg, #fff3e0, #fff8e1); padding: 10px 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #ffe0b2; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .cb-filter-status .status-text { font-size: 13px; color: #e65100; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .cb-filter-status .status-tag { background: var(--primary); color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 12px; }
+    .cb-filter-status .status-count { color: #333; }
+    .cb-filter-status .status-count b { color: var(--primary); font-size: 16px; }
+    .cb-filter-status .status-clear { background: var(--clickable); border: 1px solid var(--clickable-border); color: #666; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .cb-filter-status .status-clear:hover { background: #e74c3c; color: #fff; border-color: #e74c3c; }
     
     /* 區塊標題 - 統一樣式，增加上方間距 */
     .cb-section-title { font-size: 14px; font-weight: 700; color: #333; margin: 18px 0 10px; padding-left: 8px; border-left: 3px solid var(--primary); }
@@ -96,38 +96,6 @@
     .cb-ind-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .cb-ind-tag .num { background: rgba(201,100,66,0.15); color: var(--primary); padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-left: 4px; font-weight: 700; }
     .cb-ind-tag.active .num { background: rgba(255,255,255,0.3); color: #fff; }
-    
-    /* 篩選狀態列 */
-    .cb-filter-bar { background: #fff3e0; border: 1px solid #ffcc80; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-    .cb-filter-bar .filter-text { font-size: 13px; color: #e65100; font-weight: 600; }
-    .cb-filter-bar .filter-clear { background: #e74c3c; border: none; border-radius: 4px; padding: 4px 10px; font-size: 11px; color: #fff; cursor: pointer; transition: all 0.2s; }
-    .cb-filter-bar .filter-clear:hover { background: #c0392b; }
-    
-    /* 常態篩選區塊 */
-    .cb-filter-hint { font-size: 11px; color: #888; margin-top: 8px; padding-left: 8px; font-style: italic; }
-    .cb-filter-always { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px; margin-top: 15px; }
-    .cb-filter-always .filter-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .cb-filter-always .filter-search-input { flex: 1; padding: 8px 12px; border: 2px solid #ddd; border-radius: 20px; font-size: 13px; outline: none; transition: border-color 0.2s; }
-    .cb-filter-always .filter-search-input:focus { border-color: var(--primary); }
-    .cb-filter-always .filter-clear-btn-small { width: 28px; height: 28px; border-radius: 50%; border: none; background: #e74c3c; color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-    .cb-filter-always .filter-clear-btn-small:hover { background: #c0392b; }
-    .cb-filter-always .filter-result { background: #fff5f0; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #333; }
-    .cb-filter-always .filter-result b { color: var(--primary); font-size: 16px; }
-    .cb-filter-always .filter-tag-display { background: var(--primary); color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-    .cb-filter-always .filter-placeholder { color: #999; font-style: italic; }
-    
-    /* 表格上方常態篩選區塊 - 更醒目的橘色風格 */
-    .cb-filter-header-always { background: linear-gradient(90deg, #fff3e0, #fff8e1); padding: 12px 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #ffe0b2; }
-    .cb-filter-header-always .filter-search-sync { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-    .cb-filter-header-always .filter-label { font-size: 13px; font-weight: 700; color: #e65100; white-space: nowrap; }
-    .cb-filter-header-always .filter-search-input-sync { flex: 1; min-width: 200px; padding: 8px 14px; border: 2px solid #ffcc80; border-radius: 20px; font-size: 13px; outline: none; background: #fff; transition: all 0.2s; }
-    .cb-filter-header-always .filter-search-input-sync:focus { border-color: var(--primary); box-shadow: 0 0 8px rgba(201,100,66,0.2); }
-    .cb-filter-header-always .filter-clear-inline { width: 30px; height: 30px; border-radius: 50%; border: none; background: #e74c3c; color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
-    .cb-filter-header-always .filter-clear-inline:hover { background: #c0392b; transform: scale(1.1); }
-    .cb-filter-header-always .filter-result-sync { background: #fff; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #333; border: 1px solid #ffe0b2; }
-    .cb-filter-header-always .filter-result-sync b { color: var(--primary); font-size: 18px; font-weight: 800; }
-    .cb-filter-header-always .filter-tag { background: var(--primary); color: #fff; padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; display: inline-block; margin: 0 2px; }
-    .cb-filter-header-always .filter-hint-text { color: #999; font-style: italic; font-size: 12px; }
     
     /* 競拍前十名表格 */
     .auction-top10-table { overflow-x: auto; margin-bottom: 10px; }
@@ -366,7 +334,6 @@
 
 <div class="result-bar">
     <div style="font-size:12px;color:#666;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
-    <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
 </div>
 <div class="card-list" id="list"></div>
 ```
@@ -471,97 +438,18 @@ const fmtTxt = t => {
 
 function handleInput(el) { 
     $('clearBtn').style.display = el.value.length > 0 ? 'block' : 'none'; 
-    // 連動篩選區輸入框
-    const filterInput = $('cbFilterSearch');
-    if(filterInput && filterInput !== el) {
-        filterInput.value = el.value;
-    }
-    // 連動表格上方的搜尋欄
-    const tableFilterInput = $('cbTableFilterSearch');
-    if(tableFilterInput && tableFilterInput !== el) {
-        tableFilterInput.value = el.value;
-    }
     renderList(); 
 }
 function clearSearch() { 
     $('search').value=''; 
     $('search').focus(); 
     $('clearBtn').style.display='none'; 
-    // 連動清除篩選區輸入框
-    const filterInput = $('cbFilterSearch');
-    if(filterInput) filterInput.value = '';
-    // 連動清除表格上方的搜尋欄
-    const tableFilterInput = $('cbTableFilterSearch');
-    if(tableFilterInput) tableFilterInput.value = '';
     // 清除篩選條件
     CB_FILTER.industry = '';
     CB_FILTER.guarantee = '';
     renderList(); 
 }
 window.setSearch = term => { $('search').value = term; handleInput($('search')); };
-
-// 篩選區輸入框處理 - 連動主搜尋欄，並智能判斷篩選條件
-window.handleCbFilterSearch = val => {
-    $('search').value = val;
-    $('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
-    
-    // 同步表格上方的搜尋欄
-    const tableFilterInput = $('cbTableFilterSearch');
-    if(tableFilterInput) tableFilterInput.value = val;
-    
-    // 智能判斷輸入內容
-    if(val === '有擔保' || val === '無擔保') {
-        CB_FILTER.guarantee = val;
-    } else if(val === '詢圈' || val === '競拍') {
-        CB_FILTER.guarantee = val;
-    } else if(val === '') {
-        // 清空時重置篩選
-        CB_FILTER.industry = '';
-        CB_FILTER.guarantee = '';
-    }
-    // 其他情況由renderList中的一般搜尋處理
-    
-    renderList();
-};
-
-// 表格上方搜尋欄連動處理 - 同步到主搜尋欄和統計區搜尋欄
-window.handleTableFilterSearch = val => {
-    // 同步主搜尋欄
-    $('search').value = val;
-    $('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
-    
-    // 同步統計區的搜尋欄
-    const statsFilterInput = $('cbFilterSearch');
-    if(statsFilterInput) statsFilterInput.value = val;
-    
-    // 智能判斷輸入內容
-    if(val === '有擔保' || val === '無擔保') {
-        CB_FILTER.guarantee = val;
-    } else if(val === '詢圈' || val === '競拍') {
-        CB_FILTER.guarantee = val;
-    } else if(val === '') {
-        CB_FILTER.industry = '';
-        CB_FILTER.guarantee = '';
-    }
-    
-    renderList();
-};
-
-// 清除所有篩選條件和搜尋關鍵字
-window.clearAllFiltersAndSearch = () => {
-    $('search').value = '';
-    $('clearBtn').style.display = 'none';
-    CB_FILTER.industry = '';
-    CB_FILTER.guarantee = '';
-    
-    // 同步清除所有搜尋欄
-    const statsFilterInput = $('cbFilterSearch');
-    if(statsFilterInput) statsFilterInput.value = '';
-    const tableFilterInput = $('cbTableFilterSearch');
-    if(tableFilterInput) tableFilterInput.value = '';
-    
-    renderList();
-};
 
 async function fetchXlsx(url) {
     try {
@@ -1856,20 +1744,8 @@ function renderCBStats() {
     // 取得主搜尋欄的值
     const searchVal = $('search')?.value || '';
     
-    // 篩選狀態顯示
+    // 判斷是否有篩選條件
     const hasFilter = CB_FILTER.industry || CB_FILTER.guarantee;
-    const renderFilterBar = (filteredCount) => {
-        if(!hasFilter) return '';
-        const filters = [];
-        if(CB_FILTER.industry) filters.push(`產業：${CB_FILTER.industry}`);
-        if(CB_FILTER.guarantee) filters.push(`擔保：${CB_FILTER.guarantee}`);
-        return `
-            <div class="cb-filter-bar">
-                <div class="filter-text">🔍 ${filters.join(' + ')} → 共 <b>${filteredCount}</b> 檔</div>
-                <button class="filter-clear" onclick="clearCbFilter()">✕ 清除</button>
-            </div>
-        `;
-    };
     
     if(CB_MODE === 'info') {
         // 基本資料模式
@@ -2062,20 +1938,6 @@ function renderCBStats() {
                 </div>
                 ${renderAuctionTop10()}
                 ${renderIndustryTags(sortedAuctionInd, '📊 各產業競拍CB分佈')}
-                <div class="cb-filter-hint">💡 可與上方「有擔保」、「無擔保」搭配篩選</div>
-                <div class="cb-section-title">🔍 篩選條件</div>
-                <div class="cb-filter-always">
-                    <div class="filter-search-row">
-                        <input type="text" class="filter-search-input" id="cbFilterSearch" placeholder="輸入產業、CB代號、簡稱..." value="${searchVal}" oninput="handleCbFilterSearch(this.value)">
-                        ${(hasFilter || searchVal) ? '<button class="filter-clear-btn-small" onclick="clearAllFiltersAndSearch()">✕</button>' : ''}
-                    </div>
-                    <div class="filter-result" id="cbFilterResult">
-                        ${(hasFilter || searchVal)
-                            ? `🔍 篩選條件：${CB_FILTER.industry ? `<span class="filter-tag-display">產業：${CB_FILTER.industry}</span>` : ''}${(CB_FILTER.industry && (CB_FILTER.guarantee || searchVal)) ? ' + ' : ''}${CB_FILTER.guarantee ? `<span class="filter-tag-display">擔保：${CB_FILTER.guarantee}</span>` : ''}${(CB_FILTER.guarantee && searchVal) ? ' + ' : ''}${searchVal ? `<span class="filter-tag-display">關鍵字：${searchVal}</span>` : ''} → 共 <b>${filteredAuction.length}</b> 檔符合`
-                            : `<span class="filter-placeholder">點選上方產業或擔保條件進行篩選，或直接輸入關鍵字搜尋</span>`
-                        }
-                    </div>
-                </div>
             </div>
         `;
     } else if(CB_MODE === 'primary') {
@@ -2232,12 +2094,7 @@ function setCbFilter(type, value) {
 // 清除所有CB篩選
 function clearCbFilter() {
     CB_FILTER = { industry: '', guarantee: '' };
-    // 同步清空主搜尋欄和所有CB篩選搜尋欄
     $('search').value = '';
-    const cbFilterInput = $('cbFilterSearch');
-    if(cbFilterInput) cbFilterInput.value = '';
-    const tableFilterInput = $('cbTableFilterSearch');
-    if(tableFilterInput) tableFilterInput.value = '';
     $('clearBtn').style.display = 'none';
     renderList();
 }
@@ -2263,24 +2120,20 @@ function renderList() {
         $('cbStatsArea').style.display = 'block';
         $('stockStatsArea').style.display = 'none';
         $('memoStatsArea').style.display = 'none';
-        $('cbFilterTags').style.display = 'none';
     } else if(CURR_DB === 'stocks') {
         $('stockStatsArea').innerHTML = renderStockStats();
         $('stockStatsArea').style.display = 'block';
         $('cbStatsArea').style.display = 'none';
         $('memoStatsArea').style.display = 'none';
-        $('cbFilterTags').style.display = 'none';
     } else if(CURR_DB === 'memo') {
         $('memoStatsArea').innerHTML = renderMemoStats();
         $('memoStatsArea').style.display = 'block';
         $('cbStatsArea').style.display = 'none';
         $('stockStatsArea').style.display = 'none';
-        $('cbFilterTags').style.display = 'none';
     } else {
         $('cbStatsArea').style.display = 'none';
         $('stockStatsArea').style.display = 'none';
         $('memoStatsArea').style.display = 'none';
-        $('cbFilterTags').style.display = 'none';
     }
     
     if(CURR_DB==='news') list = DB.news;
@@ -2497,6 +2350,20 @@ function renderList() {
             html += `</tbody></table></div>`;
         } else if(CB_MODE === 'auction') {
             // 競拍模式專屬表格 - 完整欄位版
+            // 篩選狀態列
+            const hasAnyFilter = CB_FILTER.industry || CB_FILTER.guarantee || q;
+            let filterStatusHtml = '';
+            if(hasAnyFilter) {
+                const filterParts = [];
+                if(CB_FILTER.industry) filterParts.push(`<span class="status-tag">產業：${CB_FILTER.industry}</span>`);
+                if(CB_FILTER.guarantee) filterParts.push(`<span class="status-tag">擔保：${CB_FILTER.guarantee}</span>`);
+                if(q) filterParts.push(`<span class="status-tag">關鍵字：${q}</span>`);
+                filterStatusHtml = `<div class="cb-filter-status">
+                    <div class="status-text">🔍 篩選條件：${filterParts.join('')} <span class="status-count">→ 共 <b>${validFiltered.length}</b> 檔符合</span></div>
+                    <button class="status-clear" onclick="clearAllFilters()">✕ 清除篩選</button>
+                </div>`;
+            }
+            
             // 計算平均值
             const avgMultiple = validFiltered.reduce((s, r) => s + (parseFloat(r['投標倍數']) || 0), 0) / (validFiltered.length || 1);
             const avgTheory = validFiltered.reduce((s, r) => s + (parseFloat(r['截標理論']) || 0), 0) / (validFiltered.length || 1);
@@ -2513,34 +2380,7 @@ function renderList() {
             const avgClosePrice = validFiltered.filter(r => r['截標收盤']).reduce((s, r) => s + (parseFloat(r['截標收盤']) || 0), 0) / (validFiltered.filter(r => r['截標收盤']).length || 1);
             const avgConvPrice = validFiltered.reduce((s, r) => s + (parseFloat(r['轉換價']) || 0), 0) / (validFiltered.length || 1);
             
-            // 篩選條件顯示 - 放在表格上方，常態性顯示
-            const q = $('search').value.trim();
-            const hasAnyFilter = CB_FILTER.industry || CB_FILTER.guarantee || q;
-            const filterTags = [];
-            if(CB_FILTER.industry) filterTags.push(`<span class="filter-tag">產業：${CB_FILTER.industry}</span>`);
-            if(CB_FILTER.guarantee) filterTags.push(`<span class="filter-tag">擔保：${CB_FILTER.guarantee}</span>`);
-            if(q && !CB_FILTER.industry && !CB_FILTER.guarantee) filterTags.push(`<span class="filter-tag">關鍵字：${q}</span>`);
-            
-            const filterHeader = `
-                <div class="cb-filter-header-always">
-                    <div class="filter-search-sync">
-                        <span class="filter-label">🔍 篩選條件：</span>
-                        <input type="text" class="filter-search-input-sync" id="cbTableFilterSearch" 
-                            placeholder="輸入產業、擔保、CB代號..." 
-                            value="${q}" 
-                            oninput="handleTableFilterSearch(this.value)">
-                        ${hasAnyFilter ? '<button class="filter-clear-inline" onclick="clearAllFiltersAndSearch()">✕</button>' : ''}
-                    </div>
-                    <div class="filter-result-sync">
-                        ${hasAnyFilter 
-                            ? `${filterTags.join(' + ')} → 共 <b>${validFiltered.length}</b> 檔符合`
-                            : `<span class="filter-hint-text">點選上方產業或擔保條件篩選，或輸入關鍵字搜尋</span>`
-                        }
-                    </div>
-                </div>
-            `;
-            
-            html = filterHeader + `<div class="cb-table-wrap"><table class="cb-table" id="cbTable">
+            html = `<div class="cb-table-wrap"><table class="cb-table" id="cbTable">
                 <thead><tr>
                     <th class="sortable" data-col="_cbCode" data-type="string">CB代號</th>
                     <th>CB簡稱</th>
