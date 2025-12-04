@@ -460,7 +460,7 @@ const DB = {
     trends:[], conceptStocks:[] 
 };
 let CB_MODE = 'info'; // 'info' 基本資料, 'active' 掛牌中, 'history' 歷史, 'auction' 競拍, 'primary' 初級市場, 'balance' 流通餘額, 'cbas' CBAS報價
-let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'putback' 賣回條件
+let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'putback' 賣回條件, 'convert' 轉換分析
 let PRIMARY_MODE = 'underwriting'; // 'underwriting' 承銷中, 'board' 董事會公告
 let AUCTION_TOP10 = ''; // 競拍TOP10選擇: 'guar_low' 有擔保最低, 'no_guar_low' 無擔保最低, 'guar_avg' 有擔保平均, 'no_guar_avg' 無擔保平均
 let STOCK_MODE = 'all'; // 'all' 全部個股, 'concept' 概念股
@@ -2018,6 +2018,7 @@ function renderCBStats() {
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='issue'?'active':''}" onclick="setCbInfoTab('issue')"><span class="top10-icon">📝</span>發行條件</div>
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='timeline'?'active':''}" onclick="setCbInfoTab('timeline')"><span class="top10-icon">📅</span>時程資訊</div>
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='putback'?'active':''}" onclick="setCbInfoTab('putback')"><span class="top10-icon">💰</span>賣回條件</div>
+                    <div class="cb-top10-btn-line ${CB_INFO_TAB==='convert'?'active':''}" onclick="setCbInfoTab('convert')"><span class="top10-icon">🔄</span>轉換分析</div>
                 </div>
             </div>
         `;
@@ -2659,6 +2660,83 @@ function renderList() {
                         <td>${putPrice2}</td>
                         <td>${r._putTiming || ''}</td>
                         <td style="max-width:150px;white-space:normal;text-align:left">${r._putCondition || ''}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table></div></div>`;
+            } else if(CB_INFO_TAB === 'convert') {
+                // 轉換分析
+                html = `<div class="cb-info-section">
+                    <div class="cb-info-title">
+                        <span class="icon">🔄</span>
+                        <span class="text">轉換分析</span>
+                        <span class="count">${validFiltered.length} 筆</span>
+                    </div>
+                    <div class="cb-table-wrap"><table class="cb-table sticky-2cols" id="cbTable">
+                    <thead><tr>
+                        <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
+                        <th class="sticky-col sticky-col-2">CB簡稱</th>
+                        <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
+                        <th class="sortable" data-col="_convPrice" data-type="num">轉換價</th>
+                        <th class="sortable" data-col="_convRatio" data-type="num">轉換比率</th>
+                        <th class="sortable" data-col="_issueLots" data-type="num">發行張數</th>
+                        <th class="sortable" data-col="_stockLots" data-type="num">約當股票</th>
+                        <th class="sortable" data-col="_convertedLots" data-type="num">已轉換CB</th>
+                        <th class="sortable" data-col="_convertedStock" data-type="num">已轉約當</th>
+                        <th class="sortable" data-col="_remainLots" data-type="num">流通餘額</th>
+                        <th class="sortable" data-col="_remainPct" data-type="num">餘額%</th>
+                        <th class="sortable" data-col="_remainStock" data-type="num">餘額約當</th>
+                        <th class="sortable" data-col="_capital" data-type="num">股本(億)</th>
+                        <th class="sortable" data-col="_dilutionPct" data-type="num">佔股本%</th>
+                    </tr></thead><tbody>`;
+                
+                validFiltered.slice(0, 150).forEach(r => {
+                    const isActive = DB.cb.find(c => c._cbCode === r._cbCode);
+                    const statusClass = isActive ? 'active-cb' : '';
+                    
+                    // 計算轉換相關數據
+                    const convPrice = parseFloat(r._convPrice) || 0;
+                    const scale = parseFloat(r._scale) || 0;
+                    const capitalStr = String(r._capital || '').replace(/[億,]/g, '');
+                    const capital = parseFloat(capitalStr) || 0;
+                    
+                    // 轉換比率 = 票面10萬 ÷ 轉換價
+                    const convRatio = convPrice > 0 ? Math.round(100000 / convPrice) : 0;
+                    // 發行張數 = 發行規模(億) × 1000
+                    const issueLots = Math.round(scale * 1000);
+                    // 約當股票張數 = 轉換比率 × 發行張數 ÷ 1000
+                    const stockLots = Math.round(convRatio * issueLots / 1000);
+                    // 股本張數 = 股本(億) × 10000
+                    const capitalLots = Math.round(capital * 10000);
+                    // 佔股本% = 約當股票 ÷ 股本張數 × 100
+                    const dilutionPct = capitalLots > 0 ? (stockLots / capitalLots * 100) : 0;
+                    
+                    // 從流通餘額資料中找到該CB的餘額
+                    const balanceData = DB.cbBalance.find(b => b._cbCode === r._cbCode);
+                    const remainLots = balanceData ? Math.round(parseFloat(balanceData._thisWeek) || 0) : 0;
+                    // 流通餘額%
+                    const remainPct = issueLots > 0 ? (remainLots / issueLots * 100) : 0;
+                    // 流通餘額約當股票
+                    const remainStock = Math.round(convRatio * remainLots / 1000);
+                    // 已轉換CB張數 = 發行張數 - 流通餘額
+                    const convertedLots = issueLots - remainLots;
+                    // 已轉換約當股票
+                    const convertedStock = Math.round(convRatio * convertedLots / 1000);
+                    
+                    html += `<tr class="${statusClass}">
+                        <td class="code sticky-col sticky-col-1" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                        <td class="sticky-col sticky-col-2">${r._name || ''}</td>
+                        <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
+                        <td>${fmtNum(convPrice, 2)}</td>
+                        <td>${fmtNum(convRatio, 0)}</td>
+                        <td>${fmtNum(issueLots, 0)}</td>
+                        <td style="font-weight:600;color:var(--primary)">${fmtNum(stockLots, 0)}</td>
+                        <td>${fmtNum(convertedLots, 0)}</td>
+                        <td>${fmtNum(convertedStock, 0)}</td>
+                        <td>${fmtNum(remainLots, 0)}</td>
+                        <td>${fmtNum(remainPct, 1)}%</td>
+                        <td>${fmtNum(remainStock, 0)}</td>
+                        <td>${fmtNum(capital, 1)}</td>
+                        <td style="font-weight:600;color:#e65100">${fmtNum(dilutionPct, 2)}%</td>
                     </tr>`;
                 });
                 html += `</tbody></table></div></div>`;
@@ -3606,10 +3684,130 @@ window.openCbInfo = cbCode => {
         </div>
     `;
 
+    // Tab 5: 轉換分析
+    // 計算轉換相關數據
+    const convPrice = parseFloat(cb._convPrice) || 0;
+    const scale = parseFloat(cb._scale) || 0;
+    // 解析股本（可能是 "10.5" 或 "10.5億" 格式）
+    const capitalStr = String(cb._capital || '').replace(/[億,]/g, '');
+    const capital = parseFloat(capitalStr) || 0;
+    
+    // 計算公式（全部用整數）
+    const convRatio = convPrice > 0 ? Math.round(100000 / convPrice) : 0;  // 轉換比率
+    const issueLots = Math.round(scale * 1000);  // 發行張數
+    const stockLots = Math.round(convRatio * issueLots / 1000);  // 約當股票張數
+    const capitalLots = Math.round(capital * 10000);  // 股本張數
+    const dilutionPct = capitalLots > 0 ? (stockLots / capitalLots * 100) : 0;  // 佔股本%
+    
+    // 從流通餘額資料中找到該CB的餘額
+    const balanceData = DB.cbBalance.find(b => b._cbCode === cb._cbCode);
+    const remainLots = balanceData ? Math.round(parseFloat(balanceData._thisWeek) || 0) : 0;
+    const remainPct = issueLots > 0 ? (remainLots / issueLots * 100) : 0;  // 流通餘額%
+    const remainStock = Math.round(convRatio * remainLots / 1000);  // 流通約當股票
+    const convertedLots = issueLots - remainLots;  // 已轉換CB張數
+    const convertedStock = Math.round(convRatio * convertedLots / 1000);  // 已轉換約當股票
+    
+    let tConversion = `
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #e8f5e9 0%, #fff 100%)">
+            <div class="title" style="color:#2e7d32">🔄 轉換比率</div>
+            <div class="modal-card-grid">
+                <div class="modal-card">
+                    <div class="val">${fmtNum(convPrice, 2)}</div>
+                    <div class="lbl">轉換價</div>
+                </div>
+                <div class="modal-card highlight">
+                    <div class="val" style="color:#2e7d32">${fmtNum(convRatio, 0)}</div>
+                    <div class="lbl">轉換比率(股)</div>
+                </div>
+            </div>
+            <div style="margin-top:10px;padding:10px;background:#fff;border-radius:8px;font-size:12px;color:#666">
+                📐 票面 10萬 ÷ 轉換價 ${fmtNum(convPrice, 2)} = ${fmtNum(convRatio, 0)} 股
+            </div>
+        </div>
+        
+        <div class="modal-info-block">
+            <div class="title">📊 發行與約當股票</div>
+            <div class="modal-card-grid">
+                <div class="modal-card">
+                    <div class="val">${fmtNum(issueLots, 0)}</div>
+                    <div class="lbl">發行張數</div>
+                </div>
+                <div class="modal-card highlight">
+                    <div class="val">${fmtNum(stockLots, 0)}</div>
+                    <div class="lbl">約當股票(張)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #fff8e1 0%, #fff 100%)">
+            <div class="title" style="color:#f57c00">📤 已轉換分析</div>
+            <div class="modal-card-grid">
+                <div class="modal-card">
+                    <div class="val">${fmtNum(convertedLots, 0)}</div>
+                    <div class="lbl">已轉換CB(張)</div>
+                </div>
+                <div class="modal-card">
+                    <div class="val">${fmtNum(convertedStock, 0)}</div>
+                    <div class="lbl">已轉約當股票</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #e3f2fd 0%, #fff 100%)">
+            <div class="title" style="color:#1565c0">💹 流通餘額分析</div>
+            <div class="modal-card-grid">
+                <div class="modal-card">
+                    <div class="val">${fmtNum(remainLots, 0)}</div>
+                    <div class="lbl">流通餘額(張)</div>
+                </div>
+                <div class="modal-card">
+                    <div class="val">${fmtNum(remainPct, 1)}%</div>
+                    <div class="lbl">餘額%</div>
+                </div>
+                <div class="modal-card">
+                    <div class="val">${fmtNum(remainStock, 0)}</div>
+                    <div class="lbl">餘額約當股票</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #fff3e0 0%, #fff 100%)">
+            <div class="title" style="color:#e65100">📈 股本稀釋分析</div>
+            <div class="modal-card-grid">
+                <div class="modal-card">
+                    <div class="val">${fmtNum(capital, 1)}</div>
+                    <div class="lbl">股本(億)</div>
+                </div>
+                <div class="modal-card highlight">
+                    <div class="val" style="color:#e65100">${fmtNum(dilutionPct, 2)}%</div>
+                    <div class="lbl">佔股本%</div>
+                </div>
+            </div>
+            <div style="margin-top:10px;padding:10px;background:#fff;border-radius:8px;font-size:12px;color:#666">
+                📐 股本 ${fmtNum(capital, 1)}億 = ${fmtNum(capitalLots, 0)} 張<br>
+                📐 佔股本 = ${fmtNum(stockLots, 0)} ÷ ${fmtNum(capitalLots, 0)} × 100% = ${fmtNum(dilutionPct, 2)}%
+            </div>
+        </div>
+    `;
+    
+    // 補充說明
+    tConversion += `
+        <div class="modal-info-block" style="background:#fafafa">
+            <div class="title">📖 名詞說明</div>
+            <div style="font-size:12px;color:#666;line-height:1.8">
+                <div><b>轉換比率</b>：每張CB（票面10萬）可換得的股數</div>
+                <div><b>約當股票</b>：全部CB轉換後對應的股票張數</div>
+                <div><b>已轉換CB</b>：發行張數 - 流通餘額張數</div>
+                <div><b>佔股本%</b>：約當股票張數佔公司總股本的比例</div>
+            </div>
+        </div>
+    `;
+
     const navItems = [
         {id:'issue', icon:'📝', label:'發行條件'},
         {id:'timeline', icon:'📅', label:'時程'},
         {id:'putback', icon:'💰', label:'賣回'},
+        {id:'conversion', icon:'🔄', label:'轉換分析'},
         {id:'stock', icon:'🏢', label:'公司'}
     ];
 
@@ -3617,6 +3815,7 @@ window.openCbInfo = cbCode => {
         <div id="tab-issue" class="tab-pane active">${tIssue}</div>
         <div id="tab-timeline" class="tab-pane">${tTimeline}</div>
         <div id="tab-putback" class="tab-pane">${tPutback}</div>
+        <div id="tab-conversion" class="tab-pane">${tConversion}</div>
         <div id="tab-stock" class="tab-pane">${tStock}</div>
     `;
     showModal(infoHtml, navItems);
