@@ -469,6 +469,47 @@ const colorClass = v => {
     return n>0?'t-up':n<0?'t-down':'';
 };
 
+// 產業 emoji 映射
+const industryEmoji = ind => {
+    const emojiMap = {
+        '半導體': '🔬', '半導體業': '🔬',
+        '電子零組件': '🔩', '電子零組件業': '🔩',
+        '電腦及週邊': '💻', '電腦及週邊設備業': '💻',
+        '光電': '💡', '光電業': '💡',
+        '通信網路': '📡', '通信網路業': '📡',
+        '電子通路': '🔌', '電子通路業': '🔌',
+        '資訊服務': '🖥️', '資訊服務業': '🖥️',
+        '其他電子': '📟', '其他電子業': '📟', '其他業電子業': '📟',
+        '生技醫療': '💊', '生技醫療業': '💊',
+        '化工': '🧪', '化學工業': '🧪',
+        '塑膠': '♻️', '塑膠工業': '♻️',
+        '鋼鐵': '🔧', '鋼鐵工業': '🔧',
+        '電機機械': '⚙️',
+        '汽車': '🚗', '汽車工業': '🚗',
+        '建材營造': '🏗️', '建材營造業': '🏗️',
+        '航運': '🚢', '航運業': '🚢',
+        '觀光餐旅': '🏨',
+        '貿易百貨': '🛒', '貿易百貨業': '🛒',
+        '金融保險': '🏦', '金控業': '🏦', '銀行業': '🏦', '證券業': '🏦',
+        '食品': '🍜', '食品工業': '🍜',
+        '紡織纖維': '👔',
+        '電器電纜': '🔋',
+        '造紙': '📄', '造紙工業': '📄',
+        '橡膠': '⭕', '橡膠工業': '⭕',
+        '玻璃陶瓷': '🏺',
+        '水泥': '🧱', '水泥工業': '🧱',
+        '油電燃氣': '⛽', '油電燃氣業': '⛽',
+        '綠能環保': '🌱',
+        '數位雲端': '☁️',
+        '居家生活': '🏠',
+        '運動休閒': '⚽',
+        '文化創意': '🎨', '文化創意業': '🎨',
+        '農業科技': '🌾', '農業科技業': '🌾',
+        '其他': '📦', '其他業': '📦'
+    };
+    return emojiMap[ind] || '📌';
+};
+
 const fmtTxt = t => {
     if(!t) return '';
     let html = safe(t).replace(/\n/g, '<br>');
@@ -1448,7 +1489,7 @@ function renderStockStats() {
                 <div class="cb-ind-title">📊 各產業分佈</div>
                 <div class="cb-ind-grid">
                     ${industries.slice(0, 25).map(([ind, cnt]) => 
-                        `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${ind}<span class="num">${padNum(cnt)}</span></div>`
+                        `<div class="cb-ind-tag" onclick="setSearch('${ind}')">${industryEmoji(ind)} ${ind}<span class="num">${padNum(cnt)}</span></div>`
                     ).join('')}
                 </div>
             </div>
@@ -1740,7 +1781,7 @@ function renderAuctionTop10() {
                     if(isMultipleRank) {
                         return `<tr>
                         <td>${i+1}</td>
-                        <td class="code">${c._cbCode}</td>
+                        <td class="code" onclick="openCbInfo('${c._cbCode}')">${c._cbCode}</td>
                         <td>${c._name}</td>
                         <td>${fmtDate(c['開標日期'])}</td>
                         <td>${fmtNum(c['競拍張數'], 0)}</td>
@@ -1760,7 +1801,7 @@ function renderAuctionTop10() {
                     
                     return `<tr>
                     <td>${i+1}</td>
-                    <td class="code">${c._cbCode}</td>
+                    <td class="code" onclick="openCbInfo('${c._cbCode}')">${c._cbCode}</td>
                     <td>${c._name}</td>
                     <td>${fmtDate(c['開標日期'])}</td>
                     <td>${fmtNum(c['競拍張數'], 0)}</td>
@@ -1855,7 +1896,7 @@ function renderCBStats() {
             <div class="cb-section-title">${title}</div>
             <div class="cb-top10-btns">
                 ${indList.map(([ind, cnt]) => `
-                    <div class="cb-top10-btn-line ${CB_FILTER.industry === ind ? 'active' : ''}" onclick="setCbFilter('industry', '${ind}')"><span class="top10-icon">🏭</span>${ind}<span class="ind-num">${cnt}</span></div>
+                    <div class="cb-top10-btn-line ${CB_FILTER.industry === ind ? 'active' : ''}" onclick="setCbFilter('industry', '${ind}')"><span class="top10-icon">${industryEmoji(ind)}</span>${ind}<span class="ind-num">${cnt}</span></div>
                 `).join('')}
             </div>
         `;
@@ -2109,7 +2150,7 @@ function renderCBStats() {
             <div class="balance-top10-table"><table>
                 <thead><tr><th>名次</th><th>代號</th><th>名稱</th><th>本週</th><th>上週</th><th>增減</th><th>比率</th><th>剩餘%</th></tr></thead>
                 <tbody>${list.map((c, i) => `<tr>
-                    <td>${i+1}</td><td class="code">${c._cbCode}</td><td class="name-cell">${c._name}</td>
+                    <td>${i+1}</td><td class="code" onclick="openCbInfo('${c._cbCode}')">${c._cbCode}</td><td class="name-cell">${c._name}</td>
                     <td>${fmtNum(c._thisWeek, 0)}</td><td>${fmtNum(c._lastWeek, 0)}</td>
                     <td class="${highlightField === '_change' ? 'highlight-red' : ''}">${fmtNum(c._change, 0)}</td>
                     <td class="${highlightField === '_changeRate' ? 'highlight-red' : ''}">${fmtNum(c._changeRate, 2)}%</td>
@@ -2626,7 +2667,7 @@ function renderList() {
                 const range = r['_range'];
                 
                 html += `<tr>
-                    <td class="code">${cbCode}</td>
+                    <td class="code" onclick="openCbInfo('${cbCode}')">${cbCode}</td>
                     <td>${cbName}</td>
                     <td class="stock" onclick="openStock('${stockCode}')">${stockCode}</td>
                     <td class="${guarClass}">${guarText}</td>
@@ -2686,8 +2727,8 @@ function renderList() {
                 
                 validFiltered.slice(0, 100).forEach(r => {
                     html += `<tr>
-                        <td class="code">${r._stockCode}</td>
-                        <td>${r._cbCode}</td>
+                        <td class="code" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
+                        <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                         <td>${r._name}</td>
                         <td class="hide-mobile">${r._method}</td>
                         <td class="hide-mobile">${r._tcri}</td>
@@ -2718,8 +2759,8 @@ function renderList() {
                 
                 validFiltered.slice(0, 100).forEach(r => {
                     html += `<tr>
-                        <td class="code">${r._stockCode}</td>
-                        <td>${r._cbCode}</td>
+                        <td class="code" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
+                        <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                         <td>${r._name}</td>
                         <td class="hide-mobile">${r._method}</td>
                         <td class="hide-mobile">${r._tcri}</td>
@@ -2749,7 +2790,7 @@ function renderList() {
                 const change = parseFloat(r._change) || 0;
                 const changeRate = parseFloat(r._changeRate) || 0;
                 html += `<tr>
-                    <td class="code">${r._cbCode}</td>
+                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                     <td class="name-col">${r._name}</td>
                     <td>${fmtNum(r._thisWeek, 0)}</td>
                     <td>${fmtNum(r._lastWeek, 0)}</td>
@@ -2779,7 +2820,7 @@ function renderList() {
             validFiltered.slice(0, 150).forEach(r => {
                 const premPct = parseFloat(r._premiumPct) || 0;
                 html += `<tr>
-                    <td class="code">${r._cbCode}</td>
+                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                     <td class="name-col">${r._name}</td>
                     <td>${r._guarantee}</td>
                     <td>${fmtNum(r._remainYears, 2)}</td>
@@ -2809,7 +2850,7 @@ function renderList() {
             
             validFiltered.forEach(r => {
                 html += `<tr>
-                    <td class="code">${r._cbCode}</td>
+                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                     <td>${r._cbName}</td>
                     <td>${r._reportDate}</td>
                     <td>${r._endDate}</td>
@@ -2833,7 +2874,7 @@ function renderList() {
             
             validFiltered.forEach(r => {
                 html += `<tr>
-                    <td class="code">${r._cbCode}</td>
+                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                     <td>${r._name}</td>
                     <td>${r._startDate}</td>
                     <td>${r._endDate}</td>
@@ -2858,7 +2899,7 @@ function renderList() {
                 const newPrice = parseFloat(r._newPrice) || 0;
                 const priceChange = newPrice - origPrice;
                 html += `<tr>
-                    <td class="code">${r._cbCode}</td>
+                    <td class="code" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                     <td>${r._cbName}</td>
                     <td>${r._adjDate}</td>
                     <td>${r._origPrice}</td>
@@ -2913,7 +2954,7 @@ function renderList() {
             const expDate = fmtDate(r['到期日']);
             
             html += `<tr>
-                <td class="code">${cbCode}</td>
+                <td class="code" onclick="openCbInfo('${cbCode}')">${cbCode}</td>
                 <td>${cbName}</td>
                 <td class="stock hide-mobile" onclick="openStock('${stockCode}')">${stockName} ${stockCode}</td>
                 <td class="hide-mobile">${ind}</td>
@@ -3232,29 +3273,13 @@ window.openCbInfo = cbCode => {
         {id:'stock', icon:'🏢', label:'公司'}
     ];
 
-    const fullHtml = `
-        <div class="modal-info">${infoHtml}</div>
-        <div class="modal-nav">${navItems.map(n => `<div class="nav-item" data-tab="${n.id}"><div class="nav-icon">${n.icon}</div><div class="nav-label">${n.label}</div></div>`).join('')}</div>
-        <div class="modal-tabs">
-            <div class="tab-pane" id="tab-issue">${tIssue}</div>
-            <div class="tab-pane" id="tab-timeline">${tTimeline}</div>
-            <div class="tab-pane" id="tab-putback">${tPutback}</div>
-            <div class="tab-pane" id="tab-stock">${tStock}</div>
-        </div>
+    $('m-body').innerHTML = `
+        <div id="tab-issue" class="tab-pane active">${tIssue}</div>
+        <div id="tab-timeline" class="tab-pane">${tTimeline}</div>
+        <div id="tab-putback" class="tab-pane">${tPutback}</div>
+        <div id="tab-stock" class="tab-pane">${tStock}</div>
     `;
-    
-    showModal(fullHtml, () => {
-        document.querySelectorAll('.modal-nav .nav-item').forEach((item, idx) => {
-            item.onclick = () => {
-                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                document.getElementById('tab-' + item.dataset.tab).classList.add('active');
-            };
-            if(idx === 0) item.classList.add('active');
-        });
-        document.getElementById('tab-issue').classList.add('active');
-    });
+    showModal(infoHtml, navItems);
 };
 
 window.openStock = code => {
