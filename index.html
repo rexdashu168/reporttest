@@ -51,14 +51,14 @@
     .cb-sub-tab.active { background: #e67e22; color: #fff; border-color: #e67e22; }
     
     /* 統計和排行榜並排容器 */
-    .cb-stats-row { display: flex; gap: 15px; margin-bottom: 12px; flex-wrap: wrap; }
-    .cb-stats-left { flex: 1; min-width: 280px; }
-    .cb-stats-right { flex: 1; min-width: 280px; }
-    @media(max-width: 600px) { .cb-stats-row { flex-direction: column; } }
+    .cb-stats-row { display: flex; gap: 15px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-start; }
+    .cb-stats-left { flex: 1; min-width: 300px; }
+    .cb-stats-right { flex: 1; min-width: 300px; }
+    @media(max-width: 700px) { .cb-stats-row { flex-direction: column; } }
     
-    /* TOP10 排行榜按鈕 - 單行文字 */
+    /* TOP10 排行榜按鈕 - 統一高度 */
     .cb-top10-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-    .cb-top10-btn-line { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #fff; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 600; color: #333; }
+    .cb-top10-btn-line { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: #fff; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 600; color: #333; min-height: 42px; }
     .cb-top10-btn-line:hover { border-color: #27ae60; background: #f0fff4; }
     .cb-top10-btn-line.active { background: #27ae60; color: #fff; border-color: #27ae60; }
     .cb-top10-btn-line .top10-icon { font-size: 16px; }
@@ -77,14 +77,14 @@
     .cb-section-title:first-child { margin-top: 0; }
     
     /* 統計數字區 - 小方格 */
-    .cb-stats-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-    .cb-stat-item { background: #fff; padding: 8px 12px; border-radius: 6px; text-align: center; border: 1px solid #eee; min-width: 60px; }
+    .cb-stats-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0; }
+    .cb-stat-item { background: #fff; padding: 10px 14px; border-radius: 6px; text-align: center; border: 1px solid #ddd; min-width: 65px; min-height: 42px; display: flex; flex-direction: column; justify-content: center; }
     .cb-stat-item.clickable { cursor: pointer; transition: all 0.2s; }
     .cb-stat-item.clickable:hover { border-color: var(--primary); background: #fff8f5; }
     .cb-stat-item.clickable.active { background: var(--primary); border-color: var(--primary); }
-    .cb-stat-num { font-size: 18px; font-weight: 800; color: var(--primary); }
+    .cb-stat-num { font-size: 18px; font-weight: 800; color: var(--primary); line-height: 1.2; }
     .cb-stat-item.clickable.active .cb-stat-num { color: #fff; }
-    .cb-stat-label { font-size: 11px; color: #555; margin-top: 2px; font-weight: 500; }
+    .cb-stat-label { font-size: 11px; color: #444; margin-top: 2px; font-weight: 600; }
     .cb-stat-item.clickable.active .cb-stat-label { color: rgba(255,255,255,0.9); }
     
     /* 產業小方塊 - 標題統一樣式 */
@@ -1524,20 +1524,25 @@ function renderAuctionTop10() {
         return `<div class="cb-ind-title" style="margin-top:15px">${title}</div>
         <div class="auction-top10-table">
             <table>
-                <thead><tr><th>排名</th><th>CB代號</th><th>名稱</th><th>開標日</th><th>最低得標</th><th>平均得標</th><th>最新收盤</th><th>掛牌最高</th><th>掛牌最低</th><th>投標倍數</th></tr></thead>
+                <thead><tr><th>排名</th><th>CB代號</th><th>名稱</th><th>開標日</th><th>競拍張數</th><th>最低得標</th><th>平均得標</th><th>最新收盤</th><th>掛牌最高</th><th>掛牌最低</th><th>投標倍數</th><th>底標價</th><th>振幅%</th></tr></thead>
                 <tbody>
-                ${list.map((c, i) => `<tr>
+                ${list.map((c, i) => {
+                    const range = (c._high > 0 && c._low > 0) ? ((c._high - c._low) / c._low * 100) : 0;
+                    return `<tr>
                     <td>${i+1}</td>
                     <td class="code">${c._cbCode}</td>
                     <td>${c._name}</td>
                     <td>${fmtDate(c['開標日期'])}</td>
+                    <td>${fmtNum(c['競拍張數'], 0)}</td>
                     <td class="${valueField === '最低得標' ? 'highlight' : ''}">${fmtNum(c['最低得標'], 2)}</td>
                     <td class="${valueField === '平均得標' ? 'highlight' : ''}">${fmtNum(c['平均得標'], 2)}</td>
                     <td>${c._latestPrice > 0 ? fmtNum(c._latestPrice, 2) : '-'}</td>
                     <td>${c._high > 0 ? fmtNum(c._high, 2) : '-'}</td>
                     <td>${c._low > 0 ? fmtNum(c._low, 2) : '-'}</td>
                     <td>${fmtNum(c['投標倍數'], 2)}x</td>
-                </tr>`).join('')}
+                    <td>${fmtNum(c['底標價'], 2)}</td>
+                    <td class="${colorClass(range)}">${fmtNum(range, 1)}%</td>
+                </tr>`}).join('')}
                 </tbody>
             </table>
         </div>`;
@@ -2225,7 +2230,7 @@ function renderList() {
                     <th class="sortable hide-mobile" data-col="平均溢價" data-type="num">平均溢價</th>
                     <th class="sortable" data-col="_high" data-type="num">掛牌最高</th>
                     <th class="sortable" data-col="_low" data-type="num">掛牌最低</th>
-                    <th class="sortable" data-col="_range" data-type="num">震幅%</th>
+                    <th class="sortable" data-col="_range" data-type="num">振幅%</th>
                 </tr></thead><tbody>`;
             
             validFiltered.slice(0, 100).forEach(r => {
@@ -2497,7 +2502,7 @@ function renderList() {
                     <th class="sortable" data-col="_high" data-type="num">掛牌最高 <span class="sort-icon">⇅</span></th>
                     <th class="sortable" data-col="_low" data-type="num">掛牌最低 <span class="sort-icon">⇅</span></th>
                     <th class="sortable" data-col="_cbPrice" data-type="num">CB收盤 <span class="sort-icon">⇅</span></th>
-                    <th class="sortable" data-col="_range" data-type="num">震幅% <span class="sort-icon">⇅</span></th>
+                    <th class="sortable" data-col="_range" data-type="num">振幅% <span class="sort-icon">⇅</span></th>
                     <th class="sortable" data-col="expDate" data-type="date">到期日 <span class="sort-icon">⇅</span></th>
                 </tr></thead><tbody>`;
             
@@ -2808,7 +2813,7 @@ window.openCbInfo = cbCode => {
             <div class="grid-3">
                 <div class="stat-box"><div class="num">${fmtNum(cb._high, 1)}</div><div class="lbl">掛牌最高</div></div>
                 <div class="stat-box"><div class="num">${fmtNum(cb._low, 1)}</div><div class="lbl">掛牌最低</div></div>
-                <div class="stat-box"><div class="num ${colorClass(range)}">${fmtNum(range, 1)}%</div><div class="lbl">震幅</div></div>
+                <div class="stat-box"><div class="num ${colorClass(range)}">${fmtNum(range, 1)}%</div><div class="lbl">振幅</div></div>
             </div>
         `;
     }
