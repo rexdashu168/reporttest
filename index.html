@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -35,71 +37,69 @@
     /* CB 統計區塊 - 淺色配色 */
     .cb-stats { background: #fff5f5; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #ffe0e0; }
     
-    /* CB 模式切換 - 小方格自然排列 */
+    /* CB 模式切換 - 同一列顯示 */
     .cb-mode-switcher { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-    .cb-mode-tab { padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #666; transition: all 0.2s; white-space: nowrap; }
+    .cb-mode-tab { padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #444; transition: all 0.2s; white-space: nowrap; }
     .cb-mode-tab:hover { border-color: var(--primary); }
     .cb-mode-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .cb-mode-tab .cnt { font-size: 10px; margin-left: 3px; opacity: 0.8; }
     
     /* 子標籤（發行條件、時程等） */
     .cb-sub-switcher { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-    .cb-sub-tab { padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #ccc; background: #f9f9f9; color: #666; transition: all 0.2s; }
+    .cb-sub-tab { padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #ccc; background: #f9f9f9; color: #444; transition: all 0.2s; }
     .cb-sub-tab:hover { border-color: #e67e22; }
     .cb-sub-tab.active { background: #e67e22; color: #fff; border-color: #e67e22; }
     
-    /* TOP10 排行榜切換按鈕 */
-    .cb-top10-switcher { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-    .cb-top10-tab { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #666; transition: all 0.2s; }
-    .cb-top10-tab:hover { border-color: #27ae60; background: #f0fff4; }
-    .cb-top10-tab.active { background: #27ae60; color: #fff; border-color: #27ae60; }
+    /* 統計和排行榜並排容器 */
+    .cb-stats-row { display: flex; gap: 15px; margin-bottom: 12px; flex-wrap: wrap; }
+    .cb-stats-left { flex: 1; min-width: 280px; }
+    .cb-stats-right { flex: 1; min-width: 280px; }
+    @media(max-width: 600px) { .cb-stats-row { flex-direction: column; } }
     
-    /* TOP10 方格按鈕 */
-    .cb-top10-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-    .cb-top10-btn { flex: 1; min-width: 70px; max-width: 100px; padding: 10px 8px; background: #fff; border: 2px solid #e0e0e0; border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.2s; }
-    .cb-top10-btn:hover { border-color: #27ae60; background: #f0fff4; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    .cb-top10-btn.active { background: linear-gradient(135deg, #27ae60, #2ecc71); border-color: #27ae60; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(39,174,96,0.3); }
-    .cb-top10-btn .top10-icon { font-size: 20px; margin-bottom: 4px; }
-    .cb-top10-btn .top10-label { font-size: 11px; font-weight: 600; line-height: 1.3; color: #555; }
-    .cb-top10-btn.active .top10-label { color: #fff; }
+    /* TOP10 排行榜按鈕 - 單行文字 */
+    .cb-top10-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cb-top10-btn-line { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #fff; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 600; color: #333; }
+    .cb-top10-btn-line:hover { border-color: #27ae60; background: #f0fff4; }
+    .cb-top10-btn-line.active { background: #27ae60; color: #fff; border-color: #27ae60; }
+    .cb-top10-btn-line .top10-icon { font-size: 16px; }
     
     /* 篩選條件列 - 表格上方 */
     .cb-filter-header { background: linear-gradient(90deg, #fff3e0, #fff8e1); padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #ffe0b2; }
     .cb-filter-header .filter-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .cb-filter-header .filter-tag { background: var(--primary); color: #fff; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: 600; }
-    .cb-filter-header .filter-count { font-size: 13px; color: #666; }
+    .cb-filter-header .filter-count { font-size: 13px; color: #444; }
     .cb-filter-header .filter-count b { color: var(--primary); font-size: 16px; }
-    .cb-filter-header .filter-clear-btn { background: #f5f5f5; border: 1px solid #ddd; color: #666; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .cb-filter-header .filter-clear-btn { background: #f5f5f5; border: 1px solid #ddd; color: #444; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
     .cb-filter-header .filter-clear-btn:hover { background: #e74c3c; color: #fff; border-color: #e74c3c; }
     
-    /* 區塊標題 */
-    .cb-section-title { font-size: 13px; font-weight: 700; color: #555; margin: 12px 0 8px; padding-left: 8px; border-left: 3px solid var(--primary); }
+    /* 區塊標題 - 統一樣式 */
+    .cb-section-title { font-size: 14px; font-weight: 700; color: #333; margin: 12px 0 8px; padding-left: 8px; border-left: 3px solid var(--primary); }
     .cb-section-title:first-child { margin-top: 0; }
     
     /* 統計數字區 - 小方格 */
     .cb-stats-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-    .cb-stat-item { background: #fff; padding: 8px 10px; border-radius: 6px; text-align: center; border: 1px solid #eee; min-width: 55px; }
+    .cb-stat-item { background: #fff; padding: 8px 12px; border-radius: 6px; text-align: center; border: 1px solid #eee; min-width: 60px; }
     .cb-stat-item.clickable { cursor: pointer; transition: all 0.2s; }
     .cb-stat-item.clickable:hover { border-color: var(--primary); background: #fff8f5; }
     .cb-stat-item.clickable.active { background: var(--primary); border-color: var(--primary); }
-    .cb-stat-num { font-size: 16px; font-weight: 800; color: var(--primary); }
+    .cb-stat-num { font-size: 18px; font-weight: 800; color: var(--primary); }
     .cb-stat-item.clickable.active .cb-stat-num { color: #fff; }
-    .cb-stat-label { font-size: 10px; color: #888; margin-top: 2px; }
+    .cb-stat-label { font-size: 11px; color: #555; margin-top: 2px; font-weight: 500; }
     .cb-stat-item.clickable.active .cb-stat-label { color: rgba(255,255,255,0.9); }
     
-    /* 產業小方塊 */
-    .cb-ind-title { font-size: 11px; font-weight: 600; color: #888; margin: 10px 0 8px; }
-    .cb-ind-grid { display: flex; flex-wrap: wrap; gap: 5px; }
-    .cb-ind-tag { padding: 4px 8px; background: #fff; border-radius: 12px; font-size: 11px; color: #666; cursor: pointer; transition: all 0.2s; border: 1px solid #eee; }
+    /* 產業小方塊 - 標題統一樣式 */
+    .cb-ind-title { font-size: 14px; font-weight: 700; color: #333; margin: 12px 0 8px; padding-left: 8px; border-left: 3px solid var(--primary); }
+    .cb-ind-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cb-ind-tag { padding: 5px 10px; background: #fff; border-radius: 12px; font-size: 12px; color: #444; cursor: pointer; transition: all 0.2s; border: 1px solid #ddd; font-weight: 500; }
     .cb-ind-tag:hover { border-color: var(--primary); color: var(--primary); }
     .cb-ind-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .cb-ind-tag .num { background: rgba(201,100,66,0.15); color: var(--primary); padding: 1px 5px; border-radius: 8px; font-size: 10px; margin-left: 3px; font-weight: 700; }
+    .cb-ind-tag .num { background: rgba(201,100,66,0.15); color: var(--primary); padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-left: 4px; font-weight: 700; }
     .cb-ind-tag.active .num { background: rgba(255,255,255,0.3); color: #fff; }
     
     /* 篩選狀態列 */
-    .cb-filter-bar { background: #fff3e0; border: 1px solid #ffcc80; border-radius: 6px; padding: 6px 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-    .cb-filter-bar .filter-text { font-size: 11px; color: #e65100; font-weight: 600; }
-    .cb-filter-bar .filter-clear { background: #e74c3c; border: none; border-radius: 4px; padding: 2px 8px; font-size: 10px; color: #fff; cursor: pointer; transition: all 0.2s; }
+    .cb-filter-bar { background: #fff3e0; border: 1px solid #ffcc80; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .cb-filter-bar .filter-text { font-size: 13px; color: #e65100; font-weight: 600; }
+    .cb-filter-bar .filter-clear { background: #e74c3c; border: none; border-radius: 4px; padding: 4px 10px; font-size: 11px; color: #fff; cursor: pointer; transition: all 0.2s; }
     .cb-filter-bar .filter-clear:hover { background: #c0392b; }
     
     /* 競拍前十名表格 */
@@ -288,6 +288,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -303,6 +304,8 @@
         <h1>📊 Rex大叔投資研究室</h1>
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
+
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -333,6 +336,7 @@
     <div id="cbFilterTags" class="cb-filter-tags" style="display:none"></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -1746,33 +1750,27 @@ function renderCBStats() {
         return `
             <div class="cb-stats">
                 ${modeTabsHtml}
-                <div class="cb-section-title">📈 統計數據</div>
-                <div class="cb-stats-grid">
-                    <div class="cb-stat-item"><div class="cb-stat-num">${displayCnt}</div><div class="cb-stat-label">${hasFilter ? '符合條件' : '競拍總數'}</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgHigh, 1)}</div><div class="cb-stat-label">平均高點</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgLow, 1)}</div><div class="cb-stat-label">平均低點</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgLowestBid, 1)}</div><div class="cb-stat-label">平均最低得標</div></div>
-                    <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgMultiple, 1)}x</div><div class="cb-stat-label">平均投標倍數</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['有擔保'] : auctionGuar['有擔保']}</div><div class="cb-stat-label">有擔保</div></div>
-                    <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['無擔保'] : auctionGuar['無擔保']}</div><div class="cb-stat-label">無擔保</div></div>
-                </div>
-                <div class="cb-section-title">🏆 得標排行榜 TOP10</div>
-                <div class="cb-top10-grid">
-                    <div class="cb-top10-btn ${AUCTION_TOP10==='guar_low'?'active':''}" onclick="setAuctionTop10('guar_low')">
-                        <div class="top10-icon">🥇</div>
-                        <div class="top10-label">有擔保<br>最低得標</div>
+                <div class="cb-stats-row">
+                    <div class="cb-stats-left">
+                        <div class="cb-section-title">📈 統計數據</div>
+                        <div class="cb-stats-grid">
+                            <div class="cb-stat-item"><div class="cb-stat-num">${displayCnt}</div><div class="cb-stat-label">${hasFilter ? '符合條件' : '競拍總數'}</div></div>
+                            <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgHigh, 1)}</div><div class="cb-stat-label">平均高點</div></div>
+                            <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgLow, 1)}</div><div class="cb-stat-label">平均低點</div></div>
+                            <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgLowestBid, 1)}</div><div class="cb-stat-label">平均最低得標</div></div>
+                            <div class="cb-stat-item"><div class="cb-stat-num">${fmtNum(avgMultiple, 1)}x</div><div class="cb-stat-label">平均投標倍數</div></div>
+                            <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '有擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '有擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['有擔保'] : auctionGuar['有擔保']}</div><div class="cb-stat-label">有擔保</div></div>
+                            <div class="cb-stat-item clickable ${CB_FILTER.guarantee === '無擔保' ? 'active' : ''}" onclick="setCbFilter('guarantee', '無擔保')"><div class="cb-stat-num">${hasFilter ? fGuar['無擔保'] : auctionGuar['無擔保']}</div><div class="cb-stat-label">無擔保</div></div>
+                        </div>
                     </div>
-                    <div class="cb-top10-btn ${AUCTION_TOP10==='no_guar_low'?'active':''}" onclick="setAuctionTop10('no_guar_low')">
-                        <div class="top10-icon">🥈</div>
-                        <div class="top10-label">無擔保<br>最低得標</div>
-                    </div>
-                    <div class="cb-top10-btn ${AUCTION_TOP10==='guar_avg'?'active':''}" onclick="setAuctionTop10('guar_avg')">
-                        <div class="top10-icon">🏅</div>
-                        <div class="top10-label">有擔保<br>平均得標</div>
-                    </div>
-                    <div class="cb-top10-btn ${AUCTION_TOP10==='no_guar_avg'?'active':''}" onclick="setAuctionTop10('no_guar_avg')">
-                        <div class="top10-icon">🎖️</div>
-                        <div class="top10-label">無擔保<br>平均得標</div>
+                    <div class="cb-stats-right">
+                        <div class="cb-section-title">🏆 得標排行榜 TOP10</div>
+                        <div class="cb-top10-btns">
+                            <div class="cb-top10-btn-line ${AUCTION_TOP10==='guar_low'?'active':''}" onclick="setAuctionTop10('guar_low')"><span class="top10-icon">🥇</span>有擔保最低得標</div>
+                            <div class="cb-top10-btn-line ${AUCTION_TOP10==='no_guar_low'?'active':''}" onclick="setAuctionTop10('no_guar_low')"><span class="top10-icon">🥈</span>無擔保最低得標</div>
+                            <div class="cb-top10-btn-line ${AUCTION_TOP10==='guar_avg'?'active':''}" onclick="setAuctionTop10('guar_avg')"><span class="top10-icon">🏅</span>有擔保平均得標</div>
+                            <div class="cb-top10-btn-line ${AUCTION_TOP10==='no_guar_avg'?'active':''}" onclick="setAuctionTop10('no_guar_avg')"><span class="top10-icon">🎖️</span>無擔保平均得標</div>
+                        </div>
                     </div>
                 </div>
                 ${renderAuctionTop10()}
