@@ -333,7 +333,7 @@
 <div id="memoStatsArea" style="display:none"></div>
 
 <div class="result-bar">
-    <div style="font-size:12px;color:#666;">找到 <b id="resCount" style="color:var(--primary)">0</b> 筆資料</div>
+    <div style="font-size:15px;color:#333;font-weight:600;">找到 <b id="resCount" style="color:var(--primary);font-size:18px;">0</b> 筆資料 <span id="filterHint" style="font-size:13px;color:#e65100;margin-left:8px;"></span></div>
 </div>
 <div class="card-list" id="list"></div>
 ```
@@ -1734,7 +1734,7 @@ function renderCBStats() {
         return `
             <div class="cb-ind-title">${title}</div>
             <div class="cb-ind-grid">
-                ${indList.slice(0, 20).map(([ind, cnt]) => `
+                ${indList.map(([ind, cnt]) => `
                     <span class="cb-ind-tag ${CB_FILTER.industry === ind ? 'active' : ''}" onclick="setCbFilter('industry', '${ind}')">${ind}<span class="num">${cnt}</span></span>
                 `).join('')}
             </div>
@@ -2228,6 +2228,16 @@ function renderList() {
     });
     
     $('resCount').innerText = filtered.length;
+    
+    // 更新篩選條件提示
+    let filterHintText = '';
+    if(CURR_DB === 'cb' && (CB_FILTER.industry || CB_FILTER.guarantee)) {
+        const parts = [];
+        if(CB_FILTER.industry) parts.push(`產業：${CB_FILTER.industry}`);
+        if(CB_FILTER.guarantee) parts.push(`擔保：${CB_FILTER.guarantee}`);
+        filterHintText = `｜篩選：${parts.join('、')}`;
+    }
+    $('filterHint').innerHTML = filterHintText;
 
     let html = '';
     
