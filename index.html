@@ -465,6 +465,7 @@ let CB_MODE = 'info'; // 'info' 基本資料, 'active' 掛牌中, 'history' 歷�
 let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'putback' 賣回條件, 'convert' 轉換分析
 let PRIMARY_MODE = 'underwriting'; // 'underwriting' 承銷中, 'auction' 近期競拍, 'board' 董事會公告
 let AUCTION_TOP10 = ''; // 競拍TOP10選擇: 'guar_low' 有擔保最低, 'no_guar_low' 無擔保最低, 'guar_avg' 有擔保平均, 'no_guar_avg' 無擔保平均
+let AUCTION_DETAIL_CB = ''; // 得標分析選擇的CB代號
 let AUCTION_DETAIL_DATA = []; // 競拍明細原始資料
 let AUCTION_DETAIL_SORT = { field: 'seq', dir: 'asc' }; // 競拍明細排序狀態
 let STOCK_MODE = 'all'; // 'all' 全部個股, 'concept' 概念股
@@ -2846,6 +2847,173 @@ function setAuctionTop10(type) {
     renderList();
 }
 
+// 設定得標分析選擇的CB
+function setAuctionDetailCb(cbCode) {
+    AUCTION_DETAIL_CB = AUCTION_DETAIL_CB === cbCode ? '' : cbCode; // 點擊相同的則取消
+    renderList();
+}
+
+// 渲染得標分析區塊
+function renderAuctionDetailAnalysis() {
+    // 取得有得標明細的CB列表
+    const cbCodes = Object.keys(DB.auctionDetail);
+    if(cbCodes.length === 0) return '';
+    
+    // 建立CB選擇按鈕（最多顯示20個最新的）
+    const recentCbs = cbCodes.slice(-20).reverse();
+    const cbBtnsHtml = recentCbs.map(code => {
+        const detail = DB.auctionDetail[code];
+        const name = detail.basic['標的名稱'] || code;
+        const shortName = name.length > 6 ? name.substring(0, 6) : name;
+        return `<div class="cb-top10-btn-line ${AUCTION_DETAIL_CB === code ? 'active' : ''}" onclick="setAuctionDetailCb('${code}')" style="font-size:12px;padding:6px 10px">
+            <span style="color:#e65100;font-weight:700">${code}</span>
+            <span style="color:#666;margin-left:4px">${shortName}</span>
+        </div>`;
+    }).join('');
+    
+    // 如果沒有選擇CB，只顯示按鈕列表
+    if(!AUCTION_DETAIL_CB || !DB.auctionDetail[AUCTION_DETAIL_CB]) {
+        return `
+            <div class="cb-section-title">📊 得標分析</div>
+            <div style="background:#fff8e1;padding:10px;border-radius:8px;margin-bottom:10px;font-size:12px;color:#f57c00">
+                💡 點選下方CB查看詳細得標明細分析（共 ${cbCodes.length} 檔資料）
+            </div>
+            <div class="cb-top10-btns" style="max-height:200px;overflow-y:auto">${cbBtnsHtml}</div>
+        `;
+    }
+    
+    // 顯示選擇的CB得標分析
+    const data = DB.auctionDetail[AUCTION_DETAIL_CB];
+    const { basic, price, cost, stats, corpStats, top10, intervals, details } = data;
+    const cbAuction = DB.cbAuction.find(a => a._cbCode === AUCTION_DETAIL_CB) || {};
+    
+    // 計算籌碼集中度
+    const totalQty = stats['得標數量'] || 0;
+    const over30 = details.filter(d => d.qty >= 30);
+    const over100 = details.filter(d => d.qty >= 100);
+    const over30Qty = over30.reduce((s, d) => s + d.qty, 0);
+    const over100Qty = over100.reduce((s, d) => s + d.qty, 0);
+    const over30Ratio = totalQty > 0 ? (over30Qty / totalQty * 100) : 0;
+    const over100Ratio = totalQty > 0 ? (over100Qty / totalQty * 100) : 0;
+    
+    // 從cbAuction取得掛牌行情
+    const listHigh = parseFloat(cbAuction._high) || 0;
+    const listLow = parseFloat(cbAuction._low) || 0;
+    const lowBid = price['最低得標'] || 0;
+    const avgBid = price['加權平均'] || 0;
+    const lowVsListLow = listLow > 0 && lowBid > 0 ? (listLow - lowBid) : null;
+    
+    // 前五大得標
+    const top5Html = top10.slice(0, 5).map((t, idx) => `
+        <tr style="background:${idx % 2 === 0 ? '#fff' : '#fff8f0'}">
+            <td style="padding:6px;text-align:center;font-weight:700;color:#e65100">${t.rank}</td>
+            <td style="padding:6px;text-align:right;font-weight:700">${fmtNum(t.qty, 0)}</td>
+            <td style="padding:6px;text-align:right">${fmtNum(t.price, 2)}</td>
+            <td style="padding:6px;text-align:right">${fmtNum(t.cost, 2)}</td>
+        </tr>
+    `).join('');
+    
+    // 區間分析（只取主要區間）
+    const mainIntervals = intervals.filter(inv => inv.ratio > 0.05);
+    const intervalHtml = mainIntervals.map((inv, idx) => `
+        <tr style="background:${inv.interval.includes('大於100') ? '#fff3e0' : (idx % 2 === 0 ? '#fff' : '#fafafa')}">
+            <td style="padding:6px;font-weight:${inv.interval.includes('大於') ? '700' : '500'}">${inv.interval}</td>
+            <td style="padding:6px;text-align:right">${fmtNum(inv.count, 0)}</td>
+            <td style="padding:6px;text-align:right;font-weight:600">${fmtNum(inv.qty, 0)}</td>
+            <td style="padding:6px;text-align:right;color:#e65100;font-weight:700">${fmtNum(inv.ratio * 100, 1)}%</td>
+        </tr>
+    `).join('');
+    
+    return `
+        <div class="cb-section-title">📊 得標分析</div>
+        <div class="cb-top10-btns" style="max-height:120px;overflow-y:auto;margin-bottom:15px">${cbBtnsHtml}</div>
+        
+        <div style="background:linear-gradient(135deg, #e65100 0%, #ff8f00 100%);color:#fff;padding:15px;border-radius:10px;margin-bottom:15px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                    <div style="font-size:20px;font-weight:800">${AUCTION_DETAIL_CB}</div>
+                    <div style="font-size:13px;opacity:0.9">${basic['標的名稱'] || ''}</div>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:12px;opacity:0.8">開標日期</div>
+                    <div style="font-size:14px;font-weight:600">${basic['開標日期'] || '-'}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin-bottom:15px">
+            <div style="background:#fff;padding:12px;border-radius:8px;text-align:center;border:1px solid #e0e0e0">
+                <div style="font-size:18px;font-weight:700;color:#c62828">${fmtNum(lowBid, 2)}</div>
+                <div style="font-size:11px;color:#888">最低得標</div>
+            </div>
+            <div style="background:#fff;padding:12px;border-radius:8px;text-align:center;border:1px solid #e0e0e0">
+                <div style="font-size:18px;font-weight:700">${fmtNum(avgBid, 2)}</div>
+                <div style="font-size:11px;color:#888">加權平均</div>
+            </div>
+            <div style="background:#fff;padding:12px;border-radius:8px;text-align:center;border:1px solid #e0e0e0">
+                <div style="font-size:18px;font-weight:700;color:#c62828">${listHigh > 0 ? fmtNum(listHigh, 2) : '-'}</div>
+                <div style="font-size:11px;color:#888">掛牌最高</div>
+            </div>
+            <div style="background:#fff;padding:12px;border-radius:8px;text-align:center;border:1px solid #e0e0e0">
+                <div style="font-size:18px;font-weight:700;color:${lowVsListLow !== null ? (lowVsListLow >= 0 ? '#c62828' : '#2e7d32') : '#333'}">${lowVsListLow !== null ? (lowVsListLow >= 0 ? '+' : '') + fmtNum(lowVsListLow, 2) : '-'}</div>
+                <div style="font-size:11px;color:#888">最低vs掛牌低</div>
+            </div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin-bottom:15px">
+            <div style="background:#e3f2fd;padding:10px;border-radius:8px;text-align:center">
+                <div style="font-size:16px;font-weight:700;color:#1565c0">${fmtNum(stats['投標得標倍數'], 2)}x</div>
+                <div style="font-size:10px;color:#666">投標倍數</div>
+            </div>
+            <div style="background:#e8f5e9;padding:10px;border-radius:8px;text-align:center">
+                <div style="font-size:16px;font-weight:700;color:#2e7d32">${fmtNum(stats['得標筆數'], 0)}</div>
+                <div style="font-size:10px;color:#666">得標筆數</div>
+            </div>
+            <div style="background:#fff3e0;padding:10px;border-radius:8px;text-align:center">
+                <div style="font-size:16px;font-weight:700;color:#e65100">${fmtNum(over30Ratio, 1)}%</div>
+                <div style="font-size:10px;color:#666">30張↑佔比</div>
+            </div>
+            <div style="background:#ffebee;padding:10px;border-radius:8px;text-align:center">
+                <div style="font-size:16px;font-weight:700;color:#c62828">${fmtNum(over100Ratio, 1)}%</div>
+                <div style="font-size:10px;color:#666">100張↑佔比</div>
+            </div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:#fff;border-radius:8px;border:1px solid #e0e0e0;overflow:hidden">
+                <div style="background:#f5f5f5;padding:8px 10px;font-size:12px;font-weight:700;color:#333">🏆 前五大得標</div>
+                <table style="width:100%;border-collapse:collapse;font-size:11px">
+                    <thead><tr style="background:#fafafa">
+                        <th style="padding:6px;text-align:center">名次</th>
+                        <th style="padding:6px;text-align:right">數量</th>
+                        <th style="padding:6px;text-align:right">價格</th>
+                        <th style="padding:6px;text-align:right">換股成本</th>
+                    </tr></thead>
+                    <tbody>${top5Html}</tbody>
+                </table>
+            </div>
+            <div style="background:#fff;border-radius:8px;border:1px solid #e0e0e0;overflow:hidden">
+                <div style="background:#f5f5f5;padding:8px 10px;font-size:12px;font-weight:700;color:#333">📊 主要得標區間</div>
+                <table style="width:100%;border-collapse:collapse;font-size:11px">
+                    <thead><tr style="background:#fafafa">
+                        <th style="padding:6px;text-align:left">區間</th>
+                        <th style="padding:6px;text-align:right">筆數</th>
+                        <th style="padding:6px;text-align:right">數量</th>
+                        <th style="padding:6px;text-align:right">佔比</th>
+                    </tr></thead>
+                    <tbody>${intervalHtml}</tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div style="text-align:center;margin-top:12px">
+            <button onclick="openCbInfo('${AUCTION_DETAIL_CB}')" style="background:#e65100;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+                🔍 查看完整競拍明細
+            </button>
+        </div>
+    `;
+}
+
 // 競拍明細排序函數
 function sortAuctionDetail(field) {
     // 切換排序方向
@@ -3172,6 +3340,7 @@ function renderCBStats() {
                     <div class="cb-top10-btn-line ${AUCTION_TOP10==='anti_drop'?'active':''}" onclick="setAuctionTop10('anti_drop')"><span class="top10-icon">🛡️</span>強勢抗跌標的</div>
                 </div>
                 ${renderAuctionTop10()}
+                ${renderAuctionDetailAnalysis()}
                 ${renderIndustryTags(sortedAuctionInd, '📊 各產業競拍CB分佈')}
             </div>
         `;
