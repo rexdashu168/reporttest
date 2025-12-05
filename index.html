@@ -1513,7 +1513,7 @@ async function init() {
             if(!sheet) return;
             
             const rows = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ''});
-            if(rows.length < 60) return; // 資料不足
+            if(rows.length < 50) return; // 資料不足
             
             const cbCode = sheetName.trim();
             const detail = {
@@ -1521,87 +1521,136 @@ async function init() {
                 price: {},
                 cost: {},
                 stats: {},
+                corpStats: null, // 法人統計（可能沒有）
                 top10: [],
                 intervals: [],
                 details: []
             };
             
+            // 找到各區段的起始行號
+            let priceRow = -1, costRow = -1, statsRow = -1, corpRow = -1, top10Row = -1, intervalRow = -1, detailRow = -1;
+            for(let i = 0; i < rows.length; i++) {
+                const label = String(rows[i]?.[0] || '').trim();
+                if(label === '【得標價格】') priceRow = i;
+                else if(label === '【換股成本分析】') costRow = i;
+                else if(label === '【投標得標統計】') statsRow = i;
+                else if(label === '【法人投標統計】') corpRow = i;
+                else if(label === '【前十大得標量】') top10Row = i;
+                else if(label === '【得標區間分析】') intervalRow = i;
+                else if(label === '【得標明細】') detailRow = i;
+            }
+            
             // 解析基本資料 (Row 0-9)
             for(let i = 0; i <= 9; i++) {
                 const label = String(rows[i]?.[0] || '').trim();
                 const value = rows[i]?.[1];
-                if(label && value !== undefined && value !== '') {
+                if(label && value !== undefined && value !== '' && !label.startsWith('【')) {
                     detail.basic[label] = value;
                 }
             }
             
-            // 解析得標價格 (Row 12-14)
-            detail.price = {
-                '最低得標': parseFloat(rows[12]?.[1]) || 0,
-                '最高得標': parseFloat(rows[13]?.[1]) || 0,
-                '加權平均': parseFloat(rows[14]?.[1]) || 0
-            };
-            
-            // 解析換股成本分析 (Row 17-21)
-            detail.cost = {
-                '最低換股成本': parseFloat(rows[17]?.[1]) || 0,
-                '最高換股成本': parseFloat(rows[18]?.[1]) || 0,
-                '平均換股成本': parseFloat(rows[19]?.[1]) || 0,
-                '換股溢價率': parseFloat(rows[20]?.[1]) || 0
-            };
-            
-            // 解析投標得標統計 (Row 24-31)
-            detail.stats = {
-                '合格投標筆數': parseFloat(rows[24]?.[1]) || 0,
-                '投標數量': parseFloat(rows[25]?.[1]) || 0,
-                '投標均張': parseFloat(rows[26]?.[1]) || 0,
-                '得標筆數': parseFloat(rows[27]?.[1]) || 0,
-                '得標數量': parseFloat(rows[28]?.[1]) || 0,
-                '得標均張': parseFloat(rows[29]?.[1]) || 0,
-                '得標總金額': parseFloat(rows[30]?.[1]) || 0,
-                '投標得標倍數': parseFloat(rows[31]?.[1]) || 0
-            };
-            
-            // 解析前十大得標量 (Row 36-45)
-            for(let i = 36; i <= 45; i++) {
-                const rank = rows[i]?.[0];
-                const qty = parseFloat(rows[i]?.[1]) || 0;
-                const price = parseFloat(rows[i]?.[2]) || 0;
-                const amount = parseFloat(rows[i]?.[3]) || 0;
-                const cost = parseFloat(rows[i]?.[4]) || 0;
-                if(rank && qty > 0) {
-                    detail.top10.push({ rank, qty, price, amount, cost });
+            // 解析得標價格
+            if(priceRow >= 0) {
+                for(let i = priceRow + 1; i < priceRow + 5; i++) {
+                    const label = String(rows[i]?.[0] || '').trim();
+                    const value = parseFloat(rows[i]?.[1]) || 0;
+                    if(label === '最低得標') detail.price['最低得標'] = value;
+                    else if(label === '最高得標') detail.price['最高得標'] = value;
+                    else if(label === '加權平均') detail.price['加權平均'] = value;
                 }
             }
             
-            // 解析得標區間分析 (Row 50-55)
-            for(let i = 50; i <= 55; i++) {
-                const interval = String(rows[i]?.[0] || '').trim();
-                const count = parseFloat(rows[i]?.[1]) || 0;
-                const qty = parseFloat(rows[i]?.[2]) || 0;
-                const amount = parseFloat(rows[i]?.[3]) || 0;
-                const avgPrice = parseFloat(rows[i]?.[4]) || 0;
-                const avgCost = parseFloat(rows[i]?.[5]) || 0;
-                const ratio = parseFloat(rows[i]?.[6]) || 0;
-                if(interval && interval !== '張數區間') {
-                    detail.intervals.push({ interval, count, qty, amount, avgPrice, avgCost, ratio });
+            // 解析換股成本分析
+            if(costRow >= 0) {
+                for(let i = costRow + 1; i < costRow + 6; i++) {
+                    const label = String(rows[i]?.[0] || '').trim();
+                    const value = parseFloat(rows[i]?.[1]) || 0;
+                    if(label === '最低換股成本') detail.cost['最低換股成本'] = value;
+                    else if(label === '最高換股成本') detail.cost['最高換股成本'] = value;
+                    else if(label === '平均換股成本') detail.cost['平均換股成本'] = value;
+                    else if(label === '換股溢價率%') detail.cost['換股溢價率'] = value;
                 }
             }
             
-            // 解析得標明細 (Row 60+)
-            for(let i = 60; i < rows.length; i++) {
-                const seq = rows[i]?.[0];
-                const price = parseFloat(rows[i]?.[1]) || 0;
-                const qty = parseFloat(rows[i]?.[2]) || 0;
-                const amount = parseFloat(rows[i]?.[3]) || 0;
-                const cost = parseFloat(rows[i]?.[4]) || 0;
-                const intervalType = String(rows[i]?.[5] || '').trim();
-                const tail = rows[i]?.[6];
-                const cumQty = parseFloat(rows[i]?.[7]) || 0;
-                const cumRatio = parseFloat(rows[i]?.[8]) || 0;
-                
-                if(seq && price > 0 && qty > 0) {
-                    detail.details.push({ seq, price, qty, amount, cost, intervalType, tail, cumQty, cumRatio });
+            // 解析投標得標統計
+            if(statsRow >= 0) {
+                for(let i = statsRow + 1; i < statsRow + 10; i++) {
+                    const label = String(rows[i]?.[0] || '').trim();
+                    const value = parseFloat(rows[i]?.[1]) || 0;
+                    if(label === '合格投標筆數') detail.stats['合格投標筆數'] = value;
+                    else if(label === '投標數量') detail.stats['投標數量'] = value;
+                    else if(label === '投標均張') detail.stats['投標均張'] = value;
+                    else if(label === '得標筆數') detail.stats['得標筆數'] = value;
+                    else if(label === '得標數量') detail.stats['得標數量'] = value;
+                    else if(label === '得標均張') detail.stats['得標均張'] = value;
+                    else if(label === '得標總金額') detail.stats['得標總金額'] = value;
+                    else if(label === '投標得標倍數') detail.stats['投標得標倍數'] = value;
+                    if(label.startsWith('【')) break; // 遇到下一區段就停止
+                }
+            }
+            
+            // 解析法人投標統計（可能沒有）
+            if(corpRow >= 0) {
+                detail.corpStats = {};
+                for(let i = corpRow + 1; i < corpRow + 6; i++) {
+                    const label = String(rows[i]?.[0] || '').trim();
+                    const value = parseFloat(rows[i]?.[1]) || 0;
+                    if(label === '法人投標筆數') detail.corpStats['法人投標筆數'] = value;
+                    else if(label === '法人投標數量') detail.corpStats['法人投標數量'] = value;
+                    else if(label === '法人得標筆數') detail.corpStats['法人得標筆數'] = value;
+                    else if(label === '法人得標數量') detail.corpStats['法人得標數量'] = value;
+                    if(label.startsWith('【')) break;
+                }
+            }
+            
+            // 解析前十大得標量
+            if(top10Row >= 0) {
+                for(let i = top10Row + 2; i < top10Row + 13; i++) { // +2跳過標題行
+                    const rank = rows[i]?.[0];
+                    const qty = parseFloat(rows[i]?.[1]) || 0;
+                    const price = parseFloat(rows[i]?.[2]) || 0;
+                    const amount = parseFloat(rows[i]?.[3]) || 0;
+                    const cost = parseFloat(rows[i]?.[4]) || 0;
+                    // 只取數字排名1-10，排除空行和其他標題
+                    if(rank && !isNaN(parseInt(rank)) && parseInt(rank) >= 1 && parseInt(rank) <= 10 && qty > 0) {
+                        detail.top10.push({ rank: parseInt(rank), qty, price, amount, cost });
+                    }
+                }
+            }
+            
+            // 解析得標區間分析
+            if(intervalRow >= 0) {
+                for(let i = intervalRow + 2; i < intervalRow + 10; i++) { // +2跳過標題行
+                    const interval = String(rows[i]?.[0] || '').trim();
+                    const count = parseFloat(rows[i]?.[1]) || 0;
+                    const qty = parseFloat(rows[i]?.[2]) || 0;
+                    const amount = parseFloat(rows[i]?.[3]) || 0;
+                    const avgPrice = parseFloat(rows[i]?.[4]) || 0;
+                    const avgCost = parseFloat(rows[i]?.[5]) || 0;
+                    const ratio = parseFloat(rows[i]?.[6]) || 0;
+                    // 只取有效的區間資料，排除標題和總計
+                    if(interval && interval.match(/^\d\./) && qty > 0) {
+                        detail.intervals.push({ interval, count, qty, amount, avgPrice, avgCost, ratio });
+                    }
+                }
+            }
+            
+            // 解析得標明細
+            if(detailRow >= 0) {
+                for(let i = detailRow + 2; i < rows.length; i++) { // +2跳過標題行
+                    const seq = rows[i]?.[0];
+                    const price = parseFloat(rows[i]?.[1]) || 0;
+                    const qty = parseFloat(rows[i]?.[2]) || 0;
+                    const amount = parseFloat(rows[i]?.[3]) || 0;
+                    const cost = parseFloat(rows[i]?.[4]) || 0;
+                    const intervalType = String(rows[i]?.[5] || '').trim();
+                    const tail = rows[i]?.[6];
+                    const cumQty = parseFloat(rows[i]?.[7]) || 0;
+                    const cumRatio = parseFloat(rows[i]?.[8]) || 0;
+                    
+                    if(seq && !isNaN(parseInt(seq)) && price > 0 && qty > 0) {
+                        detail.details.push({ seq: parseInt(seq), price, qty, amount, cost, intervalType, tail, cumQty, cumRatio });
+                    }
                 }
             }
             
@@ -5122,7 +5171,7 @@ window.openCbInfo = cbCode => {
     let tAuction = '';
     
     if(auctionData) {
-        const { basic, price, cost, stats, top10, intervals, details } = auctionData;
+        const { basic, price, cost, stats, corpStats, top10, intervals, details } = auctionData;
         
         // 計算30張以上和100張以上的籌碼集中度
         const over30 = details.filter(d => d.qty >= 30);
@@ -5133,110 +5182,143 @@ window.openCbInfo = cbCode => {
         const over30Ratio = totalQty > 0 ? (over30Qty / totalQty * 100) : 0;
         const over100Ratio = totalQty > 0 ? (over100Qty / totalQty * 100) : 0;
         
+        // 法人統計區塊（如果有的話）
+        const corpHtml = corpStats ? `
+            <div class="modal-info-block" style="background:linear-gradient(135deg, #fce4ec 0%, #fff 100%);margin-top:15px">
+                <div class="title" style="color:#c2185b">🏛️ 法人投標統計</div>
+                <div class="modal-card-grid" style="grid-template-columns:repeat(2, 1fr)">
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700">${fmtNum(corpStats['法人投標筆數'], 0)}</div>
+                        <div class="lbl" style="font-weight:500">法人投標筆數</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700">${fmtNum(corpStats['法人投標數量'], 0)}</div>
+                        <div class="lbl" style="font-weight:500">法人投標數量</div>
+                    </div>
+                </div>
+                <div class="modal-card-grid" style="grid-template-columns:repeat(2, 1fr);margin-top:10px">
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700;color:#c2185b">${fmtNum(corpStats['法人得標筆數'], 0)}</div>
+                        <div class="lbl" style="font-weight:500">法人得標筆數</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700;color:#c2185b">${fmtNum(corpStats['法人得標數量'], 0)}</div>
+                        <div class="lbl" style="font-weight:500">法人得標數量</div>
+                    </div>
+                </div>
+                ${totalQty > 0 && corpStats['法人得標數量'] ? `
+                <div style="text-align:center;margin-top:10px;padding:8px;background:#fce4ec;border-radius:8px">
+                    <span style="font-size:13px;color:#c2185b;font-weight:600">法人佔比：${fmtNum(corpStats['法人得標數量'] / totalQty * 100, 1)}%</span>
+                </div>` : ''}
+            </div>
+        ` : '';
+        
         tAuction = `
             <div class="modal-info-block" style="background:linear-gradient(135deg, #e65100 0%, #ff8f00 100%);color:#fff;padding:20px;border-radius:12px">
                 <div style="text-align:center">
-                    <div style="font-size:14px;opacity:0.8">${basic['標的名稱'] || cb._name}</div>
+                    <div style="font-size:14px;opacity:0.9;font-weight:500">${basic['標的名稱'] || cb._name}</div>
                     <div style="font-size:24px;font-weight:800;margin:5px 0">🔨 競拍明細分析</div>
-                    <div style="font-size:13px;opacity:0.8">開標日期：${basic['開標日期'] || '-'} ｜ 主辦：${basic['主辦承銷商'] || '-'}</div>
+                    <div style="font-size:13px;opacity:0.9;font-weight:500">開標日期：${basic['開標日期'] || '-'} ｜ 主辦：${basic['主辦承銷商'] || '-'}</div>
                 </div>
             </div>
             
             <div class="modal-info-block" style="margin-top:15px">
-                <div class="title">📊 得標價格與換股成本</div>
+                <div class="title" style="font-weight:700">📊 得標價格與換股成本</div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr)">
                     <div class="modal-card">
-                        <div class="val" style="color:#27ae60">${fmtNum(price['最低得標'], 2)}</div>
-                        <div class="lbl">最低得標</div>
+                        <div class="val" style="color:#27ae60;font-weight:700">${fmtNum(price['最低得標'], 2)}</div>
+                        <div class="lbl" style="font-weight:500">最低得標</div>
                     </div>
                     <div class="modal-card highlight">
-                        <div class="val">${fmtNum(price['加權平均'], 2)}</div>
-                        <div class="lbl">加權平均</div>
+                        <div class="val" style="font-weight:700">${fmtNum(price['加權平均'], 2)}</div>
+                        <div class="lbl" style="font-weight:500">加權平均</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val" style="color:#e74c3c">${fmtNum(price['最高得標'], 2)}</div>
-                        <div class="lbl">最高得標</div>
+                        <div class="val" style="color:#e74c3c;font-weight:700">${fmtNum(price['最高得標'], 2)}</div>
+                        <div class="lbl" style="font-weight:500">最高得標</div>
                     </div>
                 </div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr);margin-top:10px">
                     <div class="modal-card">
-                        <div class="val" style="color:#27ae60">${fmtNum(cost['最低換股成本'], 2)}</div>
-                        <div class="lbl">最低換股成本</div>
+                        <div class="val" style="color:#27ae60;font-weight:700">${fmtNum(cost['最低換股成本'], 2)}</div>
+                        <div class="lbl" style="font-weight:500">最低換股成本</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val">${fmtNum(cost['平均換股成本'], 2)}</div>
-                        <div class="lbl">平均換股成本</div>
+                        <div class="val" style="font-weight:700">${fmtNum(cost['平均換股成本'], 2)}</div>
+                        <div class="lbl" style="font-weight:500">平均換股成本</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val" style="color:#e74c3c">${fmtNum(cost['最高換股成本'], 2)}</div>
-                        <div class="lbl">最高換股成本</div>
+                        <div class="val" style="color:#e74c3c;font-weight:700">${fmtNum(cost['最高換股成本'], 2)}</div>
+                        <div class="lbl" style="font-weight:500">最高換股成本</div>
                     </div>
                 </div>
                 <div style="text-align:center;margin-top:10px;padding:8px;background:#fff3e0;border-radius:8px">
-                    <span style="font-size:13px;color:#e65100">換股溢價率：<b>${fmtNum(cost['換股溢價率'], 2)}%</b></span>
+                    <span style="font-size:13px;color:#e65100;font-weight:600">換股溢價率：${fmtNum(cost['換股溢價率'], 2)}%</span>
                 </div>
             </div>
             
             <div class="modal-info-block" style="background:linear-gradient(135deg, #e3f2fd 0%, #fff 100%);margin-top:15px">
-                <div class="title" style="color:#1565c0">📈 投標得標統計</div>
+                <div class="title" style="color:#1565c0;font-weight:700">📈 投標得標統計</div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr)">
                     <div class="modal-card">
-                        <div class="val">${fmtNum(stats['合格投標筆數'], 0)}</div>
-                        <div class="lbl">投標筆數</div>
+                        <div class="val" style="font-weight:700">${fmtNum(stats['合格投標筆數'], 0)}</div>
+                        <div class="lbl" style="font-weight:500">投標筆數</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val">${fmtNum(stats['得標筆數'], 0)}</div>
-                        <div class="lbl">得標筆數</div>
+                        <div class="val" style="font-weight:700">${fmtNum(stats['得標筆數'], 0)}</div>
+                        <div class="lbl" style="font-weight:500">得標筆數</div>
                     </div>
                     <div class="modal-card highlight">
-                        <div class="val" style="color:#e65100">${fmtNum(stats['投標得標倍數'], 2)}x</div>
-                        <div class="lbl">投標倍數</div>
+                        <div class="val" style="color:#e65100;font-weight:700">${fmtNum(stats['投標得標倍數'], 2)}x</div>
+                        <div class="lbl" style="font-weight:500">投標倍數</div>
                     </div>
                 </div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr);margin-top:10px">
                     <div class="modal-card">
-                        <div class="val">${fmtNum(stats['投標數量'], 0)}</div>
-                        <div class="lbl">投標張數</div>
+                        <div class="val" style="font-weight:700">${fmtNum(stats['投標數量'], 0)}</div>
+                        <div class="lbl" style="font-weight:500">投標張數</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val">${fmtNum(stats['得標數量'], 0)}</div>
-                        <div class="lbl">得標張數</div>
+                        <div class="val" style="font-weight:700">${fmtNum(stats['得標數量'], 0)}</div>
+                        <div class="lbl" style="font-weight:500">得標張數</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val">${fmtNum(stats['得標均張'], 1)}</div>
-                        <div class="lbl">得標均張</div>
+                        <div class="val" style="font-weight:700">${fmtNum(stats['得標均張'], 1)}</div>
+                        <div class="lbl" style="font-weight:500">得標均張</div>
                     </div>
                 </div>
             </div>
             
+            ${corpHtml}
+            
             <div class="modal-info-block" style="background:linear-gradient(135deg, #fff8e1 0%, #fff 100%);margin-top:15px">
-                <div class="title" style="color:#f57c00">🎯 主力籌碼集中度</div>
+                <div class="title" style="color:#f57c00;font-weight:700">🎯 主力籌碼集中度</div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(2, 1fr)">
                     <div class="modal-card" style="background:${over30Ratio >= 50 ? '#fff3e0' : '#fff'}">
-                        <div class="val" style="color:${over30Ratio >= 50 ? '#e65100' : '#333'}">${fmtNum(over30Ratio, 1)}%</div>
-                        <div class="lbl">30張以上佔比</div>
-                        <div style="font-size:11px;color:#888;margin-top:4px">${over30.length}筆 / ${fmtNum(over30Qty, 0)}張</div>
+                        <div class="val" style="color:${over30Ratio >= 50 ? '#e65100' : '#333'};font-weight:700">${fmtNum(over30Ratio, 1)}%</div>
+                        <div class="lbl" style="font-weight:500">30張以上佔比</div>
+                        <div style="font-size:11px;color:#666;margin-top:4px;font-weight:500">${over30.length}筆 / ${fmtNum(over30Qty, 0)}張</div>
                     </div>
                     <div class="modal-card" style="background:${over100Ratio >= 30 ? '#ffebee' : '#fff'}">
-                        <div class="val" style="color:${over100Ratio >= 30 ? '#c62828' : '#333'}">${fmtNum(over100Ratio, 1)}%</div>
-                        <div class="lbl">100張以上佔比</div>
-                        <div style="font-size:11px;color:#888;margin-top:4px">${over100.length}筆 / ${fmtNum(over100Qty, 0)}張</div>
+                        <div class="val" style="color:${over100Ratio >= 30 ? '#c62828' : '#333'};font-weight:700">${fmtNum(over100Ratio, 1)}%</div>
+                        <div class="lbl" style="font-weight:500">100張以上佔比</div>
+                        <div style="font-size:11px;color:#666;margin-top:4px;font-weight:500">${over100.length}筆 / ${fmtNum(over100Qty, 0)}張</div>
                     </div>
                 </div>
             </div>
             
             <div class="modal-info-block" style="margin-top:15px">
-                <div class="title">📊 得標區間分析</div>
+                <div class="title" style="font-weight:700">📊 得標區間分析</div>
                 <div style="overflow-x:auto">
                     <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden">
                         <thead>
                             <tr style="background:#f5f5f5">
-                                <th style="padding:10px 6px;text-align:left;font-weight:600">區間</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:600">筆數</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:600">數量</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:600">均價</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:600">換股成本</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:600">佔比</th>
+                                <th style="padding:10px 6px;text-align:left;font-weight:700">區間</th>
+                                <th style="padding:10px 6px;text-align:right;font-weight:700">筆數</th>
+                                <th style="padding:10px 6px;text-align:right;font-weight:700">數量</th>
+                                <th style="padding:10px 6px;text-align:right;font-weight:700">均價</th>
+                                <th style="padding:10px 6px;text-align:right;font-weight:700">換股成本</th>
+                                <th style="padding:10px 6px;text-align:right;font-weight:700">佔比</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -5244,12 +5326,12 @@ window.openCbInfo = cbCode => {
                                 const isLarge = inv.interval.includes('大於100') || inv.interval.includes('50-100');
                                 const bgColor = inv.interval.includes('大於100') ? '#fff3e0' : (inv.interval.includes('50-100') ? '#fffde7' : (idx % 2 === 0 ? '#fff' : '#fafafa'));
                                 return `<tr style="background:${bgColor}">
-                                    <td style="padding:8px 6px;font-weight:${isLarge ? '600' : '400'}">${inv.interval}</td>
-                                    <td style="padding:8px 6px;text-align:right">${fmtNum(inv.count, 0)}</td>
-                                    <td style="padding:8px 6px;text-align:right;font-weight:${isLarge ? '600' : '400'}">${fmtNum(inv.qty, 0)}</td>
-                                    <td style="padding:8px 6px;text-align:right">${fmtNum(inv.avgPrice, 2)}</td>
-                                    <td style="padding:8px 6px;text-align:right">${fmtNum(inv.avgCost, 2)}</td>
-                                    <td style="padding:8px 6px;text-align:right;color:${isLarge ? '#e65100' : '#333'};font-weight:${isLarge ? '700' : '400'}">${fmtNum(inv.ratio * 100, 1)}%</td>
+                                    <td style="padding:8px 6px;font-weight:${isLarge ? '700' : '500'}">${inv.interval}</td>
+                                    <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(inv.count, 0)}</td>
+                                    <td style="padding:8px 6px;text-align:right;font-weight:${isLarge ? '700' : '500'}">${fmtNum(inv.qty, 0)}</td>
+                                    <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(inv.avgPrice, 2)}</td>
+                                    <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(inv.avgCost, 2)}</td>
+                                    <td style="padding:8px 6px;text-align:right;color:${isLarge ? '#e65100' : '#333'};font-weight:700">${fmtNum(inv.ratio * 100, 1)}%</td>
                                 </tr>`;
                             }).join('')}
                         </tbody>
@@ -5258,25 +5340,25 @@ window.openCbInfo = cbCode => {
             </div>
             
             <div class="modal-info-block" style="margin-top:15px">
-                <div class="title">🏆 前十大得標量</div>
+                <div class="title" style="font-weight:700">🏆 前十大得標量</div>
                 <div style="overflow-x:auto">
                     <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden">
                         <thead>
                             <tr style="background:linear-gradient(90deg, #e65100, #ff8f00);color:#fff">
-                                <th style="padding:10px 6px;text-align:center">排名</th>
-                                <th style="padding:10px 6px;text-align:right">數量</th>
-                                <th style="padding:10px 6px;text-align:right">價格</th>
-                                <th style="padding:10px 6px;text-align:right">金額</th>
-                                <th style="padding:10px 6px;text-align:right">換股成本</th>
+                                <th style="padding:10px 6px;text-align:center;font-weight:700">排名</th>
+                                <th style="padding:10px 6px;text-align:right;font-weight:700">數量</th>
+                                <th style="padding:10px 6px;text-align:right;font-weight:700">價格</th>
+                                <th style="padding:10px 6px;text-align:right;font-weight:700">金額</th>
+                                <th style="padding:10px 6px;text-align:right;font-weight:700">換股成本</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${top10.map((t, idx) => `<tr style="background:${idx % 2 === 0 ? '#fff' : '#fff8f0'}">
                                 <td style="padding:8px 6px;text-align:center;font-weight:700;color:#e65100">${t.rank}</td>
-                                <td style="padding:8px 6px;text-align:right;font-weight:600">${fmtNum(t.qty, 0)}</td>
-                                <td style="padding:8px 6px;text-align:right">${fmtNum(t.price, 2)}</td>
-                                <td style="padding:8px 6px;text-align:right">${fmtNum(t.amount, 0)}</td>
-                                <td style="padding:8px 6px;text-align:right">${fmtNum(t.cost, 2)}</td>
+                                <td style="padding:8px 6px;text-align:right;font-weight:700">${fmtNum(t.qty, 0)}</td>
+                                <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(t.price, 2)}</td>
+                                <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(t.amount, 0)}</td>
+                                <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(t.cost, 2)}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>
@@ -5284,8 +5366,8 @@ window.openCbInfo = cbCode => {
             </div>
             
             <div class="modal-info-block" style="margin-top:15px">
-                <div class="title">📋 完整得標明細 <span style="font-size:12px;color:#888;font-weight:400">(共${details.length}筆)</span></div>
-                <div style="font-size:11px;color:#666;margin-bottom:10px">
+                <div class="title" style="font-weight:700">📋 完整得標明細 <span style="font-size:12px;color:#888;font-weight:500">(共${details.length}筆)</span></div>
+                <div style="font-size:11px;color:#555;margin-bottom:10px;font-weight:500">
                     <span style="display:inline-block;width:12px;height:12px;background:#fff3e0;border:1px solid #ffcc80;border-radius:2px;vertical-align:middle;margin-right:4px"></span>30張以上
                     <span style="display:inline-block;width:12px;height:12px;background:#ffebee;border:1px solid #ef9a9a;border-radius:2px;vertical-align:middle;margin-left:12px;margin-right:4px"></span>100張以上
                 </div>
@@ -5293,19 +5375,19 @@ window.openCbInfo = cbCode => {
                     <table style="width:100%;border-collapse:collapse;font-size:11px;background:#fff;border-radius:8px;overflow:hidden">
                         <thead style="position:sticky;top:0;z-index:1">
                             <tr style="background:#f5f5f5">
-                                <th style="padding:8px 4px;text-align:center;font-weight:600">序</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:600">價格</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:600">數量</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:600">金額</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:600">換股成本</th>
-                                <th style="padding:8px 4px;text-align:left;font-weight:600">區間</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:600">累計佔比</th>
+                                <th style="padding:8px 4px;text-align:center;font-weight:700">序</th>
+                                <th style="padding:8px 4px;text-align:right;font-weight:700">價格</th>
+                                <th style="padding:8px 4px;text-align:right;font-weight:700">數量</th>
+                                <th style="padding:8px 4px;text-align:right;font-weight:700">金額</th>
+                                <th style="padding:8px 4px;text-align:right;font-weight:700">換股成本</th>
+                                <th style="padding:8px 4px;text-align:left;font-weight:700">區間</th>
+                                <th style="padding:8px 4px;text-align:right;font-weight:700">累計佔比</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${details.map((d, idx) => {
                                 let bgColor = idx % 2 === 0 ? '#fff' : '#fafafa';
-                                let fontWeight = '400';
+                                let fontWeight = '500';
                                 if(d.qty >= 100) {
                                     bgColor = '#ffebee';
                                     fontWeight = '700';
@@ -5314,13 +5396,13 @@ window.openCbInfo = cbCode => {
                                     fontWeight = '600';
                                 }
                                 return `<tr style="background:${bgColor}">
-                                    <td style="padding:6px 4px;text-align:center">${d.seq}</td>
-                                    <td style="padding:6px 4px;text-align:right">${fmtNum(d.price, 2)}</td>
+                                    <td style="padding:6px 4px;text-align:center;font-weight:500">${d.seq}</td>
+                                    <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.price, 2)}</td>
                                     <td style="padding:6px 4px;text-align:right;font-weight:${fontWeight};color:${d.qty >= 100 ? '#c62828' : (d.qty >= 30 ? '#e65100' : '#333')}">${fmtNum(d.qty, 0)}</td>
-                                    <td style="padding:6px 4px;text-align:right">${fmtNum(d.amount, 0)}</td>
-                                    <td style="padding:6px 4px;text-align:right">${fmtNum(d.cost, 2)}</td>
-                                    <td style="padding:6px 4px;text-align:left;font-size:10px">${d.intervalType}</td>
-                                    <td style="padding:6px 4px;text-align:right">${fmtNum(d.cumRatio * 100, 1)}%</td>
+                                    <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.amount, 0)}</td>
+                                    <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.cost, 2)}</td>
+                                    <td style="padding:6px 4px;text-align:left;font-size:10px;font-weight:500">${d.intervalType}</td>
+                                    <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.cumRatio * 100, 1)}%</td>
                                 </tr>`;
                             }).join('')}
                         </tbody>
@@ -5332,8 +5414,8 @@ window.openCbInfo = cbCode => {
         tAuction = `
             <div class="modal-info-block" style="background:#f5f5f5;text-align:center;padding:40px">
                 <div style="font-size:48px;margin-bottom:15px">🔨</div>
-                <div style="font-size:16px;font-weight:600;color:#666;margin-bottom:10px">暫無競拍明細資料</div>
-                <div style="font-size:13px;color:#999">
+                <div style="font-size:16px;font-weight:700;color:#666;margin-bottom:10px">暫無競拍明細資料</div>
+                <div style="font-size:13px;color:#999;font-weight:500">
                     此CB目前沒有競拍明細資料，<br>
                     可能尚未納入競拍資料庫或採用詢圈方式發行。
                 </div>
