@@ -3978,7 +3978,8 @@ function renderList() {
                     const stats = detail?.stats || {};
                     const cost = detail?.cost || {};
                     const details = detail?.details || [];
-                    const totalQty = stats['得標數量'] || 0;
+                    // 用明細的總張數作為分母，確保佔比不會超過100%
+                    const totalQty = details.reduce((s, d) => s + (d.qty || 0), 0);
                     const over30Qty = details.filter(d => d.qty >= 30).reduce((s, d) => s + d.qty, 0);
                     const over100Qty = details.filter(d => d.qty >= 100).reduce((s, d) => s + d.qty, 0);
                     const over30Ratio = totalQty > 0 ? (over30Qty / totalQty * 100) : 0;
@@ -5375,7 +5376,8 @@ window.openCbInfo = cbCode => {
         // 計算30張以上和100張以上的籌碼集中度
         const over30 = details.filter(d => d.qty >= 30);
         const over100 = details.filter(d => d.qty >= 100);
-        const totalQty = stats['得標數量'] || 0;
+        // 用明細的總張數作為分母，確保佔比不會超過100%
+        const totalQty = details.reduce((s, d) => s + (d.qty || 0), 0);
         const over30Qty = over30.reduce((s, d) => s + d.qty, 0);
         const over100Qty = over100.reduce((s, d) => s + d.qty, 0);
         const over30Ratio = totalQty > 0 ? (over30Qty / totalQty * 100) : 0;
