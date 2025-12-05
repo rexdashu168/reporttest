@@ -462,7 +462,7 @@ const DB = {
     auctionDetail: {} // 競拍明細資料 { 'CB代號': { basic:{}, stats:{}, top10:[], intervals:[], details:[] } }
 };
 let CB_MODE = 'info'; // 'info' 基本資料, 'active' 掛牌中, 'history' 歷史, 'auction' 競拍, 'primary' 初級市場, 'balance' 流通餘額, 'cbas' CBAS報價
-let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'putback' 賣回條件, 'convert' 轉換分析, 'auction' 得標分析
+let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'putback' 賣回條件, 'convert' 轉換分析
 let PRIMARY_MODE = 'underwriting'; // 'underwriting' 承銷中, 'auction' 近期競拍, 'board' 董事會公告
 let AUCTION_TOP10 = ''; // 競拍TOP10選擇: 'guar_low' 有擔保最低, 'no_guar_low' 無擔保最低, 'guar_avg' 有擔保平均, 'no_guar_avg' 無擔保平均
 let AUCTION_DETAIL_DATA = []; // 競拍明細原始資料
@@ -3011,7 +3011,6 @@ function renderCBStats() {
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='timeline'?'active':''}" onclick="setCbInfoTab('timeline')"><span class="top10-icon">📅</span>時程資訊</div>
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='putback'?'active':''}" onclick="setCbInfoTab('putback')"><span class="top10-icon">💰</span>賣回條件</div>
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='convert'?'active':''}" onclick="setCbInfoTab('convert')"><span class="top10-icon">🔄</span>轉換分析</div>
-                    <div class="cb-top10-btn-line ${CB_INFO_TAB==='auction'?'active':''}" onclick="setCbInfoTab('auction')"><span class="top10-icon">🎯</span>得標分析</div>
                 </div>
             </div>
         `;
@@ -3772,94 +3771,6 @@ function renderList() {
                         <td>${fmtNum(remainStock, 0)}</td>
                         <td>${fmtNum(capital, 1)}</td>
                         <td style="font-weight:600;color:#e65100">${fmtNum(dilutionPct, 2)}%</td>
-                    </tr>`;
-                });
-                html += `</tbody></table></div></div>`;
-            } else if(CB_INFO_TAB === 'auction') {
-                // 得標分析 - 從 cbAuction 取得競拍資料
-                // 篩選出有競拍資料的CB
-                const auctionFiltered = validFiltered.filter(r => {
-                    return DB.cbAuction.find(a => a._cbCode === r._cbCode);
-                });
-                
-                html = `<div class="cb-info-section">
-                    <div class="cb-info-title">
-                        <span class="icon">🎯</span>
-                        <span class="text">得標分析</span>
-                        <span class="count">${auctionFiltered.length} 筆</span>
-                    </div>
-                    <div class="cb-table-wrap"><table class="cb-table sticky-2cols" id="cbTable">
-                    <thead><tr>
-                        <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
-                        <th class="sticky-col sticky-col-2">CB簡稱</th>
-                        <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
-                        <th class="sortable" data-col="_guarantee" data-type="string">擔保</th>
-                        <th class="sortable" data-col="_scale" data-type="num">規模</th>
-                        <th class="sortable" data-col="_auctionLots" data-type="num">競拍張</th>
-                        <th class="sortable" data-col="_bidLots" data-type="num">投標張</th>
-                        <th class="sortable" data-col="_bidMultiple" data-type="num">倍數</th>
-                        <th class="sortable" data-col="_bidCount" data-type="num">件數</th>
-                        <th class="sortable" data-col="_closePrice" data-type="num">截標價</th>
-                        <th class="sortable" data-col="_convPrice" data-type="num">轉換價</th>
-                        <th class="sortable" data-col="_theoryPrice" data-type="num">理論價</th>
-                        <th class="sortable" data-col="_basePrice" data-type="num">底標價</th>
-                        <th class="sortable" data-col="_lowBid" data-type="num">最低得標</th>
-                        <th class="sortable" data-col="_lowPremium" data-type="num">最低溢價</th>
-                        <th class="sortable" data-col="_avgBid" data-type="num">平均得標</th>
-                        <th class="sortable" data-col="_avgPremium" data-type="num">平均溢價</th>
-                        <th class="sortable" data-col="_high" data-type="num">掛牌高</th>
-                        <th class="sortable" data-col="_low" data-type="num">掛牌低</th>
-                    </tr></thead><tbody>`;
-                
-                auctionFiltered.slice(0, 150).forEach(r => {
-                    const isActive = DB.cb.find(c => c._cbCode === r._cbCode);
-                    const statusClass = isActive ? 'active-cb' : '';
-                    const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
-                    const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
-                    
-                    // 從 cbAuction 取得競拍資料
-                    const auctionData = DB.cbAuction.find(a => a._cbCode === r._cbCode) || {};
-                    
-                    const auctionLots = parseFloat(auctionData['競拍張數']) || 0;
-                    const bidLots = parseFloat(auctionData['投標張數']) || 0;
-                    const bidMultiple = parseFloat(auctionData['投標倍數']) || 0;
-                    const bidCount = parseFloat(auctionData['合格件數']) || 0;
-                    const closePrice = parseFloat(auctionData['截標收盤']) || 0;
-                    const convPrice = parseFloat(auctionData['轉換價']) || parseFloat(r._convPrice) || 0;
-                    const theoryPrice = parseFloat(auctionData['截標理論']) || 0;
-                    const basePrice = parseFloat(auctionData['底標價']) || 0;
-                    const lowBid = parseFloat(auctionData['最低得標']) || 0;
-                    const lowPremium = parseFloat(auctionData['最低溢價']) || 0;
-                    const avgBid = parseFloat(auctionData['平均得標']) || 0;
-                    const avgPremium = parseFloat(auctionData['平均溢價']) || 0;
-                    const high = parseFloat(auctionData._high) || 0;
-                    const low = parseFloat(auctionData._low) || 0;
-                    
-                    // 計算最低得標與掛牌低價差（正=賺、負=賠）
-                    const lowDiff = low > 0 && lowBid > 0 ? (low - lowBid) : 0;
-                    // 台灣市場：紅色=賺錢/上漲，綠色=虧損/下跌
-                    const lowDiffClass = lowDiff > 0 ? 'color:#c62828' : (lowDiff < 0 ? 'color:#2e7d32' : '');
-                    
-                    html += `<tr class="${statusClass}">
-                        <td class="code sticky-col sticky-col-1" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
-                        <td class="sticky-col sticky-col-2">${r._name || ''}</td>
-                        <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
-                        <td class="${guarClass}">${guarText}</td>
-                        <td>${r._scale || ''}</td>
-                        <td>${fmtNum(auctionLots, 0)}</td>
-                        <td>${fmtNum(bidLots, 0)}</td>
-                        <td style="font-weight:600;color:#1565c0">${fmtNum(bidMultiple, 2)}</td>
-                        <td>${fmtNum(bidCount, 0)}</td>
-                        <td>${fmtNum(closePrice, 2)}</td>
-                        <td>${fmtNum(convPrice, 2)}</td>
-                        <td>${fmtNum(theoryPrice, 2)}</td>
-                        <td>${fmtNum(basePrice, 2)}</td>
-                        <td style="font-weight:600">${fmtNum(lowBid, 2)}</td>
-                        <td>${fmtNum(lowPremium, 2)}</td>
-                        <td style="font-weight:600">${fmtNum(avgBid, 2)}</td>
-                        <td>${fmtNum(avgPremium, 2)}</td>
-                        <td style="font-weight:600;color:#c62828">${high > 0 ? fmtNum(high, 2) : '-'}</td>
-                        <td style="${lowDiffClass}">${low > 0 ? fmtNum(low, 2) : '-'}</td>
                     </tr>`;
                 });
                 html += `</tbody></table></div></div>`;
@@ -5324,10 +5235,30 @@ window.openCbInfo = cbCode => {
 
     // ========== 競拍明細標籤頁 ==========
     const auctionData = DB.auctionDetail[cbCode];
+    // 從 cbAuction 取得額外的競拍資料（截標價、理論價、底標價、掛牌高低等）
+    const cbAuctionData = DB.cbAuction.find(a => a._cbCode === cbCode) || {};
     let tAuction = '';
     
     if(auctionData) {
         const { basic, price, cost, stats, corpStats, top10, intervals, details } = auctionData;
+        
+        // 從 cbAuction 取得截標與掛牌資料
+        const closePrice = parseFloat(cbAuctionData['截標收盤']) || 0;  // 截標日股價
+        const convPrice = parseFloat(cbAuctionData['轉換價']) || parseFloat(cb._convPrice) || 0;  // 轉換價
+        const theoryPrice = parseFloat(cbAuctionData['截標理論']) || 0;  // 理論價
+        const basePrice = parseFloat(cbAuctionData['底標價']) || 0;  // 底標價
+        const lowPremium = parseFloat(cbAuctionData['最低溢價']) || 0;  // 最低溢價
+        const avgPremium = parseFloat(cbAuctionData['平均溢價']) || 0;  // 平均溢價
+        const listHigh = parseFloat(cbAuctionData._high) || 0;  // 掛牌最高
+        const listLow = parseFloat(cbAuctionData._low) || 0;  // 掛牌最低
+        const latestPrice = parseFloat(cbAuctionData._latestPrice) || 0;  // 最新價
+        const convRatio = convPrice > 0 ? Math.round(100000 / convPrice) : 0;  // 轉換比率
+        
+        // 計算損益（台灣：紅色=賺、綠色=賠）
+        const lowBid = price['最低得標'] || 0;
+        const avgBid = price['加權平均'] || 0;
+        const lowVsListLow = listLow > 0 && lowBid > 0 ? (listLow - lowBid) : null;
+        const avgVsListLow = listLow > 0 && avgBid > 0 ? (listLow - avgBid) : null;
         
         // 計算30張以上和100張以上的籌碼集中度
         const over30 = details.filter(d => d.qty >= 30);
@@ -5382,7 +5313,7 @@ window.openCbInfo = cbCode => {
                 <div class="title" style="font-weight:700">📊 得標價格與換股成本</div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr)">
                     <div class="modal-card">
-                        <div class="val" style="color:#27ae60;font-weight:700">${fmtNum(price['最低得標'], 2)}</div>
+                        <div class="val" style="color:#c62828;font-weight:700">${fmtNum(price['最低得標'], 2)}</div>
                         <div class="lbl" style="font-weight:500">最低得標</div>
                     </div>
                     <div class="modal-card highlight">
@@ -5390,13 +5321,13 @@ window.openCbInfo = cbCode => {
                         <div class="lbl" style="font-weight:500">加權平均</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val" style="color:#e74c3c;font-weight:700">${fmtNum(price['最高得標'], 2)}</div>
+                        <div class="val" style="color:#2e7d32;font-weight:700">${fmtNum(price['最高得標'], 2)}</div>
                         <div class="lbl" style="font-weight:500">最高得標</div>
                     </div>
                 </div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr);margin-top:10px">
                     <div class="modal-card">
-                        <div class="val" style="color:#27ae60;font-weight:700">${fmtNum(cost['最低換股成本'], 2)}</div>
+                        <div class="val" style="color:#c62828;font-weight:700">${fmtNum(cost['最低換股成本'], 2)}</div>
                         <div class="lbl" style="font-weight:500">最低換股成本</div>
                     </div>
                     <div class="modal-card">
@@ -5404,13 +5335,79 @@ window.openCbInfo = cbCode => {
                         <div class="lbl" style="font-weight:500">平均換股成本</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val" style="color:#e74c3c;font-weight:700">${fmtNum(cost['最高換股成本'], 2)}</div>
+                        <div class="val" style="color:#2e7d32;font-weight:700">${fmtNum(cost['最高換股成本'], 2)}</div>
                         <div class="lbl" style="font-weight:500">最高換股成本</div>
                     </div>
                 </div>
                 <div style="text-align:center;margin-top:10px;padding:8px;background:#fff3e0;border-radius:8px">
                     <span style="font-size:13px;color:#e65100;font-weight:600">換股溢價率：${fmtNum(cost['換股溢價率'], 2)}%</span>
                 </div>
+            </div>
+            
+            <div class="modal-info-block" style="background:linear-gradient(135deg, #f3e5f5 0%, #fff 100%);margin-top:15px">
+                <div class="title" style="color:#7b1fa2;font-weight:700">📊 截標與掛牌行情對照</div>
+                <div class="modal-card-grid" style="grid-template-columns:repeat(4, 1fr)">
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700">${closePrice > 0 ? fmtNum(closePrice, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">截標日股價</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700">${convPrice > 0 ? fmtNum(convPrice, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">轉換價</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700;color:#7b1fa2">${convRatio > 0 ? fmtNum(convRatio, 0) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">轉換比率</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700">${theoryPrice > 0 ? fmtNum(theoryPrice, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">理論價</div>
+                    </div>
+                </div>
+                <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr);margin-top:10px">
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700">${basePrice > 0 ? fmtNum(basePrice, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">底標價</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700">${lowPremium !== 0 ? fmtNum(lowPremium, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">最低溢價</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700">${avgPremium !== 0 ? fmtNum(avgPremium, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">平均溢價</div>
+                    </div>
+                </div>
+                <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr);margin-top:10px">
+                    <div class="modal-card" style="background:${listHigh > 0 ? '#fce4ec' : '#fff'}">
+                        <div class="val" style="font-weight:700;color:#c62828">${listHigh > 0 ? fmtNum(listHigh, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">掛牌最高</div>
+                    </div>
+                    <div class="modal-card" style="background:${listLow > 0 ? '#e8f5e9' : '#fff'}">
+                        <div class="val" style="font-weight:700;color:#2e7d32">${listLow > 0 ? fmtNum(listLow, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">掛牌最低</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700">${latestPrice > 0 ? fmtNum(latestPrice, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">最新收盤</div>
+                    </div>
+                </div>
+                ${(lowVsListLow !== null || avgVsListLow !== null) ? `
+                <div style="margin-top:12px;padding:10px;background:#fff;border-radius:8px;border:1px solid #e0e0e0">
+                    <div style="font-size:12px;color:#666;margin-bottom:8px;font-weight:600">💰 得標價與掛牌低價對照</div>
+                    <div style="display:flex;gap:15px;justify-content:center">
+                        ${lowVsListLow !== null ? `
+                        <div style="text-align:center">
+                            <div style="font-size:11px;color:#888;font-weight:500">最低得標 vs 掛牌低</div>
+                            <div style="font-size:16px;font-weight:700;color:${lowVsListLow >= 0 ? '#c62828' : '#2e7d32'}">${lowVsListLow >= 0 ? '+' : ''}${fmtNum(lowVsListLow, 2)}</div>
+                        </div>` : ''}
+                        ${avgVsListLow !== null ? `
+                        <div style="text-align:center">
+                            <div style="font-size:11px;color:#888;font-weight:500">平均得標 vs 掛牌低</div>
+                            <div style="font-size:16px;font-weight:700;color:${avgVsListLow >= 0 ? '#c62828' : '#2e7d32'}">${avgVsListLow >= 0 ? '+' : ''}${fmtNum(avgVsListLow, 2)}</div>
+                        </div>` : ''}
+                    </div>
+                </div>` : ''}
             </div>
             
             <div class="modal-info-block" style="background:linear-gradient(135deg, #e3f2fd 0%, #fff 100%);margin-top:15px">
