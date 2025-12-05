@@ -462,9 +462,11 @@ const DB = {
     auctionDetail: {} // 競拍明細資料 { 'CB代號': { basic:{}, stats:{}, top10:[], intervals:[], details:[] } }
 };
 let CB_MODE = 'info'; // 'info' 基本資料, 'active' 掛牌中, 'history' 歷史, 'auction' 競拍, 'primary' 初級市場, 'balance' 流通餘額, 'cbas' CBAS報價
-let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'putback' 賣回條件, 'convert' 轉換分析
+let CB_INFO_TAB = 'issue'; // 'issue' 發行條件, 'timeline' 時程資訊, 'putback' 賣回條件, 'convert' 轉換分析, 'auction' 得標分析
 let PRIMARY_MODE = 'underwriting'; // 'underwriting' 承銷中, 'auction' 近期競拍, 'board' 董事會公告
 let AUCTION_TOP10 = ''; // 競拍TOP10選擇: 'guar_low' 有擔保最低, 'no_guar_low' 無擔保最低, 'guar_avg' 有擔保平均, 'no_guar_avg' 無擔保平均
+let AUCTION_DETAIL_DATA = []; // 競拍明細原始資料
+let AUCTION_DETAIL_SORT = { field: 'seq', dir: 'asc' }; // 競拍明細排序狀態
 let STOCK_MODE = 'all'; // 'all' 全部個股, 'concept' 概念股
 let MEMO_MODE = 'all'; // 'all' 全部, 'stock' 個股, 'industry' 產業
 
@@ -2844,6 +2846,71 @@ function setAuctionTop10(type) {
     renderList();
 }
 
+// 競拍明細排序函數
+function sortAuctionDetail(field) {
+    // 切換排序方向
+    if(AUCTION_DETAIL_SORT.field === field) {
+        AUCTION_DETAIL_SORT.dir = AUCTION_DETAIL_SORT.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        AUCTION_DETAIL_SORT.field = field;
+        AUCTION_DETAIL_SORT.dir = field === 'seq' ? 'asc' : 'desc'; // 序號預設升序，其他預設降序
+    }
+    renderAuctionDetailTable();
+}
+
+// 渲染競拍明細表格
+function renderAuctionDetailTable() {
+    const tbody = document.getElementById('auction-detail-tbody');
+    if(!tbody || !AUCTION_DETAIL_DATA.length) return;
+    
+    const { field, dir } = AUCTION_DETAIL_SORT;
+    const sorted = [...AUCTION_DETAIL_DATA].sort((a, b) => {
+        let va = a[field], vb = b[field];
+        if(typeof va === 'string') va = va.toLowerCase();
+        if(typeof vb === 'string') vb = vb.toLowerCase();
+        if(va < vb) return dir === 'asc' ? -1 : 1;
+        if(va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    tbody.innerHTML = sorted.map((d, idx) => {
+        let bgColor = idx % 2 === 0 ? '#fff' : '#fafafa';
+        let fontWeight = '500';
+        if(d.qty >= 100) {
+            bgColor = '#ffebee';
+            fontWeight = '700';
+        } else if(d.qty >= 30) {
+            bgColor = '#fff3e0';
+            fontWeight = '600';
+        }
+        return `<tr style="background:${bgColor}">
+            <td style="padding:6px 4px;text-align:center;font-weight:500">${d.seq}</td>
+            <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.price, 2)}</td>
+            <td style="padding:6px 4px;text-align:right;font-weight:${fontWeight};color:${d.qty >= 100 ? '#c62828' : (d.qty >= 30 ? '#e65100' : '#333')}">${fmtNum(d.qty, 0)}</td>
+            <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.amount, 0)}</td>
+            <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.cost, 2)}</td>
+            <td style="padding:6px 4px;text-align:left;font-size:10px;font-weight:500">${d.intervalType}</td>
+            <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.cumRatio * 100, 1)}%</td>
+        </tr>`;
+    }).join('');
+    
+    // 更新表頭排序指示
+    document.querySelectorAll('.auction-sort-th').forEach(th => {
+        const f = th.dataset.field;
+        const arrow = th.querySelector('.sort-arrow');
+        if(arrow) {
+            if(f === field) {
+                arrow.textContent = dir === 'asc' ? ' ↑' : ' ↓';
+                arrow.style.opacity = '1';
+            } else {
+                arrow.textContent = ' ↕';
+                arrow.style.opacity = '0.4';
+            }
+        }
+    });
+}
+window.sortAuctionDetail = sortAuctionDetail;
+
 // CB 統計區塊 - 九宮格方塊版
 function renderCBStats() {
     const stats = META.cbStats;
@@ -2944,6 +3011,7 @@ function renderCBStats() {
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='timeline'?'active':''}" onclick="setCbInfoTab('timeline')"><span class="top10-icon">📅</span>時程資訊</div>
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='putback'?'active':''}" onclick="setCbInfoTab('putback')"><span class="top10-icon">💰</span>賣回條件</div>
                     <div class="cb-top10-btn-line ${CB_INFO_TAB==='convert'?'active':''}" onclick="setCbInfoTab('convert')"><span class="top10-icon">🔄</span>轉換分析</div>
+                    <div class="cb-top10-btn-line ${CB_INFO_TAB==='auction'?'active':''}" onclick="setCbInfoTab('auction')"><span class="top10-icon">🎯</span>得標分析</div>
                 </div>
             </div>
         `;
@@ -3704,6 +3772,94 @@ function renderList() {
                         <td>${fmtNum(remainStock, 0)}</td>
                         <td>${fmtNum(capital, 1)}</td>
                         <td style="font-weight:600;color:#e65100">${fmtNum(dilutionPct, 2)}%</td>
+                    </tr>`;
+                });
+                html += `</tbody></table></div></div>`;
+            } else if(CB_INFO_TAB === 'auction') {
+                // 得標分析 - 從 cbAuction 取得競拍資料
+                // 篩選出有競拍資料的CB
+                const auctionFiltered = validFiltered.filter(r => {
+                    return DB.cbAuction.find(a => a._cbCode === r._cbCode);
+                });
+                
+                html = `<div class="cb-info-section">
+                    <div class="cb-info-title">
+                        <span class="icon">🎯</span>
+                        <span class="text">得標分析</span>
+                        <span class="count">${auctionFiltered.length} 筆</span>
+                    </div>
+                    <div class="cb-table-wrap"><table class="cb-table sticky-2cols" id="cbTable">
+                    <thead><tr>
+                        <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
+                        <th class="sticky-col sticky-col-2">CB簡稱</th>
+                        <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
+                        <th class="sortable" data-col="_guarantee" data-type="string">擔保</th>
+                        <th class="sortable" data-col="_scale" data-type="num">規模</th>
+                        <th class="sortable" data-col="_auctionLots" data-type="num">競拍張</th>
+                        <th class="sortable" data-col="_bidLots" data-type="num">投標張</th>
+                        <th class="sortable" data-col="_bidMultiple" data-type="num">倍數</th>
+                        <th class="sortable" data-col="_bidCount" data-type="num">件數</th>
+                        <th class="sortable" data-col="_closePrice" data-type="num">截標價</th>
+                        <th class="sortable" data-col="_convPrice" data-type="num">轉換價</th>
+                        <th class="sortable" data-col="_theoryPrice" data-type="num">理論價</th>
+                        <th class="sortable" data-col="_basePrice" data-type="num">底標價</th>
+                        <th class="sortable" data-col="_lowBid" data-type="num">最低得標</th>
+                        <th class="sortable" data-col="_lowPremium" data-type="num">最低溢價</th>
+                        <th class="sortable" data-col="_avgBid" data-type="num">平均得標</th>
+                        <th class="sortable" data-col="_avgPremium" data-type="num">平均溢價</th>
+                        <th class="sortable" data-col="_high" data-type="num">掛牌高</th>
+                        <th class="sortable" data-col="_low" data-type="num">掛牌低</th>
+                    </tr></thead><tbody>`;
+                
+                auctionFiltered.slice(0, 150).forEach(r => {
+                    const isActive = DB.cb.find(c => c._cbCode === r._cbCode);
+                    const statusClass = isActive ? 'active-cb' : '';
+                    const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
+                    const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
+                    
+                    // 從 cbAuction 取得競拍資料
+                    const auctionData = DB.cbAuction.find(a => a._cbCode === r._cbCode) || {};
+                    
+                    const auctionLots = parseFloat(auctionData['競拍張數']) || 0;
+                    const bidLots = parseFloat(auctionData['投標張數']) || 0;
+                    const bidMultiple = parseFloat(auctionData['投標倍數']) || 0;
+                    const bidCount = parseFloat(auctionData['合格件數']) || 0;
+                    const closePrice = parseFloat(auctionData['截標收盤']) || 0;
+                    const convPrice = parseFloat(auctionData['轉換價']) || parseFloat(r._convPrice) || 0;
+                    const theoryPrice = parseFloat(auctionData['截標理論']) || 0;
+                    const basePrice = parseFloat(auctionData['底標價']) || 0;
+                    const lowBid = parseFloat(auctionData['最低得標']) || 0;
+                    const lowPremium = parseFloat(auctionData['最低溢價']) || 0;
+                    const avgBid = parseFloat(auctionData['平均得標']) || 0;
+                    const avgPremium = parseFloat(auctionData['平均溢價']) || 0;
+                    const high = parseFloat(auctionData._high) || 0;
+                    const low = parseFloat(auctionData._low) || 0;
+                    
+                    // 計算最低得標與掛牌低價差（正=賺、負=賠）
+                    const lowDiff = low > 0 && lowBid > 0 ? (low - lowBid) : 0;
+                    // 台灣市場：紅色=賺錢/上漲，綠色=虧損/下跌
+                    const lowDiffClass = lowDiff > 0 ? 'color:#c62828' : (lowDiff < 0 ? 'color:#2e7d32' : '');
+                    
+                    html += `<tr class="${statusClass}">
+                        <td class="code sticky-col sticky-col-1" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
+                        <td class="sticky-col sticky-col-2">${r._name || ''}</td>
+                        <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode}</td>
+                        <td class="${guarClass}">${guarText}</td>
+                        <td>${r._scale || ''}</td>
+                        <td>${fmtNum(auctionLots, 0)}</td>
+                        <td>${fmtNum(bidLots, 0)}</td>
+                        <td style="font-weight:600;color:#1565c0">${fmtNum(bidMultiple, 2)}</td>
+                        <td>${fmtNum(bidCount, 0)}</td>
+                        <td>${fmtNum(closePrice, 2)}</td>
+                        <td>${fmtNum(convPrice, 2)}</td>
+                        <td>${fmtNum(theoryPrice, 2)}</td>
+                        <td>${fmtNum(basePrice, 2)}</td>
+                        <td style="font-weight:600">${fmtNum(lowBid, 2)}</td>
+                        <td>${fmtNum(lowPremium, 2)}</td>
+                        <td style="font-weight:600">${fmtNum(avgBid, 2)}</td>
+                        <td>${fmtNum(avgPremium, 2)}</td>
+                        <td style="font-weight:600;color:#c62828">${high > 0 ? fmtNum(high, 2) : '-'}</td>
+                        <td style="${lowDiffClass}">${low > 0 ? fmtNum(low, 2) : '-'}</td>
                     </tr>`;
                 });
                 html += `</tbody></table></div></div>`;
@@ -5370,21 +5526,22 @@ window.openCbInfo = cbCode => {
                 <div style="font-size:11px;color:#555;margin-bottom:10px;font-weight:500">
                     <span style="display:inline-block;width:12px;height:12px;background:#fff3e0;border:1px solid #ffcc80;border-radius:2px;vertical-align:middle;margin-right:4px"></span>30張以上
                     <span style="display:inline-block;width:12px;height:12px;background:#ffebee;border:1px solid #ef9a9a;border-radius:2px;vertical-align:middle;margin-left:12px;margin-right:4px"></span>100張以上
+                    <span style="margin-left:15px;color:#999">📌 點擊表頭可排序</span>
                 </div>
                 <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
                     <table style="width:100%;border-collapse:collapse;font-size:11px;background:#fff;border-radius:8px;overflow:hidden">
                         <thead style="position:sticky;top:0;z-index:1">
                             <tr style="background:#f5f5f5">
-                                <th style="padding:8px 4px;text-align:center;font-weight:700">序</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:700">價格</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:700">數量</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:700">金額</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:700">換股成本</th>
+                                <th class="auction-sort-th" data-field="seq" onclick="sortAuctionDetail('seq')" style="padding:8px 4px;text-align:center;font-weight:700;cursor:pointer;user-select:none">序<span class="sort-arrow" style="opacity:1"> ↑</span></th>
+                                <th class="auction-sort-th" data-field="price" onclick="sortAuctionDetail('price')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">價格<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
+                                <th class="auction-sort-th" data-field="qty" onclick="sortAuctionDetail('qty')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">數量<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
+                                <th class="auction-sort-th" data-field="amount" onclick="sortAuctionDetail('amount')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">金額<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
+                                <th class="auction-sort-th" data-field="cost" onclick="sortAuctionDetail('cost')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">換股成本<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
                                 <th style="padding:8px 4px;text-align:left;font-weight:700">區間</th>
-                                <th style="padding:8px 4px;text-align:right;font-weight:700">累計佔比</th>
+                                <th class="auction-sort-th" data-field="cumRatio" onclick="sortAuctionDetail('cumRatio')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">累計佔比<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="auction-detail-tbody">
                             ${details.map((d, idx) => {
                                 let bgColor = idx % 2 === 0 ? '#fff' : '#fafafa';
                                 let fontWeight = '500';
@@ -5410,6 +5567,9 @@ window.openCbInfo = cbCode => {
                 </div>
             </div>
         `;
+        // 存儲資料供排序使用
+        AUCTION_DETAIL_DATA = details;
+        AUCTION_DETAIL_SORT = { field: 'seq', dir: 'asc' };
     } else {
         tAuction = `
             <div class="modal-info-block" style="background:#f5f5f5;text-align:center;padding:40px">
@@ -5421,6 +5581,7 @@ window.openCbInfo = cbCode => {
                 </div>
             </div>
         `;
+        AUCTION_DETAIL_DATA = [];
     }
 
     const navItems = [
