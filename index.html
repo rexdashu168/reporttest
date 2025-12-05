@@ -3962,14 +3962,15 @@ function renderList() {
                     <th class="sticky-col sticky-col-2">CB簡稱</th>
                     <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
                     <th class="sortable" data-col="_guarantee" data-type="string">擔保</th>
-                    <th class="sortable" data-col="得標筆數" data-type="num">得標筆數</th>
-                    <th class="sortable" data-col="得標張數" data-type="num">得標張數</th>
+                    <th class="sortable" data-col="得標筆數" data-type="num">筆數</th>
+                    <th class="sortable" data-col="得標張數" data-type="num">張數</th>
                     <th class="sortable" data-col="得標均張" data-type="num">均張</th>
-                    <th class="sortable" data-col="over30Ratio" data-type="num">30張↑佔比</th>
-                    <th class="sortable" data-col="over100Ratio" data-type="num">100張↑佔比</th>
-                    <th class="sortable" data-col="最低換股成本" data-type="num">最低換股成本</th>
-                    <th class="sortable" data-col="平均換股成本" data-type="num">平均換股成本</th>
-                    <th>查看明細</th>
+                    <th class="sortable" data-col="top10Ratio" data-type="num">前10大占比</th>
+                    <th class="sortable" data-col="mainForceRatio" data-type="num">主力集中度</th>
+                    <th class="sortable" data-col="over30Ratio" data-type="num">30張↑</th>
+                    <th class="sortable" data-col="over100Ratio" data-type="num">100張↑</th>
+                    <th class="sortable" data-col="最低換股成本" data-type="num">最低換股</th>
+                    <th>明細</th>
                 </tr></thead><tbody>`;
                 detailFiltered.slice(0, 150).forEach(r => {
                     const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
@@ -3978,12 +3979,23 @@ function renderList() {
                     const stats = detail?.stats || {};
                     const cost = detail?.cost || {};
                     const details = detail?.details || [];
+                    const top10 = detail?.top10 || [];
+                    
                     // 用明細的總張數作為分母，確保佔比不會超過100%
                     const totalQty = details.reduce((s, d) => s + (d.qty || 0), 0);
                     const over30Qty = details.filter(d => d.qty >= 30).reduce((s, d) => s + d.qty, 0);
                     const over100Qty = details.filter(d => d.qty >= 100).reduce((s, d) => s + d.qty, 0);
                     const over30Ratio = totalQty > 0 ? (over30Qty / totalQty * 100) : 0;
                     const over100Ratio = totalQty > 0 ? (over100Qty / totalQty * 100) : 0;
+                    
+                    // 前十大量占比
+                    const top10Qty = top10.reduce((s, t) => s + (t.qty || 0), 0);
+                    const top10Ratio = totalQty > 0 ? (top10Qty / totalQty * 100) : 0;
+                    
+                    // 主力籌碼集中度：50張以上得標者佔比
+                    const over50Qty = details.filter(d => d.qty >= 50).reduce((s, d) => s + d.qty, 0);
+                    const mainForceRatio = totalQty > 0 ? (over50Qty / totalQty * 100) : 0;
+                    
                     html += `<tr>
                         <td class="code sticky-col sticky-col-1" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                         <td class="sticky-col sticky-col-2">${r._name || ''}</td>
@@ -3992,16 +4004,17 @@ function renderList() {
                         <td>${fmtNum(stats['得標筆數'], 0)}</td>
                         <td>${fmtNum(stats['得標數量'], 0)}</td>
                         <td>${fmtNum(stats['得標均張'], 1)}</td>
+                        <td style="color:${top10Ratio >= 40 ? '#1565c0' : '#333'};font-weight:${top10Ratio >= 40 ? '700' : '500'}">${fmtNum(top10Ratio, 1)}%</td>
+                        <td style="color:${mainForceRatio >= 60 ? '#7b1fa2' : '#333'};font-weight:${mainForceRatio >= 60 ? '700' : '500'}">${fmtNum(mainForceRatio, 1)}%</td>
                         <td style="color:${over30Ratio >= 50 ? '#e65100' : '#333'};font-weight:${over30Ratio >= 50 ? '700' : '500'}">${fmtNum(over30Ratio, 1)}%</td>
                         <td style="color:${over100Ratio >= 30 ? '#c62828' : '#333'};font-weight:${over100Ratio >= 30 ? '700' : '500'}">${fmtNum(over100Ratio, 1)}%</td>
                         <td style="color:#c62828;font-weight:600">${fmtNum(cost['最低換股成本'], 2)}</td>
-                        <td>${fmtNum(cost['平均換股成本'], 2)}</td>
-                        <td><button onclick="openCbInfo('${r._cbCode}');setTimeout(()=>document.querySelector('[data-tab=auction]')?.click(),100)" style="background:#e65100;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">🔍 明細</button></td>
+                        <td><button onclick="openCbInfo('${r._cbCode}');setTimeout(()=>document.querySelector('[data-tab=auction]')?.click(),100)" style="background:#e65100;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:10px">🔍</button></td>
                     </tr>`;
                 });
                 // 顯示無明細資料的提示
                 if(detailFiltered.length === 0) {
-                    html += `<tr><td colspan="12" style="text-align:center;padding:30px;color:#888">目前篩選條件下沒有得標明細資料</td></tr>`;
+                    html += `<tr><td colspan="13" style="text-align:center;padding:30px;color:#888">目前篩選條件下沒有得標明細資料</td></tr>`;
                 }
             }
             
