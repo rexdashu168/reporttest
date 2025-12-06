@@ -13,6 +13,8 @@
         .container { max-width: 800px; margin: 0 auto; padding: 12px; }
         @media(min-width: 1024px) { .container { max-width: 1400px; padding: 20px; } }
         @media(min-width: 1600px) { .container { max-width: 1600px; } }
+
+```
     .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -381,6 +383,7 @@
     @media(min-width: 768px) { .modal { align-items: center; } .modal-inner { height: 85vh; border-radius: 16px; } }
     @media(max-width: 480px) { .cb-stats-grid { grid-template-columns: repeat(3, 1fr); } .cb-stat-num { font-size: 18px; } }
 </style>
+```
 
 </head>
 <body>
@@ -396,6 +399,8 @@
         <h1>📊 Rex大叔投資研究室</h1>
         <p style="font-size:12px;color:#666">全方位台股投資決策系統 v11.6</p>
     </div>
+
+```
 <div class="db-switcher">
     <div class="db-tab active" data-db="news">⚡ 外電 <span class="count" id="c-news">0</span></div>
     <div class="db-tab" data-db="memo">📋 Memo <span class="count" id="c-memo">0</span></div>
@@ -425,6 +430,7 @@
     <div style="font-size:15px;color:#333;font-weight:600;">找到 <b id="resCount" style="color:var(--primary);font-size:18px;">0</b> 筆資料 <span id="filterHint" style="font-size:13px;color:#e65100;margin-left:8px;"></span></div>
 </div>
 <div class="card-list" id="list"></div>
+```
 
 </div>
 
@@ -1010,7 +1016,9 @@ async function init() {
                         convEnd: r['轉換結束'],
                         stopConvStart: r['停止轉換起始日'],
                         stopConvEnd: r['停止轉換終迄日'],
-                        fundUse: safe(r['資金用途'])
+                        fundUse: safe(r['資金用途']),
+                        fundUseType: safe(r['資金用途分類']),
+                        listDate: r['掛牌日期']
                     };
                 }
             });
@@ -1255,10 +1263,14 @@ async function init() {
         // 從歷史 CB 中排除掛牌中的
         DB.cbHistory = DB.cbHistory.filter(c => !activeCbCodes.has(c._cbCode));
         
-        // 讀取 04_所有CB競拍資料庫
+        // 讀取 04_所有CB競拍資料庫 (以此為競拍資料主要來源)
         XLSX.utils.sheet_to_json(wb.Sheets['04_所有CB競拍資料庫']||[]).forEach(r => {
             const cbCode = safe(r['CB代號']);
             if(!cbCode) return; // 跳過空資料
+            
+            // 跳過還沒開標的（最低得標為0或空）
+            const lowestBid = parseFloat(r['最低得標']) || 0;
+            if(lowestBid <= 0) return;
             
             // 優先使用 00 工作表的掛牌高低，若無則用 04 工作表的
             const hl = cbHighLow[cbCode] || {};
@@ -1269,7 +1281,7 @@ async function init() {
             
             const bidLots = parseFloat(r['競拍張數']) || 0;
             const bidMultiple = parseFloat(r['投標倍數']) || 0;
-            const totalBidLots = Math.round(bidLots * bidMultiple); // 投標張數 = 競拍張數 × 投標倍數
+            const totalBidLots = parseFloat(r['投標張數']) || Math.round(bidLots * bidMultiple);
             
             DB.cbAuction.push({
                 '_cbCode': cbCode,
@@ -1281,21 +1293,33 @@ async function init() {
                 '_low': low,
                 '_latestPrice': latestPrice,
                 '_range': low > 0 ? (high - low) / low * 100 : 0,
+                '_fundUseType': hl.fundUseType || '',
                 '開標日期': r['開標日期'],
                 '截標日': r['截標日'],
+                '投標開始日': r['投標開始日'],
+                '撥券日': r['撥券日'],
                 '發行規模': r['發行規模'],
+                '股本': r['股本'],
+                '年期': r['年期'],
+                '信用評等': r['信用評等'],
                 '競拍張數': r['競拍張數'],
                 '投標張數': totalBidLots,
                 '底標價': r['底標價'],
                 '截標收盤': r['截標收盤'] || r['截標日收盤'] || r['截標日股價'],
                 '轉換價': r['轉換價'],
                 '截標理論': r['理論價'],
-                '最低得標': r['最低得標'],
+                '最低得標': lowestBid,
                 '最低溢價': r['最低溢價'],
                 '平均得標': r['平均得標'],
                 '平均溢價': r['平均溢價'],
-                '投標倍數': r['投標倍數'],
+                '最高得標價格': r['最高得標價格(元)'],
+                '承銷價格': r['承銷價格(元)'],
+                '投標倍數': bidMultiple,
                 '合格件數': r['合格件數'],
+                '投標均張': r['投標均張'],
+                '最高投標數量': r['最高投(得)標數量(張)'],
+                '得標總金額': r['得標總金額'],
+                '得標手續費率': r['得標手續費率(%)'],
                 '發行券商': safe(r['發行券商']),
                 '訂價溢價率': r['訂價溢價率']
             });
@@ -3818,44 +3842,54 @@ function renderList() {
                 <div class="cb-table-wrap"><table class="cb-table sticky-2cols" id="cbTable">`;
             
             if(AUCTION_TAB === 'basic') {
-                // 基本資料：CB代號、簡稱、股票、擔保、開標日、發行規模、競拍張數、發行券商
+                // 基本資料：CB代號、簡稱、股票、擔保、信評、開標日、發行規模、股本、轉換價、資金用途、發行券商
                 html += `<thead><tr>
                     <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
                     <th class="sticky-col sticky-col-2">CB簡稱</th>
                     <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
                     <th class="sortable" data-col="_guarantee" data-type="string">擔保</th>
+                    <th class="sortable" data-col="信用評等" data-type="string">信評</th>
                     <th class="sortable" data-col="開標日期" data-type="date">開標日</th>
-                    <th class="sortable" data-col="發行規模" data-type="num">發行規模</th>
-                    <th class="sortable" data-col="競拍張數" data-type="num">競拍張數</th>
+                    <th class="sortable" data-col="發行規模" data-type="num">規模</th>
+                    <th class="sortable" data-col="股本" data-type="num">股本</th>
                     <th class="sortable" data-col="轉換價" data-type="num">轉換價</th>
+                    <th class="sortable" data-col="_fundUseType" data-type="string">資金用途</th>
                     <th class="sortable" data-col="發行券商" data-type="string">發行券商</th>
                 </tr></thead><tbody>`;
                 validFiltered.slice(0, 150).forEach(r => {
                     const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
                     const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
+                    const fundUse = r._fundUseType || '';
+                    const fundUseColor = fundUse.includes('資本支出') ? '#1565c0' : 
+                                         fundUse.includes('研發') ? '#7b1fa2' :
+                                         fundUse.includes('轉投資') ? '#00695c' : '#666';
                     html += `<tr>
                         <td class="code sticky-col sticky-col-1" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                         <td class="sticky-col sticky-col-2">${r._name || ''}</td>
                         <td class="stock" onclick="openStock('${r._stockCode}')">${r._stockCode || ''}</td>
                         <td class="${guarClass}">${guarText}</td>
+                        <td>${r['信用評等'] || '-'}</td>
                         <td>${fmtDate(r['開標日期'])}</td>
                         <td>${r['發行規模'] || ''}</td>
-                        <td>${fmtNum(r['競拍張數'], 0)}</td>
+                        <td>${fmtNum(r['股本'], 1)}</td>
                         <td>${fmtNum(r['轉換價'], 2)}</td>
+                        <td style="color:${fundUseColor};font-size:11px">${fundUse || '-'}</td>
                         <td>${r['發行券商'] || ''}</td>
                     </tr>`;
                 });
             } else if(AUCTION_TAB === 'bid') {
-                // 投標統計：CB代號、簡稱、股票、擔保、競拍張數、投標張數、投標倍數、合格件數
+                // 投標統計：CB代號、簡稱、股票、擔保、競拍張數、投標張數、投標倍數、合格件數、投標均張、最高投標數量
                 html += `<thead><tr>
                     <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
                     <th class="sticky-col sticky-col-2">CB簡稱</th>
                     <th class="sortable" data-col="_stockCode" data-type="string">股票</th>
                     <th class="sortable" data-col="_guarantee" data-type="string">擔保</th>
-                    <th class="sortable" data-col="競拍張數" data-type="num">競拍張數</th>
-                    <th class="sortable" data-col="投標張數" data-type="num">投標張數</th>
-                    <th class="sortable" data-col="投標倍數" data-type="num">投標倍數</th>
-                    <th class="sortable" data-col="合格件數" data-type="num">合格件數</th>
+                    <th class="sortable" data-col="競拍張數" data-type="num">競拍張</th>
+                    <th class="sortable" data-col="投標張數" data-type="num">投標張</th>
+                    <th class="sortable" data-col="投標倍數" data-type="num">倍數</th>
+                    <th class="sortable" data-col="合格件數" data-type="num">件數</th>
+                    <th class="sortable" data-col="投標均張" data-type="num">投標均張</th>
+                    <th class="sortable" data-col="最高投標數量" data-type="num">最高投標</th>
                     <th class="sortable" data-col="底標價" data-type="num">底標價</th>
                     <th class="sortable" data-col="截標收盤" data-type="num">截標股價</th>
                     <th class="sortable" data-col="截標理論" data-type="num">理論價</th>
@@ -3864,6 +3898,8 @@ function renderList() {
                     const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
                     const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
                     const multiple = parseFloat(r['投標倍數']) || 0;
+                    const avgBidLots = parseFloat(r['投標均張']) || 0;
+                    const maxBidQty = r['最高投標數量'] || 0;
                     html += `<tr>
                         <td class="code sticky-col sticky-col-1" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
                         <td class="sticky-col sticky-col-2">${r._name || ''}</td>
@@ -3873,13 +3909,15 @@ function renderList() {
                         <td>${fmtNum(r['投標張數'], 0)}</td>
                         <td style="font-weight:700;color:#1565c0">${fmtNum(multiple, 2)}x</td>
                         <td>${fmtNum(r['合格件數'], 0)}</td>
+                        <td style="color:#e65100;font-weight:600">${fmtNum(avgBidLots, 1)}</td>
+                        <td style="color:#7b1fa2;font-weight:600">${fmtNum(maxBidQty, 0)}</td>
                         <td>${fmtNum(r['底標價'], 2)}</td>
                         <td>${r['截標收盤'] ? fmtNum(r['截標收盤'], 2) : '-'}</td>
                         <td>${fmtNum(r['截標理論'], 2)}</td>
                     </tr>`;
                 });
             } else if(AUCTION_TAB === 'result') {
-                // 得標結果：CB代號、簡稱、股票、擔保、最低得標、最低溢價、平均得標、平均溢價、訂價溢價率
+                // 得標結果：CB代號、簡稱、股票、擔保、理論價、最低得標、平均得標、最高得標、承銷價格、訂價溢價率
                 html += `<thead><tr>
                     <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
                     <th class="sticky-col sticky-col-2">CB簡稱</th>
@@ -3889,14 +3927,14 @@ function renderList() {
                     <th class="sortable" data-col="最低得標" data-type="num">最低得標</th>
                     <th class="sortable" data-col="最低溢價" data-type="num">最低溢價</th>
                     <th class="sortable" data-col="平均得標" data-type="num">平均得標</th>
-                    <th class="sortable" data-col="平均溢價" data-type="num">平均溢價</th>
-                    <th class="sortable" data-col="訂價溢價率" data-type="num">訂價溢價率</th>
+                    <th class="sortable" data-col="最高得標價格" data-type="num">最高得標</th>
+                    <th class="sortable" data-col="承銷價格" data-type="num">承銷價格</th>
+                    <th class="sortable" data-col="訂價溢價率" data-type="num">訂價溢價</th>
                 </tr></thead><tbody>`;
                 validFiltered.slice(0, 150).forEach(r => {
                     const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
                     const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
                     const lowestPrem = parseFloat(r['最低溢價']) || 0;
-                    const avgPrem = parseFloat(r['平均溢價']) || 0;
                     const pricingPrem = parseFloat(r['訂價溢價率']) || 0;
                     html += `<tr>
                         <td class="code sticky-col sticky-col-1" onclick="openCbInfo('${r._cbCode}')">${r._cbCode}</td>
@@ -3905,10 +3943,11 @@ function renderList() {
                         <td class="${guarClass}">${guarText}</td>
                         <td>${fmtNum(r['截標理論'], 2)}</td>
                         <td style="font-weight:700;color:#c62828">${fmtNum(r['最低得標'], 2)}</td>
-                        <td>${fmtNum(lowestPrem * 100, 2)}%</td>
-                        <td style="font-weight:700">${fmtNum(r['平均得標'], 2)}</td>
-                        <td>${fmtNum(avgPrem * 100, 2)}%</td>
-                        <td>${fmtNum(pricingPrem * 100, 2)}%</td>
+                        <td class="${colorClass(lowestPrem * 100)}">${fmtNum(lowestPrem * 100, 2)}%</td>
+                        <td style="font-weight:600">${fmtNum(r['平均得標'], 2)}</td>
+                        <td style="color:#2e7d32">${r['最高得標價格'] ? fmtNum(r['最高得標價格'], 2) : '-'}</td>
+                        <td style="font-weight:600">${r['承銷價格'] ? fmtNum(r['承銷價格'], 2) : '-'}</td>
+                        <td class="${colorClass(pricingPrem * 100)}">${fmtNum(pricingPrem * 100, 2)}%</td>
                     </tr>`;
                 });
             } else if(AUCTION_TAB === 'list') {
@@ -5374,6 +5413,17 @@ window.openCbInfo = cbCode => {
         const latestPrice = parseFloat(cbAuctionData._latestPrice) || 0;  // 最新價
         const convRatio = convPrice > 0 ? Math.round(100000 / convPrice) : 0;  // 轉換比率
         
+        // 新增欄位
+        const maxBidPrice = parseFloat(cbAuctionData['最高得標價格']) || 0;  // 最高得標價格
+        const underwritePrice = parseFloat(cbAuctionData['承銷價格']) || 0;  // 承銷價格
+        const avgBidLots = parseFloat(cbAuctionData['投標均張']) || 0;  // 投標均張
+        const maxBidQty = parseFloat(cbAuctionData['最高投標數量']) || 0;  // 最高投標數量
+        const totalAmount = parseFloat(cbAuctionData['得標總金額']) || 0;  // 得標總金額
+        const bidFeeRate = parseFloat(cbAuctionData['得標手續費率']) || 0;  // 得標手續費率
+        const stockCap = parseFloat(cbAuctionData['股本']) || 0;  // 股本
+        const creditRating = cbAuctionData['信用評等'] || '';  // 信用評等
+        const fundUseType = cbAuctionData._fundUseType || '';  // 資金用途分類
+        
         // 計算損益（台灣：紅色=賺、綠色=賠）
         const lowBid = price['最低得標'] || 0;
         const avgBid = price['加權平均'] || 0;
@@ -5427,12 +5477,18 @@ window.openCbInfo = cbCode => {
                     <div style="font-size:14px;opacity:0.9;font-weight:500">${basic['標的名稱'] || cb._name}</div>
                     <div style="font-size:24px;font-weight:800;margin:5px 0">🔨 競拍明細分析</div>
                     <div style="font-size:13px;opacity:0.9;font-weight:500">開標日期：${basic['開標日期'] || '-'} ｜ 主辦：${basic['主辦承銷商'] || '-'}</div>
+                    ${(creditRating || stockCap > 0 || fundUseType) ? `
+                    <div style="margin-top:10px;display:flex;gap:15px;justify-content:center;flex-wrap:wrap">
+                        ${creditRating ? `<span style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:15px;font-size:12px">信評：${creditRating}</span>` : ''}
+                        ${stockCap > 0 ? `<span style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:15px;font-size:12px">股本：${fmtNum(stockCap, 1)}億</span>` : ''}
+                        ${fundUseType ? `<span style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:15px;font-size:12px">${fundUseType}</span>` : ''}
+                    </div>` : ''}
                 </div>
             </div>
             
             <div class="modal-info-block" style="margin-top:15px">
                 <div class="title" style="font-weight:700">📊 得標價格與換股成本</div>
-                <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr)">
+                <div class="modal-card-grid" style="grid-template-columns:repeat(4, 1fr)">
                     <div class="modal-card">
                         <div class="val" style="color:#c62828;font-weight:700">${fmtNum(price['最低得標'], 2)}</div>
                         <div class="lbl" style="font-weight:500">最低得標</div>
@@ -5442,8 +5498,12 @@ window.openCbInfo = cbCode => {
                         <div class="lbl" style="font-weight:500">加權平均</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val" style="color:#2e7d32;font-weight:700">${fmtNum(price['最高得標'], 2)}</div>
+                        <div class="val" style="color:#2e7d32;font-weight:700">${maxBidPrice > 0 ? fmtNum(maxBidPrice, 2) : fmtNum(price['最高得標'], 2)}</div>
                         <div class="lbl" style="font-weight:500">最高得標</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="color:#7b1fa2;font-weight:700">${underwritePrice > 0 ? fmtNum(underwritePrice, 2) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">承銷價格</div>
                     </div>
                 </div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr);margin-top:10px">
@@ -5547,7 +5607,7 @@ window.openCbInfo = cbCode => {
                         <div class="lbl" style="font-weight:500">投標倍數</div>
                     </div>
                 </div>
-                <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr);margin-top:10px">
+                <div class="modal-card-grid" style="grid-template-columns:repeat(4, 1fr);margin-top:10px">
                     <div class="modal-card">
                         <div class="val" style="font-weight:700">${fmtNum(stats['投標數量'], 0)}</div>
                         <div class="lbl" style="font-weight:500">投標張數</div>
@@ -5557,10 +5617,19 @@ window.openCbInfo = cbCode => {
                         <div class="lbl" style="font-weight:500">得標張數</div>
                     </div>
                     <div class="modal-card">
-                        <div class="val" style="font-weight:700">${fmtNum(stats['得標均張'], 1)}</div>
-                        <div class="lbl" style="font-weight:500">得標均張</div>
+                        <div class="val" style="font-weight:700">${avgBidLots > 0 ? fmtNum(avgBidLots, 1) : fmtNum(stats['得標均張'], 1)}</div>
+                        <div class="lbl" style="font-weight:500">投標均張</div>
+                    </div>
+                    <div class="modal-card">
+                        <div class="val" style="font-weight:700;color:#7b1fa2">${maxBidQty > 0 ? fmtNum(maxBidQty, 0) : '-'}</div>
+                        <div class="lbl" style="font-weight:500">最高投標量</div>
                     </div>
                 </div>
+                ${totalAmount > 0 ? `
+                <div style="text-align:center;margin-top:10px;padding:8px;background:#e3f2fd;border-radius:8px">
+                    <span style="font-size:13px;color:#1565c0;font-weight:600">得標總金額：${fmtNum(totalAmount / 100000000, 2)} 億元</span>
+                    ${bidFeeRate > 0 ? `<span style="margin-left:15px;font-size:12px;color:#666">手續費率：${fmtNum(bidFeeRate, 2)}%</span>` : ''}
+                </div>` : ''}
             </div>
             
             ${corpHtml}
