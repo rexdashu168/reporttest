@@ -3843,6 +3843,12 @@ function renderList() {
             
             if(AUCTION_TAB === 'basic') {
                 // 基本資料：CB代號、簡稱、股票、擔保、信評、開標日、發行規模、股本、轉換價、資金用途、發行券商
+                // 計算合計
+                const displayed = validFiltered.slice(0, 150);
+                const sumSize = displayed.reduce((s, r) => s + (parseFloat(r['發行規模']) || 0), 0);
+                const sumCap = displayed.reduce((s, r) => s + (parseFloat(r['股本']) || 0), 0);
+                const avgConvPrice = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['轉換價']) || 0), 0) / displayed.length : 0;
+                
                 html += `<thead><tr>
                     <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
                     <th class="sticky-col sticky-col-2">CB簡稱</th>
@@ -3856,7 +3862,7 @@ function renderList() {
                     <th class="sortable" data-col="_fundUseType" data-type="string">資金用途</th>
                     <th class="sortable" data-col="發行券商" data-type="string">發行券商</th>
                 </tr></thead><tbody>`;
-                validFiltered.slice(0, 150).forEach(r => {
+                displayed.forEach(r => {
                     const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
                     const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
                     const fundUse = r._fundUseType || '';
@@ -3877,8 +3883,27 @@ function renderList() {
                         <td>${r['發行券商'] || ''}</td>
                     </tr>`;
                 });
+                // 合計行
+                html += `<tr style="background:#e3f2fd;font-weight:700;border-top:2px solid #1565c0">
+                    <td class="sticky-col sticky-col-1" style="background:#e3f2fd">合計</td>
+                    <td class="sticky-col sticky-col-2" style="background:#e3f2fd">${displayed.length} 檔</td>
+                    <td colspan="4"></td>
+                    <td style="color:#1565c0">${fmtNum(sumSize, 1)}</td>
+                    <td style="color:#1565c0">${fmtNum(sumCap, 1)}</td>
+                    <td style="color:#666">均${fmtNum(avgConvPrice, 1)}</td>
+                    <td colspan="2"></td>
+                </tr>`;
             } else if(AUCTION_TAB === 'bid') {
                 // 投標統計：CB代號、簡稱、股票、擔保、競拍張數、投標張數、投標倍數、合格件數、投標均張、最高投標數量
+                // 計算合計
+                const displayed = validFiltered.slice(0, 150);
+                const sumBidLots = displayed.reduce((s, r) => s + (parseFloat(r['競拍張數']) || 0), 0);
+                const sumTotalBid = displayed.reduce((s, r) => s + (parseFloat(r['投標張數']) || 0), 0);
+                const sumCases = displayed.reduce((s, r) => s + (parseFloat(r['合格件數']) || 0), 0);
+                const avgMultiple = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['投標倍數']) || 0), 0) / displayed.length : 0;
+                const avgBidLotsSum = displayed.filter(r => r['投標均張']).length > 0 ? 
+                    displayed.reduce((s, r) => s + (parseFloat(r['投標均張']) || 0), 0) / displayed.filter(r => r['投標均張']).length : 0;
+                
                 html += `<thead><tr>
                     <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
                     <th class="sticky-col sticky-col-2">CB簡稱</th>
@@ -3894,7 +3919,7 @@ function renderList() {
                     <th class="sortable" data-col="截標收盤" data-type="num">截標股價</th>
                     <th class="sortable" data-col="截標理論" data-type="num">理論價</th>
                 </tr></thead><tbody>`;
-                validFiltered.slice(0, 150).forEach(r => {
+                displayed.forEach(r => {
                     const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
                     const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
                     const multiple = parseFloat(r['投標倍數']) || 0;
@@ -3916,8 +3941,29 @@ function renderList() {
                         <td>${fmtNum(r['截標理論'], 2)}</td>
                     </tr>`;
                 });
+                // 合計行
+                html += `<tr style="background:#e3f2fd;font-weight:700;border-top:2px solid #1565c0">
+                    <td class="sticky-col sticky-col-1" style="background:#e3f2fd">合計</td>
+                    <td class="sticky-col sticky-col-2" style="background:#e3f2fd">${displayed.length} 檔</td>
+                    <td colspan="2"></td>
+                    <td style="color:#1565c0">${fmtNum(sumBidLots, 0)}</td>
+                    <td style="color:#1565c0">${fmtNum(sumTotalBid, 0)}</td>
+                    <td style="color:#1565c0">均${fmtNum(avgMultiple, 2)}x</td>
+                    <td style="color:#1565c0">${fmtNum(sumCases, 0)}</td>
+                    <td style="color:#e65100">均${fmtNum(avgBidLotsSum, 1)}</td>
+                    <td colspan="4"></td>
+                </tr>`;
             } else if(AUCTION_TAB === 'result') {
                 // 得標結果：CB代號、簡稱、股票、擔保、理論價、最低得標、最低溢價、平均得標、平均溢價、最高得標、承銷價格、訂價溢價率
+                // 計算平均
+                const displayed = validFiltered.slice(0, 150);
+                const avgTheory = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['截標理論']) || 0), 0) / displayed.length : 0;
+                const avgLowestBid = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['最低得標']) || 0), 0) / displayed.length : 0;
+                const avgLowestPrem = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['最低溢價']) || 0), 0) / displayed.length : 0;
+                const avgAvgBid = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['平均得標']) || 0), 0) / displayed.length : 0;
+                const avgAvgPrem = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['平均溢價']) || 0), 0) / displayed.length : 0;
+                const avgPricingPrem = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['訂價溢價率']) || 0), 0) / displayed.length : 0;
+                
                 html += `<thead><tr>
                     <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
                     <th class="sticky-col sticky-col-2">CB簡稱</th>
@@ -3932,7 +3978,7 @@ function renderList() {
                     <th class="sortable" data-col="承銷價格" data-type="num">承銷價格</th>
                     <th class="sortable" data-col="訂價溢價率" data-type="num">訂價溢價</th>
                 </tr></thead><tbody>`;
-                validFiltered.slice(0, 150).forEach(r => {
+                displayed.forEach(r => {
                     const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
                     const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
                     const lowestPrem = parseFloat(r['最低溢價']) || 0;
@@ -3953,8 +3999,39 @@ function renderList() {
                         <td class="${colorClass(pricingPrem * 100)}">${fmtNum(pricingPrem * 100, 2)}%</td>
                     </tr>`;
                 });
+                // 合計行
+                html += `<tr style="background:#e3f2fd;font-weight:700;border-top:2px solid #1565c0">
+                    <td class="sticky-col sticky-col-1" style="background:#e3f2fd">平均</td>
+                    <td class="sticky-col sticky-col-2" style="background:#e3f2fd">${displayed.length} 檔</td>
+                    <td colspan="2"></td>
+                    <td style="color:#1565c0">${fmtNum(avgTheory, 2)}</td>
+                    <td style="color:#c62828">${fmtNum(avgLowestBid, 2)}</td>
+                    <td class="${colorClass(avgLowestPrem * 100)}">${fmtNum(avgLowestPrem * 100, 2)}%</td>
+                    <td style="color:#1565c0">${fmtNum(avgAvgBid, 2)}</td>
+                    <td class="${colorClass(avgAvgPrem * 100)}">${fmtNum(avgAvgPrem * 100, 2)}%</td>
+                    <td colspan="2"></td>
+                    <td class="${colorClass(avgPricingPrem * 100)}">${fmtNum(avgPricingPrem * 100, 2)}%</td>
+                </tr>`;
             } else if(AUCTION_TAB === 'list') {
                 // 掛牌行情：CB代號、簡稱、股票、擔保、最低得標、平均得標、掛牌高、掛牌低、最新價、振幅
+                // 計算統計
+                const displayed = validFiltered.slice(0, 150);
+                const withListData = displayed.filter(r => r._low > 0 && r['最低得標'] > 0);
+                const avgLowestBid = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['最低得標']) || 0), 0) / displayed.length : 0;
+                const avgAvgBid = displayed.length > 0 ? displayed.reduce((s, r) => s + (parseFloat(r['平均得標']) || 0), 0) / displayed.length : 0;
+                const avgRange = withListData.length > 0 ? withListData.reduce((s, r) => s + (parseFloat(r._range) || 0), 0) / withListData.length : 0;
+                // 計算平均損益
+                let totalDiff = 0, diffCount = 0;
+                withListData.forEach(r => {
+                    const lowBid = parseFloat(r['最低得標']) || 0;
+                    const listLow = parseFloat(r._low) || 0;
+                    if(listLow > 0 && lowBid > 0) {
+                        totalDiff += (listLow - lowBid);
+                        diffCount++;
+                    }
+                });
+                const avgDiff = diffCount > 0 ? totalDiff / diffCount : 0;
+                
                 html += `<thead><tr>
                     <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
                     <th class="sticky-col sticky-col-2">CB簡稱</th>
@@ -3968,7 +4045,7 @@ function renderList() {
                     <th class="sortable" data-col="_range" data-type="num">振幅%</th>
                     <th>最低vs掛低</th>
                 </tr></thead><tbody>`;
-                validFiltered.slice(0, 150).forEach(r => {
+                displayed.forEach(r => {
                     const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
                     const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
                     const lowBid = parseFloat(r['最低得標']) || 0;
@@ -3989,10 +4066,54 @@ function renderList() {
                         <td style="font-weight:700;color:${diffColor}">${diff !== null ? (diff >= 0 ? '+' : '') + fmtNum(diff, 2) : '-'}</td>
                     </tr>`;
                 });
+                // 合計行
+                const avgDiffColor = avgDiff >= 0 ? '#c62828' : '#2e7d32';
+                html += `<tr style="background:#e3f2fd;font-weight:700;border-top:2px solid #1565c0">
+                    <td class="sticky-col sticky-col-1" style="background:#e3f2fd">平均</td>
+                    <td class="sticky-col sticky-col-2" style="background:#e3f2fd">${displayed.length} 檔</td>
+                    <td colspan="2"></td>
+                    <td style="color:#1565c0">${fmtNum(avgLowestBid, 2)}</td>
+                    <td style="color:#1565c0">${fmtNum(avgAvgBid, 2)}</td>
+                    <td colspan="3"></td>
+                    <td class="${colorClass(avgRange)}">${fmtNum(avgRange, 1)}%</td>
+                    <td style="color:${avgDiffColor}">${diffCount > 0 ? (avgDiff >= 0 ? '+' : '') + fmtNum(avgDiff, 2) : '-'}</td>
+                </tr>`;
             } else if(AUCTION_TAB === 'detail') {
                 // 得標明細：從 auctionDetail 取得資料
                 // 篩選有得標明細的CB
                 const detailFiltered = validFiltered.filter(r => DB.auctionDetail[r._cbCode]);
+                
+                // 計算合計統計
+                let sumCases = 0, sumQty = 0;
+                let totalTop10Ratio = 0, totalMainForceRatio = 0, totalOver30Ratio = 0, totalOver100Ratio = 0;
+                const displayed = detailFiltered.slice(0, 150);
+                displayed.forEach(r => {
+                    const detail = DB.auctionDetail[r._cbCode];
+                    const stats = detail?.stats || {};
+                    const details = detail?.details || [];
+                    const top10 = detail?.top10 || [];
+                    
+                    sumCases += parseFloat(stats['得標筆數']) || 0;
+                    sumQty += parseFloat(stats['得標數量']) || 0;
+                    
+                    const totalQty = details.reduce((s, d) => s + (d.qty || 0), 0);
+                    if(totalQty > 0) {
+                        const top10Qty = top10.reduce((s, t) => s + (t.qty || 0), 0);
+                        totalTop10Ratio += (top10Qty / totalQty * 100);
+                        const over50Qty = details.filter(d => d.qty >= 50).reduce((s, d) => s + d.qty, 0);
+                        totalMainForceRatio += (over50Qty / totalQty * 100);
+                        const over30Qty = details.filter(d => d.qty >= 30).reduce((s, d) => s + d.qty, 0);
+                        totalOver30Ratio += (over30Qty / totalQty * 100);
+                        const over100Qty = details.filter(d => d.qty >= 100).reduce((s, d) => s + d.qty, 0);
+                        totalOver100Ratio += (over100Qty / totalQty * 100);
+                    }
+                });
+                const avgTop10Ratio = displayed.length > 0 ? totalTop10Ratio / displayed.length : 0;
+                const avgMainForceRatio = displayed.length > 0 ? totalMainForceRatio / displayed.length : 0;
+                const avgOver30Ratio = displayed.length > 0 ? totalOver30Ratio / displayed.length : 0;
+                const avgOver100Ratio = displayed.length > 0 ? totalOver100Ratio / displayed.length : 0;
+                const avgQtyPerCase = sumCases > 0 ? sumQty / sumCases : 0;
+                
                 html += `<thead><tr>
                     <th class="sortable sticky-col sticky-col-1" data-col="_cbCode" data-type="string">CB代號</th>
                     <th class="sticky-col sticky-col-2">CB簡稱</th>
@@ -4008,7 +4129,7 @@ function renderList() {
                     <th class="sortable" data-col="最低換股成本" data-type="num">最低換股</th>
                     <th>明細</th>
                 </tr></thead><tbody>`;
-                detailFiltered.slice(0, 150).forEach(r => {
+                displayed.forEach(r => {
                     const guarText = r._guarantee === '有擔保' ? '有' : (r._guarantee === '無擔保' || r._guarantee === '0' ? '無' : r._guarantee || '');
                     const guarClass = r._guarantee === '有擔保' ? 'guar-yes' : '';
                     const detail = DB.auctionDetail[r._cbCode];
@@ -4048,6 +4169,22 @@ function renderList() {
                         <td><button onclick="openCbInfo('${r._cbCode}');setTimeout(()=>document.querySelector('[data-tab=auction]')?.click(),100)" style="background:#e65100;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:10px">🔍</button></td>
                     </tr>`;
                 });
+                // 合計行
+                if(displayed.length > 0) {
+                    html += `<tr style="background:#e3f2fd;font-weight:700;border-top:2px solid #1565c0">
+                        <td class="sticky-col sticky-col-1" style="background:#e3f2fd">合計</td>
+                        <td class="sticky-col sticky-col-2" style="background:#e3f2fd">${displayed.length} 檔</td>
+                        <td colspan="2"></td>
+                        <td style="color:#1565c0">${fmtNum(sumCases, 0)}</td>
+                        <td style="color:#1565c0">${fmtNum(sumQty, 0)}</td>
+                        <td style="color:#1565c0">均${fmtNum(avgQtyPerCase, 1)}</td>
+                        <td style="color:#1565c0">均${fmtNum(avgTop10Ratio, 1)}%</td>
+                        <td style="color:#7b1fa2">均${fmtNum(avgMainForceRatio, 1)}%</td>
+                        <td style="color:#e65100">均${fmtNum(avgOver30Ratio, 1)}%</td>
+                        <td style="color:#c62828">均${fmtNum(avgOver100Ratio, 1)}%</td>
+                        <td colspan="2"></td>
+                    </tr>`;
+                }
                 // 顯示無明細資料的提示
                 if(detailFiltered.length === 0) {
                     html += `<tr><td colspan="13" style="text-align:center;padding:30px;color:#888">目前篩選條件下沒有得標明細資料</td></tr>`;
