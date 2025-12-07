@@ -350,24 +350,24 @@
     @media(max-width: 480px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); } }
     
     /* 彈窗九宮格卡片 */
-    .modal-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+    .modal-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px; }
     @media(max-width: 500px) { .modal-card-grid { grid-template-columns: repeat(2, 1fr); } }
-    .modal-card { background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%); border: 1px solid #e8e8e8; border-radius: 10px; padding: 12px; text-align: center; }
-    .modal-card .val { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
-    .modal-card .lbl { font-size: 11px; color: #888; }
+    .modal-card { background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%); border: 1px solid #e8e8e8; border-radius: 12px; padding: 16px 12px; text-align: center; }
+    .modal-card .val { font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 6px; font-family: 'Menlo', 'Monaco', 'Consolas', monospace; }
+    .modal-card .lbl { font-size: 13px; color: #666; font-weight: 500; }
     .modal-card.highlight { background: linear-gradient(135deg, #fff5f0 0%, #fff 100%); border-color: var(--primary); }
-    .modal-card.highlight .val { font-size: 22px; }
+    .modal-card.highlight .val { font-size: 26px; }
     
     /* 彈窗資訊區塊 */
-    .modal-info-block { background: #fafafa; border-radius: 10px; padding: 15px; margin-bottom: 12px; }
-    .modal-info-block .title { font-size: 13px; font-weight: 600; color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-    .modal-info-block .content { display: flex; flex-wrap: wrap; gap: 8px 20px; }
-    .modal-info-block .item { font-size: 13px; }
-    .modal-info-block .item .label { color: #888; }
-    .modal-info-block .item .value { font-weight: 600; color: #333; margin-left: 6px; }
-    .stat-box { background: #f8f9fa; padding: 12px; text-align: center; border-radius: 8px; }
-    .stat-box .num { font-size: 18px; font-weight: 700; color: var(--primary); }
-    .stat-box .lbl { font-size: 11px; color: #888; margin-top: 2px; }
+    .modal-info-block { background: #fafafa; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+    .modal-info-block .title { font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .modal-info-block .content { display: flex; flex-wrap: wrap; gap: 10px 24px; }
+    .modal-info-block .item { font-size: 15px; }
+    .modal-info-block .item .label { color: #666; }
+    .modal-info-block .item .value { font-weight: 600; color: #333; margin-left: 8px; }
+    .stat-box { background: #f8f9fa; padding: 14px; text-align: center; border-radius: 10px; }
+    .stat-box .num { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .stat-box .lbl { font-size: 13px; color: #666; margin-top: 4px; font-weight: 500; }
 
     .qa-item { margin-bottom: 15px; }
     .qa-q { background: #e3f2fd; padding: 10px 12px; border-radius: 8px 8px 0 0; font-weight: 600; color: #1565c0; font-size: 13px; }
@@ -4759,54 +4759,86 @@ window.openCbInfo = cbCode => {
         </div>
     `;
 
-    // Tab 1: 發行條件 - 九宮格設計
+    // Tab 1: 發行條件 - 重新設計排版
     const guarClass = cb._guarantee === '有擔保' ? 'highlight' : '';
     let tIssue = `
-        <div class="modal-card-grid">
-            <div class="modal-card highlight">
-                <div class="val">${fmtNum(cb._convPrice, 2)}</div>
-                <div class="lbl">轉換價格</div>
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #fff5f0 0%, #fff 100%);border:1px solid #ffe0d0">
+            <div class="title" style="font-size:16px;margin-bottom:15px">📊 核心數據</div>
+            <div class="modal-card-grid" style="margin-bottom:0">
+                <div class="modal-card highlight">
+                    <div class="val">${fmtNum(cb._convPrice, 2)}</div>
+                    <div class="lbl">轉換價格</div>
+                </div>
+                <div class="modal-card highlight">
+                    <div class="val">${cb._scale || '-'}</div>
+                    <div class="lbl">發行規模(億)</div>
+                </div>
+                <div class="modal-card">
+                    <div class="val" style="color:#7b1fa2">${cb._years || '-'}年</div>
+                    <div class="lbl">發行年期</div>
+                </div>
             </div>
-            <div class="modal-card highlight">
-                <div class="val">${cb._scale || '-'}</div>
-                <div class="lbl">發行規模(億)</div>
-            </div>
-            <div class="modal-card">
-                <div class="val">${cb._years || '-'}年</div>
-                <div class="lbl">發行年期</div>
-            </div>
-            <div class="modal-card">
-                <div class="val">${cb._issuePrice || '100'}</div>
-                <div class="lbl">發行價格</div>
-            </div>
-            <div class="modal-card">
-                <div class="val">${cb._expPrice || '100'}</div>
-                <div class="lbl">到期還本價</div>
-            </div>
-            <div class="modal-card">
-                <div class="val">${cb._premium ? fmtNum(cb._premium * 100, 1) + '%' : '-'}</div>
-                <div class="lbl">訂價溢價率</div>
-            </div>
-        </div>
-        
-        <div class="modal-info-block">
-            <div class="title">📋 基本資訊</div>
-            <div class="content">
-                <div class="item"><span class="label">CB代號</span><span class="value">${cbCode}</span></div>
-                <div class="item"><span class="label">股票代號</span><span class="value" style="color:var(--primary);cursor:pointer" onclick="openStock('${cb._stockCode}');closeModal()">${cb._stockCode}</span></div>
-                <div class="item"><span class="label">詢圈/競拍</span><span class="value">${cb._method || '-'}</span></div>
-                <div class="item"><span class="label">擔保</span><span class="value ${cb._guarantee === '有擔保' ? 't-up' : ''}">${cb._guarantee || '-'}</span></div>
-                <div class="item"><span class="label">信用評等</span><span class="value">${cb._rating || '-'}</span></div>
-                <div class="item"><span class="label">發行券商</span><span class="value">${cb._issuer || '-'}</span></div>
+            <div class="modal-card-grid" style="margin-bottom:0;margin-top:12px">
+                <div class="modal-card">
+                    <div class="val">${cb._issuePrice || '100'}</div>
+                    <div class="lbl">發行價格</div>
+                </div>
+                <div class="modal-card">
+                    <div class="val">${cb._expPrice || '100'}</div>
+                    <div class="lbl">到期還本價</div>
+                </div>
+                <div class="modal-card">
+                    <div class="val" style="color:${cb._premium > 0 ? '#c62828' : '#2e7d32'}">${cb._premium ? fmtNum(cb._premium * 100, 1) + '%' : '-'}</div>
+                    <div class="lbl">訂價溢價率</div>
+                </div>
             </div>
         </div>
         
         <div class="modal-info-block">
-            <div class="title">🏢 公司資訊</div>
-            <div class="content">
-                <div class="item"><span class="label">產業分類</span><span class="value">${cb._industry || '-'}</span></div>
-                <div class="item"><span class="label">產業地位</span><span class="value">${cb._position || '-'}</span></div>
-                <div class="item"><span class="label">股本規模</span><span class="value">${cb._capital || '-'}</span></div>
+            <div class="title" style="font-size:16px">📋 基本資訊</div>
+            <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:12px 20px">
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">CB代號</span>
+                    <span style="font-weight:600;font-size:15px">${cbCode}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">股票代號</span>
+                    <span style="font-weight:600;font-size:15px;color:var(--primary);cursor:pointer" onclick="openStock('${cb._stockCode}');closeModal()">${cb._stockCode}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">詢圈/競拍</span>
+                    <span style="font-weight:600;font-size:15px;padding:2px 10px;background:${cb._method === '競拍' ? '#e3f2fd' : '#f5f5f5'};border-radius:4px">${cb._method || '-'}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">擔保</span>
+                    <span style="font-weight:600;font-size:15px;color:${cb._guarantee === '有擔保' ? '#c62828' : '#666'}">${cb._guarantee || '-'}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">信用評等</span>
+                    <span style="font-weight:600;font-size:15px">${cb._rating || '-'}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">發行券商</span>
+                    <span style="font-weight:600;font-size:15px">${cb._issuer || '-'}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #e8f5e9 0%, #fff 100%)">
+            <div class="title" style="font-size:16px;color:#2e7d32">🏢 公司資訊</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <span style="color:#666;font-size:14px;min-width:70px">產業分類</span>
+                    <span style="font-weight:600;font-size:15px;padding:4px 12px;background:#fff;border-radius:6px;border:1px solid #c8e6c9">${cb._industry || '-'}</span>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:12px">
+                    <span style="color:#666;font-size:14px;min-width:70px">產業地位</span>
+                    <span style="font-size:15px;line-height:1.6;color:#333">${cb._position || '-'}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                    <span style="color:#666;font-size:14px;min-width:70px">股本規模</span>
+                    <span style="font-weight:600;font-size:15px">${cb._capital || '-'}</span>
+                </div>
             </div>
         </div>
     `;
@@ -4814,9 +4846,9 @@ window.openCbInfo = cbCode => {
     // 資金用途（如果有）
     if(cb._fundUse) {
         tIssue += `
-            <div class="modal-info-block" style="background:linear-gradient(135deg, #f0f9ff 0%, #fff 100%)">
-                <div class="title">💰 資金用途</div>
-                <div style="font-size:13px;color:#333;line-height:1.6">${cb._fundUse}</div>
+            <div class="modal-info-block" style="background:linear-gradient(135deg, #fff8e1 0%, #fff 100%);border:1px solid #ffe0b2">
+                <div class="title" style="font-size:16px;color:#e65100">💰 資金用途</div>
+                <div style="font-size:15px;color:#333;line-height:1.8;padding:10px;background:#fff;border-radius:8px">${cb._fundUse}</div>
             </div>
         `;
     }
@@ -4825,14 +4857,35 @@ window.openCbInfo = cbCode => {
     let tTimeline = `
         <div class="modal-info-block">
             <div class="title">📅 發行時程</div>
-            <div class="content">
-                <div class="item"><span class="label">董事會公告</span><span class="value">${fmtDate(cb._boardDate)}</span></div>
-                <div class="item"><span class="label">送件日期</span><span class="value">${fmtDate(cb._sendDate)}</span></div>
-                <div class="item"><span class="label">生效日期</span><span class="value">${fmtDate(cb._effectDate)}</span></div>
-                <div class="item"><span class="label">詢圈/競拍</span><span class="value">${cb._bidDate || '-'}</span></div>
-                <div class="item"><span class="label">掛牌日期</span><span class="value" style="color:var(--primary);font-weight:700">${fmtDate(cb._listDate)}</span></div>
-                <div class="item"><span class="label">到期日期</span><span class="value" style="color:#e74c3c;font-weight:700">${fmtDate(cb._expDate)}</span></div>
-                <div class="item"><span class="label">CBAS拆解日</span><span class="value">${fmtDate(cb._cbasDate)}</span></div>
+            <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:12px 24px">
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">董事會公告</span>
+                    <span style="font-weight:600;font-size:15px">${fmtDate(cb._boardDate)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">送件日期</span>
+                    <span style="font-weight:600;font-size:15px">${fmtDate(cb._sendDate)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">生效日期</span>
+                    <span style="font-weight:600;font-size:15px">${fmtDate(cb._effectDate)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">詢圈/競拍</span>
+                    <span style="font-weight:600;font-size:15px">${cb._bidDate || '-'}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">掛牌日期</span>
+                    <span style="font-weight:700;font-size:15px;color:var(--primary)">${fmtDate(cb._listDate)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">到期日期</span>
+                    <span style="font-weight:700;font-size:15px;color:#e74c3c">${fmtDate(cb._expDate)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;grid-column:span 2">
+                    <span style="color:#666;font-size:14px">CBAS拆解日</span>
+                    <span style="font-weight:600;font-size:15px">${fmtDate(cb._cbasDate)}</span>
+                </div>
             </div>
         </div>
         
@@ -4904,13 +4957,22 @@ window.openCbInfo = cbCode => {
     // Tab 3: 賣回條件 - 優化呈現
     let tPutback = `
         <div class="modal-info-block">
-            <div class="title">💰 賣回條件</div>
-            <div class="content">
-                <div class="item"><span class="label">賣回日期1</span><span class="value" style="color:var(--primary)">${fmtDate(cb._putDate1)}</span></div>
-                <div class="item"><span class="label">賣回日期2</span><span class="value" style="color:var(--primary)">${fmtDate(cb._putDate2)}</span></div>
-                <div class="item"><span class="label">賣回時機</span><span class="value">${cb._putTiming || '-'}</span></div>
+            <div class="title" style="font-size:16px">💰 賣回條件</div>
+            <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:12px 24px">
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">賣回日期1</span>
+                    <span style="font-weight:700;font-size:15px;color:var(--primary)">${fmtDate(cb._putDate1)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee">
+                    <span style="color:#666;font-size:14px">賣回日期2</span>
+                    <span style="font-weight:700;font-size:15px;color:var(--primary)">${fmtDate(cb._putDate2)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;grid-column:span 2">
+                    <span style="color:#666;font-size:14px">賣回時機</span>
+                    <span style="font-weight:600;font-size:15px">${cb._putTiming || '-'}</span>
+                </div>
             </div>
-            ${cb._putCondition ? `<div style="font-size:12px;color:#666;margin-top:10px;padding-top:10px;border-top:1px dashed #ddd"><span style="color:#888">賣回條件：</span>${cb._putCondition}</div>` : ''}
+            ${cb._putCondition ? `<div style="font-size:14px;color:#555;margin-top:12px;padding:12px;background:#f5f5f5;border-radius:8px;line-height:1.6"><span style="color:#888;font-weight:600">賣回條件：</span>${cb._putCondition}</div>` : ''}
         </div>
     `;
     
@@ -4928,19 +4990,19 @@ window.openCbInfo = cbCode => {
         // YTP 賣回殖利率
         if(ytpInfo.ytp1 !== null || ytpInfo.ytp2 !== null) {
             tPutback += `<div class="modal-info-block" style="background:linear-gradient(135deg, #fff8e1 0%, #fff 100%)">
-                <div class="title" style="color:#f57c00">📈 賣回殖利率 (YTP)</div>`;
+                <div class="title" style="color:#f57c00;font-size:16px">📈 賣回殖利率 (YTP)</div>`;
             
             if(ytpInfo.ytp1 !== null) {
                 const ytpClass = ytpInfo.ytp1 >= 0 ? 't-up' : 't-down';
                 tPutback += `
-                    <div style="display:flex;align-items:center;gap:15px;padding:10px 0;border-bottom:1px solid #f0f0f0">
+                    <div style="display:flex;align-items:center;gap:15px;padding:12px 0;border-bottom:1px solid #f0f0f0">
                         <div style="flex:1">
-                            <div style="font-size:12px;color:#888">第一次賣回</div>
-                            <div style="font-weight:600">${fmtDate(cb._putDate1)}</div>
+                            <div style="font-size:13px;color:#888">第一次賣回</div>
+                            <div style="font-weight:600;font-size:15px">${fmtDate(cb._putDate1)}</div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:12px;color:#888">賣回價 ${fmtNum(ytpInfo.price1, 2)} / ${ytpInfo.days1}天</div>
-                            <div style="font-size:20px;font-weight:700" class="${ytpClass}">${ytpInfo.ytp1 >= 0 ? '+' : ''}${fmtNum(ytpInfo.ytp1, 2)}%</div>
+                            <div style="font-size:13px;color:#888">賣回價 ${fmtNum(ytpInfo.price1, 2)} / ${ytpInfo.days1}天</div>
+                            <div style="font-size:24px;font-weight:700" class="${ytpClass}">${ytpInfo.ytp1 >= 0 ? '+' : ''}${fmtNum(ytpInfo.ytp1, 2)}%</div>
                         </div>
                     </div>
                 `;
@@ -4948,14 +5010,14 @@ window.openCbInfo = cbCode => {
             if(ytpInfo.ytp2 !== null) {
                 const ytpClass = ytpInfo.ytp2 >= 0 ? 't-up' : 't-down';
                 tPutback += `
-                    <div style="display:flex;align-items:center;gap:15px;padding:10px 0">
+                    <div style="display:flex;align-items:center;gap:15px;padding:12px 0">
                         <div style="flex:1">
-                            <div style="font-size:12px;color:#888">第二次賣回</div>
-                            <div style="font-weight:600">${fmtDate(cb._putDate2)}</div>
+                            <div style="font-size:13px;color:#888">第二次賣回</div>
+                            <div style="font-weight:600;font-size:15px">${fmtDate(cb._putDate2)}</div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:12px;color:#888">賣回價 ${fmtNum(ytpInfo.price2, 2)} / ${ytpInfo.days2}天</div>
-                            <div style="font-size:20px;font-weight:700" class="${ytpClass}">${ytpInfo.ytp2 >= 0 ? '+' : ''}${fmtNum(ytpInfo.ytp2, 2)}%</div>
+                            <div style="font-size:13px;color:#888">賣回價 ${fmtNum(ytpInfo.price2, 2)} / ${ytpInfo.days2}天</div>
+                            <div style="font-size:24px;font-weight:700" class="${ytpClass}">${ytpInfo.ytp2 >= 0 ? '+' : ''}${fmtNum(ytpInfo.ytp2, 2)}%</div>
                         </div>
                     </div>
                 `;
@@ -4968,15 +5030,15 @@ window.openCbInfo = cbCode => {
             const ytmClass = ytmInfo.ytm >= 0 ? 't-up' : 't-down';
             tPutback += `
                 <div class="modal-info-block" style="background:linear-gradient(135deg, #e3f2fd 0%, #fff 100%)">
-                    <div class="title" style="color:#1976d2">🏁 到期殖利率 (YTM)</div>
-                    <div style="display:flex;align-items:center;gap:15px;padding:10px 0">
+                    <div class="title" style="color:#1976d2;font-size:16px">🏁 到期殖利率 (YTM)</div>
+                    <div style="display:flex;align-items:center;gap:15px;padding:12px 0">
                         <div style="flex:1">
-                            <div style="font-size:12px;color:#888">到期日</div>
-                            <div style="font-weight:600">${fmtDate(cb._expDate)}</div>
+                            <div style="font-size:13px;color:#888">到期日</div>
+                            <div style="font-weight:600;font-size:15px">${fmtDate(cb._expDate)}</div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:12px;color:#888">到期價 ${fmtNum(cb._expPrice, 2)} / ${ytmInfo.days}天</div>
-                            <div style="font-size:20px;font-weight:700" class="${ytmClass}">${ytmInfo.ytm >= 0 ? '+' : ''}${fmtNum(ytmInfo.ytm, 2)}%</div>
+                            <div style="font-size:13px;color:#888">到期價 ${fmtNum(cb._expPrice, 2)} / ${ytmInfo.days}天</div>
+                            <div style="font-size:24px;font-weight:700" class="${ytmClass}">${ytmInfo.ytm >= 0 ? '+' : ''}${fmtNum(ytmInfo.ytm, 2)}%</div>
                         </div>
                     </div>
                 </div>
@@ -4984,12 +5046,12 @@ window.openCbInfo = cbCode => {
         }
         
         if(ytpInfo.ytp1 === null && ytpInfo.ytp2 === null && ytmInfo.ytm === null) {
-            tPutback += `<div style="color:#999;font-size:13px;padding:10px 0;text-align:center">無法計算殖利率（缺少賣回/到期日期資料）</div>`;
+            tPutback += `<div style="color:#999;font-size:14px;padding:12px 0;text-align:center">無法計算殖利率（缺少賣回/到期日期資料）</div>`;
         }
     } else {
         tPutback += `
             <div class="modal-info-block" style="background:#f5f5f5">
-                <div style="color:#999;font-size:13px;text-align:center;padding:10px 0">📊 無CB現價資料，無法計算殖利率</div>
+                <div style="color:#999;font-size:14px;text-align:center;padding:12px 0">📊 無CB現價資料，無法計算殖利率</div>
             </div>
         `;
     }
@@ -5045,7 +5107,7 @@ window.openCbInfo = cbCode => {
     
     let tConversion = `
         <div class="modal-info-block" style="background:linear-gradient(135deg, #e8f5e9 0%, #fff 100%)">
-            <div class="title" style="color:#2e7d32">🔄 轉換比率</div>
+            <div class="title" style="color:#2e7d32;font-size:16px">🔄 轉換比率</div>
             <div class="modal-card-grid">
                 <div class="modal-card">
                     <div class="val">${fmtNum(convPrice, 2)}</div>
@@ -5056,13 +5118,13 @@ window.openCbInfo = cbCode => {
                     <div class="lbl">轉換比率(股)</div>
                 </div>
             </div>
-            <div style="margin-top:10px;padding:10px;background:#fff;border-radius:8px;font-size:12px;color:#666">
-                📐 票面 10萬 ÷ 轉換價 ${fmtNum(convPrice, 2)} = ${fmtNum(convRatio, 0)} 股
+            <div style="margin-top:12px;padding:12px;background:#fff;border-radius:8px;font-size:14px;color:#555">
+                📐 票面 10萬 ÷ 轉換價 ${fmtNum(convPrice, 2)} = <b style="color:#2e7d32">${fmtNum(convRatio, 0)}</b> 股
             </div>
         </div>
         
         <div class="modal-info-block">
-            <div class="title">📊 發行與約當股票</div>
+            <div class="title" style="font-size:16px">📊 發行與約當股票</div>
             <div class="modal-card-grid">
                 <div class="modal-card">
                     <div class="val">${fmtNum(issueLots, 0)}</div>
@@ -5076,7 +5138,7 @@ window.openCbInfo = cbCode => {
         </div>
         
         <div class="modal-info-block" style="background:linear-gradient(135deg, #fff8e1 0%, #fff 100%)">
-            <div class="title" style="color:#f57c00">📤 已轉換分析</div>
+            <div class="title" style="color:#f57c00;font-size:16px">📤 已轉換分析</div>
             <div class="modal-card-grid">
                 <div class="modal-card">
                     <div class="val">${fmtNum(convertedLots, 0)}</div>
@@ -5090,7 +5152,7 @@ window.openCbInfo = cbCode => {
         </div>
         
         <div class="modal-info-block" style="background:linear-gradient(135deg, #e3f2fd 0%, #fff 100%)">
-            <div class="title" style="color:#1565c0">💹 流通餘額分析</div>
+            <div class="title" style="color:#1565c0;font-size:16px">💹 流通餘額分析</div>
             <div class="modal-card-grid">
                 <div class="modal-card">
                     <div class="val">${fmtNum(remainLots, 0)}</div>
@@ -5108,7 +5170,7 @@ window.openCbInfo = cbCode => {
         </div>
         
         <div class="modal-info-block" style="background:linear-gradient(135deg, #fff3e0 0%, #fff 100%)">
-            <div class="title" style="color:#e65100">📈 股本稀釋分析</div>
+            <div class="title" style="color:#e65100;font-size:16px">📈 股本稀釋分析</div>
             <div class="modal-card-grid">
                 <div class="modal-card">
                     <div class="val">${fmtNum(capital, 1)}</div>
@@ -5164,54 +5226,54 @@ window.openCbInfo = cbCode => {
     const valueStatusBg = hasConvValue ? '#e8f5e9' : '#ffebee';
     
     let tValue = `
-        <div class="modal-info-block" style="background:linear-gradient(135deg, #1a237e 0%, #283593 100%);color:#fff;padding:20px;border-radius:12px">
-            <div style="text-align:center;margin-bottom:15px">
-                <div style="font-size:14px;opacity:0.8">${cb._name}</div>
-                <div style="font-size:28px;font-weight:800;margin:5px 0">可轉換公司債價值分析</div>
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #1a237e 0%, #283593 100%);color:#fff;padding:22px;border-radius:12px">
+            <div style="text-align:center;margin-bottom:18px">
+                <div style="font-size:15px;opacity:0.8">${cb._name}</div>
+                <div style="font-size:24px;font-weight:800;margin:5px 0">可轉換公司債價值分析</div>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px;background:rgba(255,255,255,0.1);border-radius:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;background:rgba(255,255,255,0.1);border-radius:10px;flex-wrap:wrap;gap:12px">
                 <div>
-                    <div style="font-size:12px;opacity:0.7">轉換價為</div>
-                    <div style="font-size:24px;font-weight:700">${fmtNum(convPriceVal, 1)} 元</div>
+                    <div style="font-size:13px;opacity:0.7">轉換價為</div>
+                    <div style="font-size:26px;font-weight:700">${fmtNum(convPriceVal, 1)} 元</div>
                 </div>
-                <div style="font-size:12px;opacity:0.7">${fmtDate(new Date())}</div>
+                <div style="font-size:13px;opacity:0.7">${fmtDate(new Date())}</div>
                 <div>
-                    <div style="font-size:12px;opacity:0.7">${cb._stockCode} 的收盤為</div>
-                    <div style="font-size:24px;font-weight:700;color:#ffeb3b">${fmtNum(stockPriceVal, 2)}</div>
+                    <div style="font-size:13px;opacity:0.7">${cb._stockCode} 的收盤為</div>
+                    <div style="font-size:26px;font-weight:700;color:#ffeb3b">${fmtNum(stockPriceVal, 2)}</div>
                 </div>
-                <div style="padding:8px 16px;background:${valueStatusBg};color:${valueStatusColor};border-radius:20px;font-weight:600;font-size:13px">
+                <div style="padding:10px 18px;background:${valueStatusBg};color:${valueStatusColor};border-radius:20px;font-weight:700;font-size:14px">
                     ${valueStatus}
                 </div>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#fff3e0;border:1px solid #ffe0b2;margin-top:15px">
-            <div style="font-size:13px;color:#e65100;line-height:1.8">
+            <div style="font-size:14px;color:#e65100;line-height:1.8">
                 📌 可轉債的漲跌將不與標的股票同步，更多是<b>債券的抗跌性</b>及<b>到期的保本特性</b>
             </div>
         </div>
         
         <div class="modal-info-block" style="margin-top:15px">
-            <div class="title" style="color:#1565c0">📊 理論價值與溢價分析</div>
+            <div class="title" style="color:#1565c0;font-size:16px">📊 理論價值與溢價分析</div>
             <div class="modal-card-grid" style="grid-template-columns:repeat(3, 1fr)">
                 <div class="modal-card">
                     <div class="val">${fmtNum(convValueCalc, 1)}</div>
                     <div class="lbl">理論價值</div>
-                    <div style="font-size:10px;color:#888;margin-top:4px">市場上的</div>
+                    <div style="font-size:11px;color:#888;margin-top:4px">市場上的</div>
                 </div>
                 <div class="modal-card highlight" style="background:linear-gradient(135deg, #fff8e1 0%, #fff 100%)">
                     <div class="val" style="color:#f57c00">${fmtNum(cbPriceVal, 2)}</div>
                     <div class="lbl">可轉債收盤價格</div>
-                    <div style="font-size:10px;color:#888;margin-top:4px">代表買進的CB</div>
+                    <div style="font-size:11px;color:#888;margin-top:4px">代表買進的CB</div>
                 </div>
                 <div class="modal-card" style="background:${premiumRateCalc > 0 ? '#fff3e0' : '#e8f5e9'}">
                     <div class="val" style="color:${premiumRateCalc > 0 ? '#e65100' : '#27ae60'}">${fmtNum(Math.abs(premiumRateCalc), 2)}%</div>
                     <div class="lbl">${premiumRateCalc > 0 ? '溢價(貴了?)' : '折價(便宜?)'}</div>
                 </div>
             </div>
-            <div style="margin-top:12px;padding:12px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#666">
-                📐 理論價值 = 100 × (股價 ${fmtNum(stockPriceVal, 2)} ÷ 轉換價 ${fmtNum(convPriceVal, 1)}) = <b>${fmtNum(convValueCalc, 2)}</b><br>
-                📐 溢價率 = (CB價 ${fmtNum(cbPriceVal, 2)} - 理論價值 ${fmtNum(convValueCalc, 2)}) ÷ ${fmtNum(convValueCalc, 2)} × 100% = <b>${fmtNum(premiumRateCalc, 2)}%</b>
+            <div style="margin-top:14px;padding:14px;background:#f5f5f5;border-radius:8px;font-size:14px;color:#555;line-height:1.8">
+                📐 理論價值 = 100 × (股價 ${fmtNum(stockPriceVal, 2)} ÷ 轉換價 ${fmtNum(convPriceVal, 1)}) = <b style="color:var(--primary)">${fmtNum(convValueCalc, 2)}</b><br>
+                📐 溢價率 = (CB價 ${fmtNum(cbPriceVal, 2)} - 理論價值 ${fmtNum(convValueCalc, 2)}) ÷ ${fmtNum(convValueCalc, 2)} × 100% = <b style="color:${premiumRateCalc > 0 ? '#e65100' : '#27ae60'}">${fmtNum(premiumRateCalc, 2)}%</b>
             </div>
         </div>
         
@@ -5301,58 +5363,58 @@ window.openCbInfo = cbCode => {
     const up100 = calcUpScenario(100);
     
     let tScenario1 = `
-        <div class="modal-info-block" style="background:linear-gradient(135deg, #1565c0 0%, #1976d2 100%);color:#fff;padding:20px;border-radius:12px">
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #1565c0 0%, #1976d2 100%);color:#fff;padding:22px;border-radius:12px">
             <div style="text-align:center;margin-bottom:15px">
-                <div style="font-size:14px;opacity:0.8">${cb._name}</div>
-                <div style="font-size:24px;font-weight:800;margin:5px 0">情境分析(一) 上漲情境</div>
+                <div style="font-size:15px;opacity:0.8">${cb._name}</div>
+                <div style="font-size:22px;font-weight:800;margin:5px 0">情境分析(一) 上漲情境</div>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#e3f2fd;border:1px solid #90caf9;margin-top:15px">
-            <div style="font-size:14px;font-weight:600;color:#1565c0;margin-bottom:12px">📈 如果買進</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px">
-                <span style="background:#fff;padding:6px 12px;border-radius:6px">溢價率 <b style="color:#e74c3c">${fmtNum(premiumRateCalc, 2)}%</b></span>
+            <div style="font-size:15px;font-weight:600;color:#1565c0;margin-bottom:12px">📈 如果買進</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px">
+                <span style="background:#fff;padding:8px 14px;border-radius:6px">溢價率 <b style="color:#e74c3c">${fmtNum(premiumRateCalc, 2)}%</b></span>
                 <span>的可轉債</span>
-                <span style="background:#fff3e0;padding:6px 12px;border-radius:6px;font-weight:700;color:#e65100">${fmtNum(cbPriceVal, 1)} 元</span>
+                <span style="background:#fff3e0;padding:8px 14px;border-radius:6px;font-weight:700;color:#e65100">${fmtNum(cbPriceVal, 1)} 元</span>
                 <span>等於票面持股成本</span>
-                <span style="background:#fff;padding:6px 12px;border-radius:6px"><b>${fmtNum(convPriceVal, 1)}</b> 元</span>
+                <span style="background:#fff;padding:8px 14px;border-radius:6px"><b>${fmtNum(convPriceVal, 1)}</b> 元</span>
                 <span>會變成了</span>
-                <span style="background:#ffeb3b;padding:6px 12px;border-radius:6px;font-weight:700">${fmtNum(stockCostCalc, 1)} 元</span>
+                <span style="background:#ffeb3b;padding:8px 14px;border-radius:6px;font-weight:700">${fmtNum(stockCostCalc, 1)} 元</span>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#f5f5f5;margin-top:12px">
-            <div style="font-size:13px;color:#666">
+            <div style="font-size:14px;color:#555">
                 💡 買進可轉債的交割方式與一般買賣股票一樣，T+2全額交割：
-                <span style="background:#fff;padding:4px 8px;border-radius:4px;margin:0 4px">${fmtNum(cbPriceVal, 1)} 元</span> ×
-                <span style="background:#fff;padding:4px 8px;border-radius:4px;margin:0 4px">1,000 股</span> =
-                <span style="background:#e8f5e9;padding:4px 8px;border-radius:4px;font-weight:600">交割 ${fmtNum(settlementAmt, 0)} 元</span>
+                <span style="background:#fff;padding:5px 10px;border-radius:4px;margin:0 4px">${fmtNum(cbPriceVal, 1)} 元</span> ×
+                <span style="background:#fff;padding:5px 10px;border-radius:4px;margin:0 4px">1,000 股</span> =
+                <span style="background:#e8f5e9;padding:5px 10px;border-radius:4px;font-weight:600">交割 ${fmtNum(settlementAmt, 0)} 元</span>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#e8f5e9;border:1px solid #a5d6a7;margin-top:15px">
-            <div style="font-size:14px;font-weight:600;color:#2e7d32;margin-bottom:10px">📊 獲利情境分析</div>
-            <div style="font-size:12px;color:#666;margin-bottom:12px">當現股收盤價格超過轉換價格 <b>${fmtNum(convPriceVal, 1)}</b> 元，可轉債與現股股價將會同步，具有<span style="color:#2e7d32;font-weight:600">股票特性</span></div>
-            <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden">
+            <div style="font-size:15px;font-weight:600;color:#2e7d32;margin-bottom:10px">📊 獲利情境分析</div>
+            <div style="font-size:14px;color:#555;margin-bottom:12px">當現股收盤價格超過轉換價格 <b>${fmtNum(convPriceVal, 1)}</b> 元，可轉債與現股股價將會同步，具有<span style="color:#2e7d32;font-weight:600">股票特性</span></div>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:8px;overflow:hidden">
                 <thead>
                     <tr style="background:#2e7d32;color:#fff">
-                        <th style="padding:10px;text-align:center">情境</th>
-                        <th style="padding:10px;text-align:right">預期股價</th>
-                        <th style="padding:10px;text-align:right">可轉債價格</th>
-                        <th style="padding:10px;text-align:right">可轉債報酬%</th>
+                        <th style="padding:12px;text-align:center">情境</th>
+                        <th style="padding:12px;text-align:right">預期股價</th>
+                        <th style="padding:12px;text-align:right">可轉債價格</th>
+                        <th style="padding:12px;text-align:right">可轉債報酬%</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td style="padding:10px;text-align:center;background:#f1f8e9">預計上漲 20%</td><td style="padding:10px;text-align:right">${fmtNum(up20.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(up20.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#2e7d32;font-weight:600">+${fmtNum(up20.returnPct, 2)}%</td></tr>
-                    <tr style="background:#f5f5f5"><td style="padding:10px;text-align:center;background:#c8e6c9">預計上漲 50%</td><td style="padding:10px;text-align:right">${fmtNum(up50.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(up50.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#2e7d32;font-weight:600">+${fmtNum(up50.returnPct, 2)}%</td></tr>
-                    <tr><td style="padding:10px;text-align:center;background:#a5d6a7">預計上漲 100%</td><td style="padding:10px;text-align:right">${fmtNum(up100.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(up100.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#2e7d32;font-weight:600">+${fmtNum(up100.returnPct, 2)}%</td></tr>
+                    <tr><td style="padding:12px;text-align:center;background:#f1f8e9">預計上漲 20%</td><td style="padding:12px;text-align:right">${fmtNum(up20.stockPrice, 1)} 元</td><td style="padding:12px;text-align:right">${fmtNum(up20.cbPrice, 1)} 元</td><td style="padding:12px;text-align:right;color:#2e7d32;font-weight:600">+${fmtNum(up20.returnPct, 2)}%</td></tr>
+                    <tr style="background:#f5f5f5"><td style="padding:12px;text-align:center;background:#c8e6c9">預計上漲 50%</td><td style="padding:12px;text-align:right">${fmtNum(up50.stockPrice, 1)} 元</td><td style="padding:12px;text-align:right">${fmtNum(up50.cbPrice, 1)} 元</td><td style="padding:12px;text-align:right;color:#2e7d32;font-weight:600">+${fmtNum(up50.returnPct, 2)}%</td></tr>
+                    <tr><td style="padding:12px;text-align:center;background:#a5d6a7">預計上漲 100%</td><td style="padding:12px;text-align:right">${fmtNum(up100.stockPrice, 1)} 元</td><td style="padding:12px;text-align:right">${fmtNum(up100.cbPrice, 1)} 元</td><td style="padding:12px;text-align:right;color:#2e7d32;font-weight:600">+${fmtNum(up100.returnPct, 2)}%</td></tr>
                 </tbody>
             </table>
         </div>
         
-        <div class="modal-info-block" style="background:linear-gradient(90deg, #4caf50, #81c784);color:#fff;margin-top:15px;padding:15px;border-radius:8px">
-            <div style="font-size:14px;font-weight:700">📌 結論</div>
-            <div style="font-size:13px;margin-top:8px;line-height:1.8">
+        <div class="modal-info-block" style="background:linear-gradient(90deg, #4caf50, #81c784);color:#fff;margin-top:15px;padding:16px;border-radius:8px">
+            <div style="font-size:15px;font-weight:700">📌 結論</div>
+            <div style="font-size:14px;margin-top:8px;line-height:1.8">
                 當股價超過轉換價，可轉債將會發揮<b>股票的特性</b>，漲越多獲利越多。
             </div>
         </div>
@@ -5372,56 +5434,56 @@ window.openCbInfo = cbCode => {
     const maxLossDisplay = Math.max(0, maxLoss);
     
     let tScenario2 = `
-        <div class="modal-info-block" style="background:linear-gradient(135deg, #c62828 0%, #d32f2f 100%);color:#fff;padding:20px;border-radius:12px">
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #c62828 0%, #d32f2f 100%);color:#fff;padding:22px;border-radius:12px">
             <div style="text-align:center;margin-bottom:15px">
-                <div style="font-size:14px;opacity:0.8">${cb._name}</div>
-                <div style="font-size:24px;font-weight:800;margin:5px 0">情境分析(二) 下跌情境</div>
+                <div style="font-size:15px;opacity:0.8">${cb._name}</div>
+                <div style="font-size:22px;font-weight:800;margin:5px 0">情境分析(二) 下跌情境</div>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#ffebee;border:1px solid #ef9a9a;margin-top:15px">
-            <div style="font-size:14px;font-weight:600;color:#c62828;margin-bottom:10px">📉 虧損情境分析</div>
-            <div style="font-size:12px;color:#666;margin-bottom:12px">當現股收盤價格低於轉換價格 <b>${fmtNum(convPriceVal, 1)}</b> 元，可轉債與現股股價將<b>不會同步</b>，具有<span style="color:#1565c0;font-weight:600">債券特性</span></div>
-            <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden">
+            <div style="font-size:15px;font-weight:600;color:#c62828;margin-bottom:10px">📉 虧損情境分析</div>
+            <div style="font-size:14px;color:#555;margin-bottom:12px">當現股收盤價格低於轉換價格 <b>${fmtNum(convPriceVal, 1)}</b> 元，可轉債與現股股價將<b>不會同步</b>，具有<span style="color:#1565c0;font-weight:600">債券特性</span></div>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:8px;overflow:hidden">
                 <thead>
                     <tr style="background:#c62828;color:#fff">
-                        <th style="padding:10px;text-align:center">情境</th>
-                        <th style="padding:10px;text-align:right">預期股價</th>
-                        <th style="padding:10px;text-align:right">可轉債價格</th>
-                        <th style="padding:10px;text-align:right">可轉債報酬%</th>
+                        <th style="padding:12px;text-align:center">情境</th>
+                        <th style="padding:12px;text-align:right">預期股價</th>
+                        <th style="padding:12px;text-align:right">可轉債價格</th>
+                        <th style="padding:12px;text-align:right">可轉債報酬%</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td style="padding:10px;text-align:center;background:#ffcdd2">預計下跌 20%</td><td style="padding:10px;text-align:right">${fmtNum(down20.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(down20.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#c62828;font-weight:600">${fmtNum(down20.returnPct, 2)}%</td></tr>
-                    <tr style="background:#f5f5f5"><td style="padding:10px;text-align:center;background:#ef9a9a">預計下跌 40%</td><td style="padding:10px;text-align:right">${fmtNum(down40.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(down40.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#c62828;font-weight:600">${fmtNum(down40.returnPct, 2)}%</td></tr>
-                    <tr><td style="padding:10px;text-align:center;background:#e57373">預計下跌 80%</td><td style="padding:10px;text-align:right">${fmtNum(down80.stockPrice, 1)} 元</td><td style="padding:10px;text-align:right">${fmtNum(down80.cbPrice, 1)} 元</td><td style="padding:10px;text-align:right;color:#c62828;font-weight:600">${fmtNum(down80.returnPct, 2)}%</td></tr>
+                    <tr><td style="padding:12px;text-align:center;background:#ffcdd2">預計下跌 20%</td><td style="padding:12px;text-align:right">${fmtNum(down20.stockPrice, 1)} 元</td><td style="padding:12px;text-align:right">${fmtNum(down20.cbPrice, 1)} 元</td><td style="padding:12px;text-align:right;color:#c62828;font-weight:600">${fmtNum(down20.returnPct, 2)}%</td></tr>
+                    <tr style="background:#f5f5f5"><td style="padding:12px;text-align:center;background:#ef9a9a">預計下跌 40%</td><td style="padding:12px;text-align:right">${fmtNum(down40.stockPrice, 1)} 元</td><td style="padding:12px;text-align:right">${fmtNum(down40.cbPrice, 1)} 元</td><td style="padding:12px;text-align:right;color:#c62828;font-weight:600">${fmtNum(down40.returnPct, 2)}%</td></tr>
+                    <tr><td style="padding:12px;text-align:center;background:#e57373">預計下跌 80%</td><td style="padding:12px;text-align:right">${fmtNum(down80.stockPrice, 1)} 元</td><td style="padding:12px;text-align:right">${fmtNum(down80.cbPrice, 1)} 元</td><td style="padding:12px;text-align:right;color:#c62828;font-weight:600">${fmtNum(down80.returnPct, 2)}%</td></tr>
                 </tbody>
             </table>
         </div>
         
         <div class="modal-info-block" style="background:#e3f2fd;border:1px solid #90caf9;margin-top:15px">
-            <div style="font-size:14px;font-weight:600;color:#1565c0;margin-bottom:10px">💡 債券保護特性</div>
-            <div style="font-size:13px;color:#444;line-height:1.8">
+            <div style="font-size:15px;font-weight:600;color:#1565c0;margin-bottom:10px">💡 債券保護特性</div>
+            <div style="font-size:14px;color:#444;line-height:1.8">
                 在公司沒有倒閉的前提下，當股價跌破轉換價時，可轉債就會充分的發揮<b>債券到期還本特性</b>，將本金還給債權人。<br>
-                <span style="color:#666">• 無擔保時：為第一順位求償人</span><br>
-                <span style="color:#666">• 有擔保時：有公司實體資產當做抵押擔保</span>
+                <span style="color:#555">• 無擔保時：為第一順位求償人</span><br>
+                <span style="color:#555">• 有擔保時：有公司實體資產當做抵押擔保</span>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#fff3e0;border:2px solid #ffb74d;margin-top:15px">
-            <div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:10px">⚠️ 風險控制</div>
+            <div style="font-size:15px;font-weight:700;color:#e65100;margin-bottom:10px">⚠️ 風險控制</div>
             <div style="font-size:15px;color:#333;line-height:1.8">
-                在最多損失 <span style="font-size:20px;font-weight:800;color:#c62828">${fmtNum(maxLossDisplay, 0)}</span> 元的情況下......<br>
-                <span style="color:#666;font-size:13px">(把風險控制在可以接受的範圍內，先求少輸)</span>
+                在最多損失 <span style="font-size:22px;font-weight:800;color:#c62828">${fmtNum(maxLossDisplay, 0)}</span> 元的情況下......<br>
+                <span style="color:#666;font-size:14px">(把風險控制在可以接受的範圍內，先求少輸)</span>
             </div>
         </div>
         
-        <div class="modal-info-block" style="background:linear-gradient(90deg, #1565c0, #42a5f5);color:#fff;margin-top:15px;padding:15px;border-radius:8px">
-            <div style="font-size:14px;font-weight:700">📌 結論</div>
-            <div style="font-size:13px;margin-top:8px;line-height:1.8">
+        <div class="modal-info-block" style="background:linear-gradient(90deg, #1565c0, #42a5f5);color:#fff;margin-top:15px;padding:16px;border-radius:8px">
+            <div style="font-size:15px;font-weight:700">📌 結論</div>
+            <div style="font-size:14px;margin-top:8px;line-height:1.8">
                 ~再買一個未來股價上漲的夢想，只要未來的<br>
-                <span style="font-size:18px;font-weight:700">${fmtNum(remainDays, 0)} 天 / ${remainYears} 年</span>內
-                股價大於 <span style="font-size:18px;font-weight:700">${fmtNum(convPriceVal, 1)}</span> 元
+                <span style="font-size:20px;font-weight:700">${fmtNum(remainDays, 0)} 天 / ${remainYears} 年</span>內
+                股價大於 <span style="font-size:20px;font-weight:700">${fmtNum(convPriceVal, 1)}</span> 元
             </div>
         </div>
     `;
@@ -5431,91 +5493,91 @@ window.openCbInfo = cbCode => {
     
     if(cbasData || cbasPremium > 0) {
         tScenario3 = `
-        <div class="modal-info-block" style="background:linear-gradient(135deg, #6a1b9a 0%, #8e24aa 100%);color:#fff;padding:20px;border-radius:12px">
+        <div class="modal-info-block" style="background:linear-gradient(135deg, #6a1b9a 0%, #8e24aa 100%);color:#fff;padding:22px;border-radius:12px">
             <div style="text-align:center;margin-bottom:15px">
-                <div style="font-size:14px;opacity:0.8">${cb._name}</div>
-                <div style="font-size:24px;font-weight:800;margin:5px 0">情境分析(三) CBAS拆解</div>
-                <div style="font-size:13px;opacity:0.8">透過拆解買進可轉債選擇權 CBAS 1張</div>
+                <div style="font-size:15px;opacity:0.8">${cb._name}</div>
+                <div style="font-size:22px;font-weight:800;margin:5px 0">情境分析(三) CBAS拆解</div>
+                <div style="font-size:14px;opacity:0.8">透過拆解買進可轉債選擇權 CBAS 1張</div>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#f3e5f5;border:1px solid #ce93d8;margin-top:15px">
-            <div style="font-size:14px;font-weight:600;color:#6a1b9a;margin-bottom:12px">📈 如果買進</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px">
-                <span style="background:#fff;padding:6px 12px;border-radius:6px">折價率 <b style="color:#6a1b9a">${fmtNum(Math.abs(premiumRateCalc), 2)}%</b></span>
+            <div style="font-size:15px;font-weight:600;color:#6a1b9a;margin-bottom:12px">📈 如果買進</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px">
+                <span style="background:#fff;padding:8px 14px;border-radius:6px">折價率 <b style="color:#6a1b9a">${fmtNum(Math.abs(premiumRateCalc), 2)}%</b></span>
                 <span>的可轉債</span>
-                <span style="background:#fff3e0;padding:6px 12px;border-radius:6px;font-weight:700;color:#e65100">${fmtNum(cbPriceVal, 1)} 元</span>
+                <span style="background:#fff3e0;padding:8px 14px;border-radius:6px;font-weight:700;color:#e65100">${fmtNum(cbPriceVal, 1)} 元</span>
                 <span>等於票面持股成本</span>
-                <span style="background:#fff;padding:6px 12px;border-radius:6px"><b>${fmtNum(convPriceVal, 1)}</b> 元</span>
+                <span style="background:#fff;padding:8px 14px;border-radius:6px"><b>${fmtNum(convPriceVal, 1)}</b> 元</span>
                 <span>會變成了</span>
-                <span style="background:#ffeb3b;padding:6px 12px;border-radius:6px;font-weight:700">${fmtNum(stockCostCalc, 1)} 元</span>
+                <span style="background:#ffeb3b;padding:8px 14px;border-radius:6px;font-weight:700">${fmtNum(stockCostCalc, 1)} 元</span>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#e8f5e9;border:1px solid #a5d6a7;margin-top:12px">
-            <div style="font-size:13px;color:#2e7d32;line-height:1.8">
+            <div style="font-size:14px;color:#2e7d32;line-height:1.8">
                 💡 首先會先將可轉債成交價拆解成 <b>債券 + 選擇權</b>：<br>
-                <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
-                    <span style="background:#fff;padding:6px 12px;border-radius:6px;font-weight:700">${fmtNum(cbPriceVal, 1)} 元</span>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+                    <span style="background:#fff;padding:8px 14px;border-radius:6px;font-weight:700">${fmtNum(cbPriceVal, 1)} 元</span>
                     <span>=</span>
-                    <span style="background:#e3f2fd;padding:6px 12px;border-radius:6px">債券 <b>100</b> 元</span>
+                    <span style="background:#e3f2fd;padding:8px 14px;border-radius:6px">債券 <b>100</b> 元</span>
                     <span>+</span>
-                    <span style="background:#fff3e0;padding:6px 12px;border-radius:6px">選擇權 <b>${fmtNum(optionValue, 1)}</b> 元</span>
+                    <span style="background:#fff3e0;padding:8px 14px;border-radius:6px">選擇權 <b>${fmtNum(optionValue, 1)}</b> 元</span>
                 </div>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#f5f5f5;margin-top:15px">
-            <div style="font-size:14px;font-weight:600;color:#333;margin-bottom:10px">📚 拆解說明</div>
-            <div style="font-size:13px;color:#555;line-height:1.8">
+            <div style="font-size:15px;font-weight:600;color:#333;margin-bottom:10px">📚 拆解說明</div>
+            <div style="font-size:14px;color:#555;line-height:1.8">
                 會拆解的主要用意在於，<b style="color:#6a1b9a">積極看好的客戶只想參與股票上漲機會</b>，所以會選擇只付出權利金，只持有股票上漲選擇權部位。<br><br>
                 而債券本金將由券商尋找願意提供債券本金當取得穩當利息的客戶進行拆解交割。實務上以折現率計算出權利金百元報價，簡單說就是<b>持有到可轉債選擇權到期日的利息成本</b>。
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#fff;border:2px solid #6a1b9a;margin-top:15px">
-            <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <table style="width:100%;border-collapse:collapse;font-size:14px">
                 <tr style="background:#f3e5f5">
-                    <td style="padding:12px;font-weight:600">${cb._name}</td>
-                    <td style="padding:12px;text-align:center">權利金(佰元報價)</td>
-                    <td style="padding:12px;text-align:center;font-weight:700;color:#6a1b9a">${fmtNum(cbasPremium, 2)} 元</td>
-                    <td style="padding:12px;text-align:center">選擇權到期日</td>
-                    <td style="padding:12px;text-align:center">${fmtDate(cbasOptExpiry)}</td>
-                    <td style="padding:12px;text-align:center">剩餘年期</td>
-                    <td style="padding:12px;text-align:center;font-weight:600">${fmtNum(cbasRemainYears, 2)} 年</td>
+                    <td style="padding:14px;font-weight:600">${cb._name}</td>
+                    <td style="padding:14px;text-align:center">權利金(佰元報價)</td>
+                    <td style="padding:14px;text-align:center;font-weight:700;color:#6a1b9a">${fmtNum(cbasPremium, 2)} 元</td>
+                    <td style="padding:14px;text-align:center">選擇權到期日</td>
+                    <td style="padding:14px;text-align:center">${fmtDate(cbasOptExpiry)}</td>
+                    <td style="padding:14px;text-align:center">剩餘年期</td>
+                    <td style="padding:14px;text-align:center;font-weight:600">${fmtNum(cbasRemainYears, 2)} 年</td>
                 </tr>
             </table>
         </div>
         
         <div class="modal-info-block" style="background:#e8f5e9;margin-top:12px">
-            <div style="font-size:13px;color:#2e7d32">
+            <div style="font-size:14px;color:#2e7d32">
                 💰 買進1張 <b>${cb._name}</b> 可轉債選擇權的交割金額計算 = 權利金(利息) <b>${fmtNum(cbasPremium, 2)}</b> 元 + 選擇權 <b>${fmtNum(optionValue, 1)}</b> 元
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#f5f5f5;margin-top:12px">
-            <div style="font-size:13px;color:#666">
+            <div style="font-size:14px;color:#555">
                 📋 交割金額：
-                <span style="background:#fff;padding:4px 8px;border-radius:4px;margin:0 4px">${fmtNum(cbasPremium + optionValue, 2)} 元</span> ×
-                <span style="background:#fff;padding:4px 8px;border-radius:4px;margin:0 4px">1,000 股</span> =
-                <span style="background:#ffeb3b;padding:4px 8px;border-radius:4px;font-weight:600">交割 ${fmtNum(cbasSettlement, 0)} 元</span>
+                <span style="background:#fff;padding:6px 10px;border-radius:4px;margin:0 4px">${fmtNum(cbasPremium + optionValue, 2)} 元</span> ×
+                <span style="background:#fff;padding:6px 10px;border-radius:4px;margin:0 4px">1,000 股</span> =
+                <span style="background:#ffeb3b;padding:6px 10px;border-radius:4px;font-weight:600">交割 ${fmtNum(cbasSettlement, 0)} 元</span>
             </div>
         </div>
         
         <div class="modal-info-block" style="background:#fff3e0;border:2px solid #ffb74d;margin-top:15px">
-            <div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:10px">⚠️ 風險控制</div>
+            <div style="font-size:15px;font-weight:700;color:#e65100;margin-bottom:10px">⚠️ 風險控制</div>
             <div style="font-size:15px;color:#333;line-height:1.8">
-                在最多損失 <span style="font-size:20px;font-weight:800;color:#c62828">${fmtNum(cbasSettlement, 0)}</span> 元的情況下......<br>
-                <span style="color:#666;font-size:13px">(把風險控制在可以接受的範圍內，先求少輸)</span>
+                在最多損失 <span style="font-size:22px;font-weight:800;color:#c62828">${fmtNum(cbasSettlement, 0)}</span> 元的情況下......<br>
+                <span style="color:#666;font-size:14px">(把風險控制在可以接受的範圍內，先求少輸)</span>
             </div>
         </div>
         
-        <div class="modal-info-block" style="background:linear-gradient(90deg, #6a1b9a, #ab47bc);color:#fff;margin-top:15px;padding:15px;border-radius:8px">
-            <div style="font-size:14px;font-weight:700">📌 結論</div>
-            <div style="font-size:13px;margin-top:8px;line-height:1.8">
+        <div class="modal-info-block" style="background:linear-gradient(90deg, #6a1b9a, #ab47bc);color:#fff;margin-top:15px;padding:16px;border-radius:8px">
+            <div style="font-size:15px;font-weight:700">📌 結論</div>
+            <div style="font-size:14px;margin-top:8px;line-height:1.8">
                 ~再買一個未來股價上漲的夢想，只要未來的<br>
-                <span style="font-size:18px;font-weight:700">${fmtNum(remainDays, 0)} 天 / ${remainYears} 年</span>內
-                股價大於 <span style="font-size:18px;font-weight:700">${fmtNum(convPriceVal, 1)}</span> 元
+                <span style="font-size:20px;font-weight:700">${fmtNum(remainDays, 0)} 天 / ${remainYears} 年</span>內
+                股價大於 <span style="font-size:20px;font-weight:700">${fmtNum(convPriceVal, 1)}</span> 元
             </div>
         </div>
         `;
@@ -5523,8 +5585,8 @@ window.openCbInfo = cbCode => {
         tScenario3 = `
             <div class="modal-info-block" style="background:#f5f5f5;text-align:center;padding:40px">
                 <div style="font-size:48px;margin-bottom:15px">🔒</div>
-                <div style="font-size:16px;font-weight:600;color:#666;margin-bottom:10px">暫無 CBAS 資訊</div>
-                <div style="font-size:13px;color:#999">
+                <div style="font-size:18px;font-weight:600;color:#666;margin-bottom:10px">暫無 CBAS 資訊</div>
+                <div style="font-size:14px;color:#999">
                     此CB目前沒有 CBAS 拆解報價資訊，<br>
                     可能尚未開放拆解交易或已下市。
                 </div>
@@ -5583,7 +5645,7 @@ window.openCbInfo = cbCode => {
         // 法人統計區塊（如果有的話）
         const corpHtml = corpStats ? `
             <div class="modal-info-block" style="background:linear-gradient(135deg, #fce4ec 0%, #fff 100%);margin-top:15px">
-                <div class="title" style="color:#c2185b">🏛️ 法人投標統計</div>
+                <div class="title" style="color:#c2185b;font-size:16px">🏛️ 法人投標統計</div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(2, 1fr)">
                     <div class="modal-card">
                         <div class="val" style="font-weight:700">${fmtNum(corpStats['法人投標筆數'], 0)}</div>
@@ -5605,29 +5667,29 @@ window.openCbInfo = cbCode => {
                     </div>
                 </div>
                 ${totalQty > 0 && corpStats['法人得標數量'] ? `
-                <div style="text-align:center;margin-top:10px;padding:8px;background:#fce4ec;border-radius:8px">
-                    <span style="font-size:13px;color:#c2185b;font-weight:600">法人佔比：${fmtNum(corpStats['法人得標數量'] / totalQty * 100, 1)}%</span>
+                <div style="text-align:center;margin-top:12px;padding:10px;background:#fce4ec;border-radius:8px">
+                    <span style="font-size:15px;color:#c2185b;font-weight:600">法人佔比：${fmtNum(corpStats['法人得標數量'] / totalQty * 100, 1)}%</span>
                 </div>` : ''}
             </div>
         ` : '';
         
         tAuction = `
-            <div class="modal-info-block" style="background:linear-gradient(135deg, #e65100 0%, #ff8f00 100%);color:#fff;padding:20px;border-radius:12px">
+            <div class="modal-info-block" style="background:linear-gradient(135deg, #e65100 0%, #ff8f00 100%);color:#fff;padding:22px;border-radius:12px">
                 <div style="text-align:center">
-                    <div style="font-size:14px;opacity:0.9;font-weight:500">${basic['標的名稱'] || cb._name}</div>
-                    <div style="font-size:24px;font-weight:800;margin:5px 0">🔨 競拍明細分析</div>
-                    <div style="font-size:13px;opacity:0.9;font-weight:500">開標日期：${basic['開標日期'] || '-'} ｜ 主辦：${basic['主辦承銷商'] || '-'}</div>
+                    <div style="font-size:15px;opacity:0.9;font-weight:500">${basic['標的名稱'] || cb._name}</div>
+                    <div style="font-size:22px;font-weight:800;margin:5px 0">🔨 競拍明細分析</div>
+                    <div style="font-size:14px;opacity:0.9;font-weight:500">開標日期：${basic['開標日期'] || '-'} ｜ 主辦：${basic['主辦承銷商'] || '-'}</div>
                     ${(creditRating || stockCap > 0 || fundUseType) ? `
-                    <div style="margin-top:10px;display:flex;gap:15px;justify-content:center;flex-wrap:wrap">
-                        ${creditRating ? `<span style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:15px;font-size:12px">信評：${creditRating}</span>` : ''}
-                        ${stockCap > 0 ? `<span style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:15px;font-size:12px">股本：${fmtNum(stockCap, 1)}億</span>` : ''}
-                        ${fundUseType ? `<span style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:15px;font-size:12px">${fundUseType}</span>` : ''}
+                    <div style="margin-top:12px;display:flex;gap:15px;justify-content:center;flex-wrap:wrap">
+                        ${creditRating ? `<span style="background:rgba(255,255,255,0.2);padding:6px 14px;border-radius:15px;font-size:13px">信評：${creditRating}</span>` : ''}
+                        ${stockCap > 0 ? `<span style="background:rgba(255,255,255,0.2);padding:6px 14px;border-radius:15px;font-size:13px">股本：${fmtNum(stockCap, 1)}億</span>` : ''}
+                        ${fundUseType ? `<span style="background:rgba(255,255,255,0.2);padding:6px 14px;border-radius:15px;font-size:13px">${fundUseType}</span>` : ''}
                     </div>` : ''}
                 </div>
             </div>
             
             <div class="modal-info-block" style="margin-top:15px">
-                <div class="title" style="font-weight:700">📊 得標價格與換股成本</div>
+                <div class="title" style="font-weight:700;font-size:16px">📊 得標價格與換股成本</div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(4, 1fr)">
                     <div class="modal-card">
                         <div class="val" style="color:#c62828;font-weight:700">${fmtNum(price['最低得標'], 2)}</div>
@@ -5660,13 +5722,13 @@ window.openCbInfo = cbCode => {
                         <div class="lbl" style="font-weight:500">最高換股成本</div>
                     </div>
                 </div>
-                <div style="text-align:center;margin-top:10px;padding:8px;background:#fff3e0;border-radius:8px">
-                    <span style="font-size:13px;color:#e65100;font-weight:600">換股溢價率：${fmtNum(cost['換股溢價率'], 2)}%</span>
+                <div style="text-align:center;margin-top:12px;padding:10px;background:#fff3e0;border-radius:8px">
+                    <span style="font-size:15px;color:#e65100;font-weight:600">換股溢價率：${fmtNum(cost['換股溢價率'], 2)}%</span>
                 </div>
             </div>
             
             <div class="modal-info-block" style="background:linear-gradient(135deg, #f3e5f5 0%, #fff 100%);margin-top:15px">
-                <div class="title" style="color:#7b1fa2;font-weight:700">📊 截標與掛牌行情對照</div>
+                <div class="title" style="color:#7b1fa2;font-weight:700;font-size:16px">📊 截標與掛牌行情對照</div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(4, 1fr)">
                     <div class="modal-card">
                         <div class="val" style="font-weight:700">${closePrice > 0 ? fmtNum(closePrice, 2) : '-'}</div>
@@ -5766,42 +5828,42 @@ window.openCbInfo = cbCode => {
                     </div>
                 </div>
                 ${totalAmount > 0 ? `
-                <div style="text-align:center;margin-top:10px;padding:8px;background:#e3f2fd;border-radius:8px">
-                    <span style="font-size:13px;color:#1565c0;font-weight:600">得標總金額：${fmtNum(totalAmount / 100000000, 2)} 億元</span>
-                    ${bidFeeRate > 0 ? `<span style="margin-left:15px;font-size:12px;color:#666">手續費率：${fmtNum(bidFeeRate, 2)}%</span>` : ''}
+                <div style="text-align:center;margin-top:12px;padding:10px;background:#e3f2fd;border-radius:8px">
+                    <span style="font-size:15px;color:#1565c0;font-weight:600">得標總金額：${fmtNum(totalAmount / 100000000, 2)} 億元</span>
+                    ${bidFeeRate > 0 ? `<span style="margin-left:15px;font-size:14px;color:#555">手續費率：${fmtNum(bidFeeRate, 2)}%</span>` : ''}
                 </div>` : ''}
             </div>
             
             ${corpHtml}
             
             <div class="modal-info-block" style="background:linear-gradient(135deg, #fff8e1 0%, #fff 100%);margin-top:15px">
-                <div class="title" style="color:#f57c00;font-weight:700">🎯 主力籌碼集中度</div>
+                <div class="title" style="color:#f57c00;font-weight:700;font-size:16px">🎯 主力籌碼集中度</div>
                 <div class="modal-card-grid" style="grid-template-columns:repeat(2, 1fr)">
                     <div class="modal-card" style="background:${over30Ratio >= 50 ? '#fff3e0' : '#fff'}">
                         <div class="val" style="color:${over30Ratio >= 50 ? '#e65100' : '#333'};font-weight:700">${fmtNum(over30Ratio, 1)}%</div>
                         <div class="lbl" style="font-weight:500">30張以上佔比</div>
-                        <div style="font-size:11px;color:#666;margin-top:4px;font-weight:500">${over30.length}筆 / ${fmtNum(over30Qty, 0)}張</div>
+                        <div style="font-size:12px;color:#666;margin-top:4px;font-weight:500">${over30.length}筆 / ${fmtNum(over30Qty, 0)}張</div>
                     </div>
                     <div class="modal-card" style="background:${over100Ratio >= 30 ? '#ffebee' : '#fff'}">
                         <div class="val" style="color:${over100Ratio >= 30 ? '#c62828' : '#333'};font-weight:700">${fmtNum(over100Ratio, 1)}%</div>
                         <div class="lbl" style="font-weight:500">100張以上佔比</div>
-                        <div style="font-size:11px;color:#666;margin-top:4px;font-weight:500">${over100.length}筆 / ${fmtNum(over100Qty, 0)}張</div>
+                        <div style="font-size:12px;color:#666;margin-top:4px;font-weight:500">${over100.length}筆 / ${fmtNum(over100Qty, 0)}張</div>
                     </div>
                 </div>
             </div>
             
             <div class="modal-info-block" style="margin-top:15px">
-                <div class="title" style="font-weight:700">📊 得標區間分析</div>
+                <div class="title" style="font-weight:700;font-size:16px">📊 得標區間分析</div>
                 <div style="overflow-x:auto">
-                    <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:8px;overflow:hidden">
                         <thead>
                             <tr style="background:#f5f5f5">
-                                <th style="padding:10px 6px;text-align:left;font-weight:700">區間</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:700">筆數</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:700">數量</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:700">均價</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:700">換股成本</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:700">佔比</th>
+                                <th style="padding:12px 8px;text-align:left;font-weight:700">區間</th>
+                                <th style="padding:12px 8px;text-align:right;font-weight:700">筆數</th>
+                                <th style="padding:12px 8px;text-align:right;font-weight:700">數量</th>
+                                <th style="padding:12px 8px;text-align:right;font-weight:700">均價</th>
+                                <th style="padding:12px 8px;text-align:right;font-weight:700">換股成本</th>
+                                <th style="padding:12px 8px;text-align:right;font-weight:700">佔比</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -5809,12 +5871,12 @@ window.openCbInfo = cbCode => {
                                 const isLarge = inv.interval.includes('大於100') || inv.interval.includes('50-100');
                                 const bgColor = inv.interval.includes('大於100') ? '#fff3e0' : (inv.interval.includes('50-100') ? '#fffde7' : (idx % 2 === 0 ? '#fff' : '#fafafa'));
                                 return `<tr style="background:${bgColor}">
-                                    <td style="padding:8px 6px;font-weight:${isLarge ? '700' : '500'}">${inv.interval}</td>
-                                    <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(inv.count, 0)}</td>
-                                    <td style="padding:8px 6px;text-align:right;font-weight:${isLarge ? '700' : '500'}">${fmtNum(inv.qty, 0)}</td>
-                                    <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(inv.avgPrice, 2)}</td>
-                                    <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(inv.avgCost, 2)}</td>
-                                    <td style="padding:8px 6px;text-align:right;color:${isLarge ? '#e65100' : '#333'};font-weight:700">${fmtNum(inv.ratio * 100, 1)}%</td>
+                                    <td style="padding:10px 8px;font-weight:${isLarge ? '700' : '500'}">${inv.interval}</td>
+                                    <td style="padding:10px 8px;text-align:right;font-weight:500">${fmtNum(inv.count, 0)}</td>
+                                    <td style="padding:10px 8px;text-align:right;font-weight:${isLarge ? '700' : '500'}">${fmtNum(inv.qty, 0)}</td>
+                                    <td style="padding:10px 8px;text-align:right;font-weight:500">${fmtNum(inv.avgPrice, 2)}</td>
+                                    <td style="padding:10px 8px;text-align:right;font-weight:500">${fmtNum(inv.avgCost, 2)}</td>
+                                    <td style="padding:10px 8px;text-align:right;color:${isLarge ? '#e65100' : '#333'};font-weight:700">${fmtNum(inv.ratio * 100, 1)}%</td>
                                 </tr>`;
                             }).join('')}
                         </tbody>
@@ -5823,25 +5885,25 @@ window.openCbInfo = cbCode => {
             </div>
             
             <div class="modal-info-block" style="margin-top:15px">
-                <div class="title" style="font-weight:700">🏆 前十大得標量</div>
+                <div class="title" style="font-weight:700;font-size:16px">🏆 前十大得標量</div>
                 <div style="overflow-x:auto">
-                    <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:8px;overflow:hidden">
                         <thead>
                             <tr style="background:linear-gradient(90deg, #e65100, #ff8f00);color:#fff">
-                                <th style="padding:10px 6px;text-align:center;font-weight:700">排名</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:700">數量</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:700">價格</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:700">金額</th>
-                                <th style="padding:10px 6px;text-align:right;font-weight:700">換股成本</th>
+                                <th style="padding:12px 8px;text-align:center;font-weight:700">排名</th>
+                                <th style="padding:12px 8px;text-align:right;font-weight:700">數量</th>
+                                <th style="padding:12px 8px;text-align:right;font-weight:700">價格</th>
+                                <th style="padding:12px 8px;text-align:right;font-weight:700">金額</th>
+                                <th style="padding:12px 8px;text-align:right;font-weight:700">換股成本</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${top10.map((t, idx) => `<tr style="background:${idx % 2 === 0 ? '#fff' : '#fff8f0'}">
-                                <td style="padding:8px 6px;text-align:center;font-weight:700;color:#e65100">${t.rank}</td>
-                                <td style="padding:8px 6px;text-align:right;font-weight:700">${fmtNum(t.qty, 0)}</td>
-                                <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(t.price, 2)}</td>
-                                <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(t.amount, 0)}</td>
-                                <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(t.cost, 2)}</td>
+                                <td style="padding:10px 8px;text-align:center;font-weight:700;color:#e65100">${t.rank}</td>
+                                <td style="padding:10px 8px;text-align:right;font-weight:700">${fmtNum(t.qty, 0)}</td>
+                                <td style="padding:10px 8px;text-align:right;font-weight:500">${fmtNum(t.price, 2)}</td>
+                                <td style="padding:10px 8px;text-align:right;font-weight:500">${fmtNum(t.amount, 0)}</td>
+                                <td style="padding:10px 8px;text-align:right;font-weight:500">${fmtNum(t.cost, 2)}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>
@@ -5849,23 +5911,23 @@ window.openCbInfo = cbCode => {
             </div>
             
             <div class="modal-info-block" style="margin-top:15px">
-                <div class="title" style="font-weight:700">📋 完整得標明細 <span style="font-size:12px;color:#888;font-weight:500">(共${details.length}筆)</span></div>
-                <div style="font-size:11px;color:#555;margin-bottom:10px;font-weight:500">
+                <div class="title" style="font-weight:700;font-size:16px">📋 完整得標明細 <span style="font-size:13px;color:#888;font-weight:500">(共${details.length}筆)</span></div>
+                <div style="font-size:13px;color:#555;margin-bottom:10px;font-weight:500">
                     <span style="display:inline-block;width:12px;height:12px;background:#fff3e0;border:1px solid #ffcc80;border-radius:2px;vertical-align:middle;margin-right:4px"></span>30張以上
                     <span style="display:inline-block;width:12px;height:12px;background:#ffebee;border:1px solid #ef9a9a;border-radius:2px;vertical-align:middle;margin-left:12px;margin-right:4px"></span>100張以上
                     <span style="margin-left:15px;color:#999">📌 點擊表頭可排序</span>
                 </div>
                 <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
-                    <table style="width:100%;border-collapse:collapse;font-size:11px;background:#fff;border-radius:8px;overflow:hidden">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:8px;overflow:hidden">
                         <thead style="position:sticky;top:0;z-index:1">
                             <tr style="background:#f5f5f5">
-                                <th class="auction-sort-th" data-field="seq" onclick="sortAuctionDetail('seq')" style="padding:8px 4px;text-align:center;font-weight:700;cursor:pointer;user-select:none">序<span class="sort-arrow" style="opacity:1"> ↑</span></th>
-                                <th class="auction-sort-th" data-field="price" onclick="sortAuctionDetail('price')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">價格<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
-                                <th class="auction-sort-th" data-field="qty" onclick="sortAuctionDetail('qty')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">數量<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
-                                <th class="auction-sort-th" data-field="amount" onclick="sortAuctionDetail('amount')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">金額<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
-                                <th class="auction-sort-th" data-field="cost" onclick="sortAuctionDetail('cost')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">換股成本<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
-                                <th style="padding:8px 4px;text-align:left;font-weight:700">區間</th>
-                                <th class="auction-sort-th" data-field="cumRatio" onclick="sortAuctionDetail('cumRatio')" style="padding:8px 4px;text-align:right;font-weight:700;cursor:pointer;user-select:none">累計佔比<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
+                                <th class="auction-sort-th" data-field="seq" onclick="sortAuctionDetail('seq')" style="padding:10px 6px;text-align:center;font-weight:700;cursor:pointer;user-select:none">序<span class="sort-arrow" style="opacity:1"> ↑</span></th>
+                                <th class="auction-sort-th" data-field="price" onclick="sortAuctionDetail('price')" style="padding:10px 6px;text-align:right;font-weight:700;cursor:pointer;user-select:none">價格<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
+                                <th class="auction-sort-th" data-field="qty" onclick="sortAuctionDetail('qty')" style="padding:10px 6px;text-align:right;font-weight:700;cursor:pointer;user-select:none">數量<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
+                                <th class="auction-sort-th" data-field="amount" onclick="sortAuctionDetail('amount')" style="padding:10px 6px;text-align:right;font-weight:700;cursor:pointer;user-select:none">金額<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
+                                <th class="auction-sort-th" data-field="cost" onclick="sortAuctionDetail('cost')" style="padding:10px 6px;text-align:right;font-weight:700;cursor:pointer;user-select:none">換股成本<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
+                                <th style="padding:10px 6px;text-align:left;font-weight:700">區間</th>
+                                <th class="auction-sort-th" data-field="cumRatio" onclick="sortAuctionDetail('cumRatio')" style="padding:10px 6px;text-align:right;font-weight:700;cursor:pointer;user-select:none">累計佔比<span class="sort-arrow" style="opacity:0.4"> ↕</span></th>
                             </tr>
                         </thead>
                         <tbody id="auction-detail-tbody">
@@ -5880,12 +5942,12 @@ window.openCbInfo = cbCode => {
                                     fontWeight = '600';
                                 }
                                 return `<tr style="background:${bgColor}">
-                                    <td style="padding:6px 4px;text-align:center;font-weight:500">${d.seq}</td>
-                                    <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.price, 2)}</td>
-                                    <td style="padding:6px 4px;text-align:right;font-weight:${fontWeight};color:${d.qty >= 100 ? '#c62828' : (d.qty >= 30 ? '#e65100' : '#333')}">${fmtNum(d.qty, 0)}</td>
-                                    <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.amount, 0)}</td>
-                                    <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.cost, 2)}</td>
-                                    <td style="padding:6px 4px;text-align:left;font-size:10px;font-weight:500">${d.intervalType}</td>
+                                    <td style="padding:8px 6px;text-align:center;font-weight:500">${d.seq}</td>
+                                    <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(d.price, 2)}</td>
+                                    <td style="padding:8px 6px;text-align:right;font-weight:${fontWeight};color:${d.qty >= 100 ? '#c62828' : (d.qty >= 30 ? '#e65100' : '#333')}">${fmtNum(d.qty, 0)}</td>
+                                    <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(d.amount, 0)}</td>
+                                    <td style="padding:8px 6px;text-align:right;font-weight:500">${fmtNum(d.cost, 2)}</td>
+                                    <td style="padding:8px 6px;text-align:left;font-size:12px;font-weight:500">${d.intervalType}</td>
                                     <td style="padding:6px 4px;text-align:right;font-weight:500">${fmtNum(d.cumRatio * 100, 1)}%</td>
                                 </tr>`;
                             }).join('')}
